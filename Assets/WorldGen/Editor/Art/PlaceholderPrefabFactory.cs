@@ -50,7 +50,8 @@ namespace TycoWorld.WorldGen.Authoring
                 Lamp = SavePrefab("StreetLamp_A", lamp, new[] { metal, head }, go =>
                 {
                     AddCapsule(go, 0.1f, 6f);
-                    AddLampLight(go);
+                    var light = AddLampLight(go);
+                    go.AddComponent<StreetLamp>().Initialize(light, go.GetComponent<MeshRenderer>(), 1);
                 })
             };
 
@@ -105,7 +106,7 @@ namespace TycoWorld.WorldGen.Authoring
             capsule.center = new Vector3(0f, height * 0.5f, 0f);
         }
 
-        static void AddLampLight(GameObject lamp)
+        static Light AddLampLight(GameObject lamp)
         {
             var lightGo = new GameObject("Light");
             lightGo.transform.SetParent(lamp.transform, false);
@@ -116,6 +117,7 @@ namespace TycoWorld.WorldGen.Authoring
             light.intensity = 3f;
             light.color = new Color(1f, 0.77f, 0.54f);
             light.shadows = LightShadows.None;
+            return light;
         }
     }
 }
