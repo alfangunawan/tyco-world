@@ -104,6 +104,25 @@ namespace TycoWorld.Player.Tests
         }
 
         [Test]
+        public void EnsureFootsteps_KeepsUserTuning()
+        {
+            var bank = fx.Track(ScriptableObject.CreateInstance<FootstepBank>());
+            PlayerAssetsBuilder.FillFootsteps(bank);
+            var grass = bank.surfaces.Single(e => e.surface == SurfaceType.Grass);
+            grass.volume = 0.9f;
+            Assert.IsFalse(PlayerAssetsBuilder.EnsureFootsteps(bank));
+            Assert.AreEqual(0.9f, bank.surfaces.Single(e => e.surface == SurfaceType.Grass).volume);
+        }
+
+        [Test]
+        public void EnsureFootsteps_FillsEmptyBank()
+        {
+            var bank = fx.Track(ScriptableObject.CreateInstance<FootstepBank>());
+            Assert.IsTrue(PlayerAssetsBuilder.EnsureFootsteps(bank));
+            Assert.AreEqual(Enum.GetValues(typeof(SurfaceType)).Length, bank.surfaces.Count);
+        }
+
+        [Test]
         public void FillFootsteps_CoversEverySurfaceWithClips()
         {
             var bank = fx.Track(ScriptableObject.CreateInstance<FootstepBank>());

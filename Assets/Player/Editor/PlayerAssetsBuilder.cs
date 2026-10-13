@@ -44,8 +44,7 @@ namespace TycoWorld.Player.Authoring
                 Tuning = LoadOrCreate<PlayerTuning>(PlayerPaths.TuningAsset),
                 Footsteps = LoadOrCreate<FootstepBank>(PlayerPaths.FootstepBankAsset)
             };
-            FillFootsteps(a.Footsteps);
-            EditorUtility.SetDirty(a.Footsteps);
+            if (EnsureFootsteps(a.Footsteps)) EditorUtility.SetDirty(a.Footsteps);
             a.Panel = BuildPanel();
             foreach (var file in PlayerAudioMap.InteractionFiles)
                 a.Clips[file] = AssetDatabase.LoadAssetAtPath<AudioClip>(PlayerAudioMap.InteractionPath(file));
@@ -72,6 +71,16 @@ namespace TycoWorld.Player.Authoring
             return a;
         }
 
+        /// <summary>Fills the bank from PlayerAudioMap only when it has no clips yet, so the user's volume/pitch tuning survives a re-run.</summary>
+        public static bool EnsureFootsteps(FootstepBank bank)
+        {
+            if (bank.surfaces != null)
+                foreach (var entry in bank.surfaces)
+                    if (entry != null && entry.clips != null && entry.clips.Length > 0) return false;
+            FillFootsteps(bank);
+            return true;
+        }
+
         public static void FillFootsteps(FootstepBank bank)
         {
             bank.surfaces = new List<SurfaceClips>();
@@ -91,12 +100,16 @@ namespace TycoWorld.Player.Authoring
                 File.WriteAllText(abs, Theme);
                 AssetDatabase.ImportAsset(PlayerPaths.ThemeAsset, ImportAssetOptions.ForceSynchronousImport);
             }
+            bool created = AssetDatabase.LoadAssetAtPath<PanelSettings>(PlayerPaths.PanelSettingsAsset) == null;
             var panel = LoadOrCreate<PanelSettings>(PlayerPaths.PanelSettingsAsset);
-            panel.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(PlayerPaths.ThemeAsset);
-            panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            panel.referenceResolution = new Vector2Int(1920, 1080);
-            panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
-            panel.match = 0.5f;
+            if (panel.themeStyleSheet == null) panel.themeStyleSheet = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(PlayerPaths.ThemeAsset);
+            if (created)
+            {
+                panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+                panel.referenceResolution = new Vector2Int(1920, 1080);
+                panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+                panel.match = 0.5f;
+            }
             EditorUtility.SetDirty(panel);
             return panel;
         }
@@ -129,16 +142,13 @@ namespace TycoWorld.Player.Authoring
             string path = PlayerPaths.MaterialsFolder + "/" + name + ".mat";
             var shader = Shader.Find("Universal Render Pipeline/Simple Lit");
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material == null)
-            {
-                material = new Material(shader);
-                AssetDatabase.CreateAsset(material, path);
-            }
-            material.shader = shader;
+            if (material != null) return material;
+            // Created once; later colour/smoothness edits by the user are kept.
+            material = new Material(shader);
             ColorUtility.TryParseHtmlString("#" + hex, out var color);
             material.SetColor("_BaseColor", color);
             material.SetFloat("_Smoothness", smoothness);
-            EditorUtility.SetDirty(material);
+            AssetDatabase.CreateAsset(material, path);
             return material;
         }
     }

@@ -284,6 +284,7 @@ MonoBehaviour:
   unlatchClip: {fileID: 8300000, guid: 5c6caa994108f6b4581a1c2e9d8364c8, type: 3}
   creakClip: {fileID: 8300000, guid: daf63635e7da47249b91aded19d13889, type: 3}
   latchClip: {fileID: 8300000, guid: 5c6caa994108f6b4581a1c2e9d8364c8, type: 3}
+  leafLength: 2
 --- !u!1 &2375030693717470956
 GameObject:
   m_ObjectHideFlags: 0
