@@ -77,6 +77,16 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Synthetic_SurfacesAssigned()
+        {
+            var built = Build("synthetic_world.json", new GenerationReport());
+            Assert.AreEqual(SurfaceType.Asphalt, built.Features.Single(f => f.Kind == FeatureKind.Road && f.OsmId == 402).Surface);
+            Assert.AreEqual(SurfaceType.Grass, built.Features.Single(f => f.Kind == FeatureKind.Area && f.OsmId == 404).Surface);
+            Assert.AreEqual(SurfaceType.Paving, built.Features.Single(f => f.Kind == FeatureKind.Area && f.OsmId == 405).Surface);
+            Assert.AreEqual(SurfaceType.Default, built.Features.Single(f => f.Kind == FeatureKind.Building && f.OsmId == 401).Surface);
+        }
+
+        [Test]
         public void Synthetic_BuildingMaterialsFollowVariantRule()
         {
             var upper = Materials(3);

@@ -27,6 +27,7 @@ namespace TycoWorld.WorldGen.Authoring
         public MeshData Mesh;
         public Material[] Materials = new Material[0];
         public bool AddCollider;
+        public SurfaceType Surface;
         public KeyBuilding Key;
         public Obb Obb;
         public string Category = "";
@@ -67,6 +68,7 @@ namespace TycoWorld.WorldGen.Authoring
             AddBuildings(world, settings, built, report);
             AddAreas(world, built, report);
             AddWater(world, settings, built, report);
+            foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
             var placer = new PropPlacer(world.Buildings, world.Roads);
             int treeVariants = settings.treePrefabs != null ? settings.treePrefabs.Length : 0;

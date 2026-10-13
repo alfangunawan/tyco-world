@@ -61,6 +61,10 @@ namespace TycoWorld.WorldGen.Authoring
             }
         }
 
+        public static string RoadMaterialName(string highway) =>
+            highway is "footway" or "path" or "cycleway" or "steps" or "pedestrian" ? "Path_Paving"
+            : highway == "track" ? "Ground_Dirt" : "Road_Asphalt";
+
         static string Cc0Path(string id, string map) => WorldGenPaths.Cc0TexturesFolder + "/" + id + "/" + id + "_1K-JPG_" + map + ".jpg";
 
         static void CheckCc0Present()
@@ -169,9 +173,7 @@ namespace TycoWorld.WorldGen.Authoring
 
         static void Assign(WorldGenSettings s, IReadOnlyDictionary<string, Material> m, PlaceholderPrefabs prefabs)
         {
-            foreach (var rule in s.roadRules)
-                rule.material = rule.highway is "footway" or "path" or "cycleway" or "steps" or "pedestrian" ? m["Path_Paving"]
-                    : rule.highway == "track" ? m["Ground_Dirt"] : m["Road_Asphalt"];
+            foreach (var rule in s.roadRules) rule.material = m[RoadMaterialName(rule.highway)];
 
             s.residentialMaterials = new BuildingMaterialSet
             {
