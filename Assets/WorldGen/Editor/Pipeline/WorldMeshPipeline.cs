@@ -92,7 +92,8 @@ namespace TycoWorld.WorldGen.Authoring
                 {
                     Kind = FeatureKind.Road, OsmId = road.Id, ElementType = OsmElementType.Way, Name = road.Name,
                     Group = FeatureGroups.Roads, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { road.Rule.material }, Category = road.Highway, Tags = road.Tags
+                    Mesh = mesh, Materials = new[] { road.Rule.material }, Category = road.Highway, Tags = road.Tags,
+                    AddCollider = true
                 });
                 report.Count("Road");
             }
@@ -151,7 +152,8 @@ namespace TycoWorld.WorldGen.Authoring
                 {
                     Kind = FeatureKind.Area, OsmId = area.Id, ElementType = area.ElementType, Name = area.Name,
                     Group = FeatureGroups.Areas, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { area.Rule.material }, Category = area.Rule.category.ToString(), Tags = area.Tags
+                    Mesh = mesh, Materials = new[] { area.Rule.material }, Category = area.Rule.category.ToString(), Tags = area.Tags,
+                    AddCollider = true
                 });
                 report.Count("Area");
             }
@@ -172,7 +174,8 @@ namespace TycoWorld.WorldGen.Authoring
                 {
                     Kind = FeatureKind.WaterArea, OsmId = water.Id, ElementType = water.ElementType, Name = water.Name,
                     Group = FeatureGroups.Water, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = water.Tags
+                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = water.Tags,
+                    AddCollider = true
                 });
                 report.Count("WaterArea");
             }
@@ -186,7 +189,8 @@ namespace TycoWorld.WorldGen.Authoring
                 {
                     Kind = FeatureKind.WaterLine, OsmId = line.Id, ElementType = OsmElementType.Way, Name = line.Name,
                     Group = FeatureGroups.Water, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = line.Tags
+                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = line.Tags,
+                    AddCollider = true
                 });
                 report.Count("WaterLine");
             }

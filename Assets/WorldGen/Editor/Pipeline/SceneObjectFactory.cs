@@ -41,6 +41,8 @@ namespace TycoWorld.WorldGen.Authoring
             box.center = center;
             box.size = size;
             GameObjectUtility.SetStaticEditorFlags(ground, Flags);
+            SetSurface(ground, SurfaceRules.Ground);
+            AddEdgeWalls(Container("WorldEdge"), world.Bounds);
 
             for (int i = 0; i < world.Features.Count; i++)
             {
@@ -79,6 +81,7 @@ namespace TycoWorld.WorldGen.Authoring
                 var osm = go.GetComponent<OsmFeature>();
                 if (osm == null) osm = go.AddComponent<OsmFeature>();
                 osm.Initialize(feature.OsmId, feature.ElementType, feature.Kind, feature.Name ?? "", feature.Tags);
+                ApplySurface(go, feature.Surface);
                 if (feature.Key != null)
                 {
                     var marker = go.GetComponent<KeyBuildingMarker>();
@@ -92,6 +95,35 @@ namespace TycoWorld.WorldGen.Authoring
             var lampPrefabs = settings.lampPrefab != null ? new[] { settings.lampPrefab } : new GameObject[0];
             PlaceProps(scene, world.Lamps, lampPrefabs, "Props/Lamps", world.ChunkSize, Container, report, "lampu");
             return root;
+        }
+
+        public static void AddEdgeWalls(Transform parent, Rect bounds)
+        {
+            string[] names = { "Edge_West", "Edge_East", "Edge_South", "Edge_North" };
+            var walls = GroundBuilder.EdgeWalls(bounds, GroundBuilder.EdgeWallHeight, GroundBuilder.EdgeWallThickness);
+            for (int i = 0; i < walls.Length; i++)
+            {
+                var wall = new GameObject(names[i]);
+                wall.transform.SetParent(parent, false);
+                var box = wall.AddComponent<BoxCollider>();
+                box.center = walls[i].Center;
+                box.size = walls[i].Size;
+                GameObjectUtility.SetStaticEditorFlags(wall, Flags);
+            }
+        }
+
+        /// <summary>Adds or updates <see cref="GroundSurface"/>; Default means "not a walkable surface" and adds nothing.</summary>
+        public static void ApplySurface(GameObject go, SurfaceType surface)
+        {
+            if (surface == SurfaceType.Default) return;
+            SetSurface(go, surface);
+        }
+
+        static void SetSurface(GameObject go, SurfaceType surface)
+        {
+            var component = go.GetComponent<GroundSurface>();
+            if (component == null) component = go.AddComponent<GroundSurface>();
+            component.Initialize(surface);
         }
 
         static string ObjectName(BuiltFeature f)

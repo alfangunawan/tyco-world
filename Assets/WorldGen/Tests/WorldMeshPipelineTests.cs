@@ -87,6 +87,15 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Synthetic_WalkableFeaturesHaveColliders()
+        {
+            var built = Build("synthetic_world.json", new GenerationReport());
+            Assert.Greater(built.Features.Count, 0);
+            foreach (var f in built.Features.Where(f => f.Mesh != null))
+                Assert.IsTrue(f.AddCollider, f.Kind + " " + f.OsmId);
+        }
+
+        [Test]
         public void Synthetic_BuildingMaterialsFollowVariantRule()
         {
             var upper = Materials(3);
