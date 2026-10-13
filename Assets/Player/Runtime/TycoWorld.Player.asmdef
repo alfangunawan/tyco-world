@@ -1,0 +1,14 @@
+{
+    "name": "TycoWorld.Player",
+    "rootNamespace": "TycoWorld.Player",
+    "references": ["TycoWorld.WorldGen", "Unity.InputSystem"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

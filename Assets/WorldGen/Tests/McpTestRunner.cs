@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace TycoWorld.WorldGen.Tests
 {
-    /// <summary>Dev helper: runs this assembly's EditMode tests synchronously (Procedure T, invoked through Unity MCP).</summary>
+    /// <summary>Dev helper: runs the project's EditMode test assemblies synchronously (Procedure T, invoked through Unity MCP).</summary>
     public static class McpTestRunner
     {
         sealed class Collector : ICallbacks
@@ -45,7 +45,7 @@ namespace TycoWorld.WorldGen.Tests
                 var filter = new Filter
                 {
                     testMode = TestMode.EditMode,
-                    assemblyNames = new[] { "TycoWorld.WorldGen.Tests" },
+                    assemblyNames = new[] { "TycoWorld.WorldGen.Tests", "TycoWorld.Player.Tests" },
                     groupNames = new[] { group }
                 };
                 api.Execute(new ExecutionSettings(filter) { runSynchronously = true });
@@ -54,7 +54,11 @@ namespace TycoWorld.WorldGen.Tests
                 text = $"group={group} passed={collector.Passed} failed={collector.Failed} skipped={collector.Skipped}";
                 if (collector.Failures.Count > 0) text += "\n" + string.Join("\n", collector.Failures);
             }
-            if (!string.IsNullOrEmpty(resultPath)) File.WriteAllText(resultPath, text);
+            if (!string.IsNullOrEmpty(resultPath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(resultPath));
+                File.WriteAllText(resultPath, text);
+            }
             return text;
         }
 

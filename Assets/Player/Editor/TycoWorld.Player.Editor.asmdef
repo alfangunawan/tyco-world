@@ -1,0 +1,21 @@
+{
+    "name": "TycoWorld.Player.Editor",
+    "rootNamespace": "TycoWorld.Player.Authoring",
+    "references": [
+        "TycoWorld.Player",
+        "TycoWorld.WorldGen",
+        "TycoWorld.WorldGen.Editor",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
