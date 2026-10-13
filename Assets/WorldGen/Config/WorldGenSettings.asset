@@ -1,0 +1,391 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33f6b79f38d08ae498caf81ca29f75a0, type: 3}
+  m_Name: WorldGenSettings
+  m_EditorClassIdentifier: TycoWorld.WorldGen.Editor::TycoWorld.WorldGen.Authoring.WorldGenSettings
+  south: -6.985
+  west: 107.6255
+  north: -6.9675
+  east: 107.638
+  originLat: -6.97265
+  originLon: 107.634
+  chunkSize: 100
+  overpassEndpoints:
+  - https://overpass-api.de/api/interpreter
+  - https://overpass.kumi.systems/api/interpreter
+  - https://overpass.private.coffee/api/interpreter
+  timeoutSeconds: 90
+  rawDataPath: WorldGenData/osm_raw.json
+  roadRules:
+  - highway: primary
+    defaultWidth: 8
+    rank: 8
+    lampSpacing: 30
+    material: {fileID: 2100000, guid: 33bddc5a3bef7c7478e1e89e4c786519, type: 2}
+  - highway: secondary
+    defaultWidth: 7
+    rank: 7
+    lampSpacing: 30
+    material: {fileID: 2100000, guid: 33bddc5a3bef7c7478e1e89e4c786519, type: 2}
+  - highway: tertiary
+    defaultWidth: 6
+    rank: 6
+    lampSpacing: 30
+    material: {fileID: 2100000, guid: 33bddc5a3bef7c7478e1e89e4c786519, type: 2}
+  - highway: unclassified
+    defaultWidth: 5
+    rank: 5
+    lampSpacing: 40
+    material: {fileID: 2100000, guid: 33bddc5a3bef7c7478e1e89e4c786519, type: 2}
+  - highway: residential
+    defaultWidth: 5
+    rank: 4
+    lampSpacing: 40
+    material: {fileID: 2100000, guid: 33bddc5a3bef7c7478e1e89e4c786519, type: 2}
+  - highway: living_street
+    defaultWidth: 4
+    rank: 3
+    lampSpacing: 0
+    material: {fileID: 2100000, guid: 33bddc5a3bef7c7478e1e89e4c786519, type: 2}
+  - highway: pedestrian
+    defaultWidth: 3
+    rank: 3
+    lampSpacing: 0
+    material: {fileID: 2100000, guid: 3633c4ed338a32e488c0b1ee5884d262, type: 2}
+  - highway: service
+    defaultWidth: 3.5
+    rank: 2
+    lampSpacing: 50
+    material: {fileID: 2100000, guid: 33bddc5a3bef7c7478e1e89e4c786519, type: 2}
+  - highway: track
+    defaultWidth: 3
+    rank: 1
+    lampSpacing: 0
+    material: {fileID: 2100000, guid: 3296dc2a12d5866438190c5bd4378ea3, type: 2}
+  - highway: footway
+    defaultWidth: 1.5
+    rank: 0
+    lampSpacing: 0
+    material: {fileID: 2100000, guid: 3633c4ed338a32e488c0b1ee5884d262, type: 2}
+  - highway: path
+    defaultWidth: 1.5
+    rank: 0
+    lampSpacing: 0
+    material: {fileID: 2100000, guid: 3633c4ed338a32e488c0b1ee5884d262, type: 2}
+  - highway: cycleway
+    defaultWidth: 1.5
+    rank: 0
+    lampSpacing: 0
+    material: {fileID: 2100000, guid: 3633c4ed338a32e488c0b1ee5884d262, type: 2}
+  - highway: steps
+    defaultWidth: 1.5
+    rank: 0
+    lampSpacing: 0
+    material: {fileID: 2100000, guid: 3633c4ed338a32e488c0b1ee5884d262, type: 2}
+  lanesWidth: 3
+  roadBaseY: 0.06
+  roadRankStep: 0.005
+  levelHeight: 3.2
+  facadeTileWidth: 3
+  parapetHeight: 0.6
+  gableMaxArea: 200
+  gableMinRectangularity: 0.85
+  gablePitchRatio: 0.25
+  gableOverhang: 0.3
+  minWallHeight: 2.5
+  buildingRules:
+  - name: Dormitory
+    buildingValues:
+    - dormitory
+    context: 0
+    minLevels: 4
+    maxLevels: 4
+    levelHeightOverride: 0
+    allowGable: 0
+    roofOnly: 0
+    materialSet: 1
+  - name: Institutional
+    buildingValues:
+    - university
+    - school
+    - college
+    - office
+    - public
+    - hospital
+    context: 0
+    minLevels: 3
+    maxLevels: 3
+    levelHeightOverride: 0
+    allowGable: 0
+    roofOnly: 0
+    materialSet: 1
+  - name: Religious
+    buildingValues:
+    - mosque
+    - church
+    - temple
+    - religious
+    context: 0
+    minLevels: 1
+    maxLevels: 1
+    levelHeightOverride: 5
+    allowGable: 0
+    roofOnly: 0
+    materialSet: 0
+  - name: Commercial
+    buildingValues:
+    - commercial
+    - retail
+    - shop
+    context: 0
+    minLevels: 2
+    maxLevels: 2
+    levelHeightOverride: 0
+    allowGable: 0
+    roofOnly: 0
+    materialSet: 0
+  - name: Small
+    buildingValues:
+    - garage
+    - garages
+    - shed
+    - hut
+    - carport
+    - kiosk
+    context: 0
+    minLevels: 1
+    maxLevels: 1
+    levelHeightOverride: 0
+    allowGable: 1
+    roofOnly: 0
+    materialSet: 0
+  - name: RoofOnly
+    buildingValues:
+    - roof
+    context: 0
+    minLevels: 1
+    maxLevels: 1
+    levelHeightOverride: 0
+    allowGable: 0
+    roofOnly: 1
+    materialSet: 0
+  - name: CampusOther
+    buildingValues: []
+    context: 1
+    minLevels: 3
+    maxLevels: 3
+    levelHeightOverride: 0
+    allowGable: 0
+    roofOnly: 0
+    materialSet: 1
+  - name: Residential
+    buildingValues: []
+    context: 2
+    minLevels: 1
+    maxLevels: 3
+    levelHeightOverride: 0
+    allowGable: 1
+    roofOnly: 0
+    materialSet: 0
+  residentialMaterials:
+    groundFloor:
+    - {fileID: 2100000, guid: 338b38ec2a70fcb4096c861551ddf67d, type: 2}
+    - {fileID: 2100000, guid: 742f79306335c2145bd42f2c9e408400, type: 2}
+    - {fileID: 2100000, guid: 765f52602c95eb1419e92e5c47afc7d9, type: 2}
+    - {fileID: 2100000, guid: 1153a2f8b5744d14cbf330546705432c, type: 2}
+    upper:
+    - {fileID: 2100000, guid: e4ac51bbd98fd514eaea9c41a6c3fed0, type: 2}
+    - {fileID: 2100000, guid: 01df9bbdfc266394fb7ba982bfd90086, type: 2}
+    - {fileID: 2100000, guid: 7277bbec0010f1f4598a968732a1484f, type: 2}
+    - {fileID: 2100000, guid: ee56a7946d5b4db458192c21873b2ebc, type: 2}
+    - {fileID: 2100000, guid: c4fd0caf26a4f8d48962c17d6c894023, type: 2}
+    - {fileID: 2100000, guid: 414e647f6087aef42a997874f8a5560d, type: 2}
+    trim:
+    - {fileID: 2100000, guid: 0d86b3a13598f3945b572d3ebeee2943, type: 2}
+    - {fileID: 2100000, guid: fd08e72a73e295644be904cfbee5cc95, type: 2}
+    - {fileID: 2100000, guid: 74f9b9b05caf4d048a8156804958d859, type: 2}
+    - {fileID: 2100000, guid: f65cd78de1f44544592004c1d99b8c81, type: 2}
+    - {fileID: 2100000, guid: 2fa401fad9c608945a0476654c69babd, type: 2}
+    - {fileID: 2100000, guid: 09959e4d521d95240be2857536955b97, type: 2}
+    flatRoof:
+    - {fileID: 2100000, guid: 347c54d7f8c2cdf40b7a57e59159b126, type: 2}
+    - {fileID: 2100000, guid: 519312f66c6067e4290925fb8fbab85b, type: 2}
+    gableRoof:
+    - {fileID: 2100000, guid: 32afa343c92900c46af0158127beb110, type: 2}
+    - {fileID: 2100000, guid: dece40bfd5ffbc048b482d2d3e725535, type: 2}
+  campusMaterials:
+    groundFloor:
+    - {fileID: 2100000, guid: 0dd0c9aca5d1ae449a6d725ab83a0cff, type: 2}
+    - {fileID: 2100000, guid: 28b53d546b9a6ec4397ab735f0693d94, type: 2}
+    upper:
+    - {fileID: 2100000, guid: 42490054350ff6e44b14a82889e144b7, type: 2}
+    - {fileID: 2100000, guid: bd296a356e55fba4d8b48b533c29d257, type: 2}
+    trim:
+    - {fileID: 2100000, guid: 6dc85e0de7eed61499ea9ce7cbf0b612, type: 2}
+    - {fileID: 2100000, guid: 69c172f0759e28e4bb76b3291d02c4ff, type: 2}
+    flatRoof:
+    - {fileID: 2100000, guid: 347c54d7f8c2cdf40b7a57e59159b126, type: 2}
+    gableRoof:
+    - {fileID: 2100000, guid: 32afa343c92900c46af0158127beb110, type: 2}
+  areaRules:
+  - name: Parking
+    matches:
+    - key: amenity
+      values:
+      - parking
+    category: 5
+    yOffset: 0.03
+    treeSpacing: 0
+    material: {fileID: 2100000, guid: e3c921459b947bc4b98ff108fd2e7f51, type: 2}
+  - name: Cemetery
+    matches:
+    - key: amenity
+      values:
+      - grave_yard
+    - key: landuse
+      values:
+      - cemetery
+    category: 6
+    yOffset: 0.03
+    treeSpacing: 10
+    material: {fileID: 2100000, guid: cbffb6c236db3af43837a53a02f383d6, type: 2}
+  - name: Pitch
+    matches:
+    - key: leisure
+      values:
+      - pitch
+      - track
+      - sports_centre
+      - stadium
+    category: 7
+    yOffset: 0.03
+    treeSpacing: 0
+    material: {fileID: 2100000, guid: 3b216dda2df1d9244986d7c75fd3c431, type: 2}
+  - name: Farmland
+    matches:
+    - key: landuse
+      values:
+      - farmland
+      - paddy
+    category: 4
+    yOffset: 0.025
+    treeSpacing: 0
+    material: {fileID: 2100000, guid: 3028f0cb5220be943aab142236322994, type: 2}
+  - name: Wood
+    matches:
+    - key: natural
+      values:
+      - wood
+      - scrub
+    - key: landuse
+      values:
+      - forest
+    category: 3
+    yOffset: 0.025
+    treeSpacing: 4
+    material: {fileID: 2100000, guid: 38a5eb12c27eb0c4babde2ebfd4b1f3a, type: 2}
+  - name: Grass
+    matches:
+    - key: landuse
+      values:
+      - grass
+      - village_green
+      - meadow
+      - recreation_ground
+    - key: leisure
+      values:
+      - park
+      - garden
+    - key: natural
+      values:
+      - grassland
+    category: 2
+    yOffset: 0.025
+    treeSpacing: 12
+    material: {fileID: 2100000, guid: 38a5eb12c27eb0c4babde2ebfd4b1f3a, type: 2}
+  - name: Hardground
+    matches:
+    - key: landuse
+      values:
+      - commercial
+      - retail
+      - industrial
+      - construction
+      - brownfield
+    category: 1
+    yOffset: 0.02
+    treeSpacing: 0
+    material: {fileID: 2100000, guid: 13ddac0f253328c4fa4e5ee0d4ce97b3, type: 2}
+  - name: Campus
+    matches:
+    - key: amenity
+      values:
+      - university
+    category: 0
+    yOffset: 0.015
+    treeSpacing: 20
+    material: {fileID: 2100000, guid: 598c8eded3edc074f89490bff52146a0, type: 2}
+  - name: Paving
+    matches: []
+    category: 8
+    yOffset: 0.035
+    treeSpacing: 0
+    material: {fileID: 2100000, guid: 3633c4ed338a32e488c0b1ee5884d262, type: 2}
+  waterMaterial: {fileID: 2100000, guid: 4af0f13c574181a418b82b9874cc0853, type: 2}
+  waterAreaY: 0.045
+  waterLineY: 0.05
+  waterwayWidths:
+  - waterway: river
+    width: 8
+  - waterway: canal
+    width: 4
+  - waterway: stream
+    width: 3
+  - waterway: drain
+    width: 1.5
+  - waterway: ditch
+    width: 1.5
+  groundMaterial: {fileID: 2100000, guid: 3296dc2a12d5866438190c5bd4378ea3, type: 2}
+  treePrefabs:
+  - {fileID: 1867751799982455186, guid: 3eb3914093e860e4d854d507f996a992, type: 3}
+  - {fileID: 6381172837136153941, guid: 51e9680ad56581447bd04b3d184b980a, type: 3}
+  lampPrefab: {fileID: 120540994895067018, guid: a0c2c5272cd3e67469c63d70414ec1f4, type: 3}
+  maxTrees: 4000
+  lampMinSpacing: 8
+  lampOffset: 0.6
+  keyBuildings:
+  - osmId: 1257717375
+    label: Telkom University Landmark Tower (TULT)
+    prefab: {fileID: 0}
+    overrideLevels: 0
+    overrideRoof: 0
+  - osmId: 197341486
+    label: Gedung Bangkit (Rektorat)
+    prefab: {fileID: 0}
+    overrideLevels: 0
+    overrideRoof: 0
+  - osmId: 1293369802
+    label: Gedung Tokong Nanas
+    prefab: {fileID: 0}
+    overrideLevels: 0
+    overrideRoof: 0
+  - osmId: 1293369773
+    label: Asrama Putra Gedung 1
+    prefab: {fileID: 0}
+    overrideLevels: 0
+    overrideRoof: 0
+  - osmId: 1293369796
+    label: Asrama Putri Gedung A
+    prefab: {fileID: 0}
+    overrideLevels: 0
+    overrideRoof: 0
+  fallbackMaterial: {fileID: 2100000, guid: 7c518c6c82585a548843533153e55392, type: 2}
