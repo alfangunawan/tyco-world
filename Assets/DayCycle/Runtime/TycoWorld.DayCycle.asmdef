@@ -1,0 +1,20 @@
+{
+    "name": "TycoWorld.DayCycle",
+    "rootNamespace": "TycoWorld.DayCycle",
+    "references": [
+        "TycoWorld.WorldGen",
+        "TycoWorld.Player",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
