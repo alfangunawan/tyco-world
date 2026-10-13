@@ -4196,7 +4196,7 @@ namespace TycoWorld.DayCycle.Tests
                 .Append(" speed=x").Append(d.Clock.SpeedMultiplier.ToString("0", inv))
                 .Append(" phase=").Append(d.Phase).Append(" horror=").Append(d.IsHorror)
                 .Append(" started=").Append(started).Append(" ended=").Append(ended)
-                .Append(" event='").Append(lastEvent).Append(''')
+                .Append(" event='").Append(lastEvent).Append('\'')
                 .Append(" sunElev=").Append(s.SunElevation.ToString("F1", inv))
                 .Append(" sun=").Append(d.Sun != null && d.Sun.enabled)
                 .Append(" moon=").Append(d.Moon != null && d.Moon.enabled)
