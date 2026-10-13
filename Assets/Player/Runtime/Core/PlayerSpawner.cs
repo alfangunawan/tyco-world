@@ -17,7 +17,9 @@ namespace TycoWorld.Player
         [SerializeField] PlayerSpawnPoint spawnPoint;
 
         public Func<bool> WorldReady;
+        public Func<bool> WorldLoadFailed;
         public SpawnState State { get; private set; } = SpawnState.WaitingForWorld;
+        WorldSceneLoader loader;
         public float WaitedSeconds { get; private set; }
         public PlayerSpawnPoint SpawnPoint => spawnPoint;
 
@@ -45,6 +47,7 @@ namespace TycoWorld.Player
         public void Begin()
         {
             if (player == null) player = GetComponent<FirstPersonPlayer>();
+            loader = UnityEngine.Object.FindAnyObjectByType<WorldSceneLoader>();
             player.Initialize();
             player.Locks.Acquire(this, PlayerAbility.All);
             player.Hud.CrosshairVisible = false;
@@ -58,6 +61,12 @@ namespace TycoWorld.Player
         {
             if (State != SpawnState.WaitingForWorld) return;
             WaitedSeconds += dt;
+            if (HasWorldLoadFailed())
+            {
+                // The loader already logged the cause; only tell the player.
+                Fail(WorldMissingMessage, false);
+                return;
+            }
             if (IsWorldReady() && TrySpawnNow()) return;
             if (State == SpawnState.WaitingForWorld && WaitedSeconds >= player.Tuning.worldWaitSeconds) Fail(WorldMissingMessage);
         }
@@ -118,13 +127,15 @@ namespace TycoWorld.Player
             return feature != null && feature.Kind == FeatureKind.Building;
         }
 
+        bool HasWorldLoadFailed() => WorldLoadFailed != null ? WorldLoadFailed() : loader != null && loader.LoadFailed;
+
         bool IsWorldReady() => WorldReady != null ? WorldReady() : UnityEngine.Object.FindAnyObjectByType<GeneratedRoot>() != null;
 
-        void Fail(string message)
+        void Fail(string message, bool logError = true)
         {
             State = SpawnState.WorldMissing;
             player.Hud.ShowMessage(message, 3600f);
-            Debug.LogError("[Player] " + message);
+            if (logError) Debug.LogError("[Player] " + message);
         }
 
         /// <summary>No safe spot near the spawn point: keep the player frozen and say why, instead of placing it inside geometry.</summary>

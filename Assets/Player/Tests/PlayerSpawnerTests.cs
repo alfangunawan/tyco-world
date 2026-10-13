@@ -80,6 +80,18 @@ namespace TycoWorld.Player.Tests
         }
 
         [Test]
+        public void WorldLoadFailed_ShowsMessageAtOnce_WithoutSecondError()
+        {
+            var (rig, spawner, _) = Setup(false);
+            spawner.WorldLoadFailed = () => true;
+            spawner.Tick(0.016f);
+            Assert.AreEqual(PlayerSpawner.SpawnState.WorldMissing, spawner.State);
+            StringAssert.Contains("belum di-generate", rig.Player.Hud.Message);
+            Assert.IsFalse(rig.Player.Locks.Allows(PlayerAbility.Move));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
         public void Nudges_OutOfBlocker()
         {
             var (rig, spawner, _) = Setup(true);
