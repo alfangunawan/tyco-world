@@ -491,8 +491,9 @@ Isi awal:
 | 1293369802 | Gedung Tokong Nanas |
 | 1293369773 | Asrama Putra Gedung 1 |
 | 1293369796 | Asrama Putri Gedung A |
+| 409467778 | Kos Raflesia 3 (kos pemain, spec #2 §3) |
 
-Kos di Sukabirus ditambahkan pengguna belakangan lewat Settings.
+Kos Raflesia 3 (kos pemain) ditambahkan di sub-proyek #2.
 
 ## 11. Output
 
@@ -625,8 +626,10 @@ Semua nilai default di tabel ini sama dengan yang tertulis di spec ini, dan diis
 2. Generate → Console tanpa error, bangunan yang dilewati < 2%, waktu generate < 60 detik.
 3. Generate kedua kalinya → hash semua chunk identik dan tidak ada asset yatim.
 4. Raycast di edit mode:
-   - ke bawah di 20 titik acak → semuanya mengenai ground di y = 0;
-   - horizontal ke 5 gedung kunci → semuanya mengenai MeshCollider.
+   - ke bawah di 20 titik acak → semuanya mengenai ground (y = 0) atau permukaan jalan/area/air (y ≤ 0,1);
+   - horizontal ke 6 gedung kunci → semuanya mengenai MeshCollider.
+8. Sub-proyek #2: raycast ke bawah di Jl. Sukabirus mengenai collider jalan dengan GroundSurface Asphalt; 4 dinding
+   WorldEdge ada; tidak ada warning PhysX segitiga > 500 m (sisi segitiga permukaan pijak ≤ 100 m).
 5. Screenshot tampak atas seluruh area: tata letaknya cocok dengan openstreetmap.org.
 6. Screenshot dari `PreviewCam` di Jl. Sukabirus: tekstur terlihat, lampu menyala, grain/fog aktif.
 7. Play mode di `PreviewCam`: frame time dan jumlah batches dicatat sebagai baseline (bukan syarat lulus).

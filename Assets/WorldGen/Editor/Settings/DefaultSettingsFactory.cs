@@ -126,7 +126,8 @@ namespace TycoWorld.WorldGen.Authoring
                 new KeyBuilding(197341486, "Gedung Bangkit (Rektorat)"),
                 new KeyBuilding(1293369802, "Gedung Tokong Nanas"),
                 new KeyBuilding(1293369773, "Asrama Putra Gedung 1"),
-                new KeyBuilding(1293369796, "Asrama Putri Gedung A")
+                new KeyBuilding(1293369796, "Asrama Putri Gedung A"),
+                new KeyBuilding(409467778, "Kos Raflesia 3")
             };
         }
 

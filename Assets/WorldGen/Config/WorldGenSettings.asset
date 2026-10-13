@@ -388,4 +388,9 @@ MonoBehaviour:
     prefab: {fileID: 0}
     overrideLevels: 0
     overrideRoof: 0
+  - osmId: 409467778
+    label: Kos Raflesia 3
+    prefab: {fileID: 0}
+    overrideLevels: 0
+    overrideRoof: 0
   fallbackMaterial: {fileID: 2100000, guid: 7c518c6c82585a548843533153e55392, type: 2}
