@@ -139,6 +139,41 @@ namespace TycoWorld.Player.Tests
             Assert.AreSame(latch, sound.Calls[sound.Calls.Count - 1].Clip);
         }
 
+        GateInteractable OpenGate(out Transform root)
+        {
+            var go = fx.Track(new GameObject("Gate"));
+            go.transform.position = PhysicsFixture.Origin + new Vector3(0f, 0f, 2f);
+            var leaf = new GameObject("Leaf").transform;
+            leaf.SetParent(go.transform, false);
+            var gate = go.AddComponent<GateInteractable>();
+            gate.Configure(leaf, null, null, null);
+            gate.Interact(Context(null));
+            gate.Tick(1f);
+            root = go.transform;
+            return gate;
+        }
+
+        [Test]
+        public void Gate_RefusesToCloseWhilePlayerStandsInItsArc()
+        {
+            var gate = OpenGate(out var root);
+            Assert.AreEqual(GateSwing.State.Open, gate.State);
+            var inArc = new InteractionContext(null, null, root.TransformPoint(new Vector3(0.8f, 1.6f, 0.8f)));
+            Assert.IsFalse(gate.CanInteract(inArc));
+            Assert.IsFalse(gate.Interact(inArc));
+            Assert.AreEqual(GateSwing.State.Open, gate.State);
+            var clear = new InteractionContext(null, null, root.TransformPoint(new Vector3(0.8f, 1.6f, -1.5f)));
+            Assert.IsTrue(gate.Interact(clear));
+            Assert.AreEqual(GateSwing.State.Closing, gate.State);
+        }
+
+        [TestCase(0.5f, 0.6f, true)]
+        [TestCase(1.9f, 0.2f, true)]
+        [TestCase(1.0f, -0.6f, false)]
+        [TestCase(3.0f, 3.0f, false)]
+        public void Gate_IsInSweep(float x, float z, bool expected) =>
+            Assert.AreEqual(expected, GateInteractable.IsInSweep(new Vector2(x, z), -100f, 0f, 2f, GateInteractable.SweepClearance));
+
         [Test]
         public void Interacted_EventCarriesId_AndResetClearsSubscribers()
         {
