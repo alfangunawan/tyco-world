@@ -12,6 +12,7 @@ namespace TycoWorld.DayCycle.Authoring
         public const string AudioFolder = Root + "/Audio";
         public const string DayAmbienceClip = AudioFolder + "/ambience_day.wav";
         public const string NightAmbienceClip = AudioFolder + "/ambience_night_crickets.mp3";
+        public const string NightAmbienceSynthClip = AudioFolder + "/ambience_night.wav";
         public const string HorrorDroneClip = AudioFolder + "/ambience_horror_drone.wav";
         public const string AudioSourcesFile = AudioFolder + "/SOURCES.md";
     }
