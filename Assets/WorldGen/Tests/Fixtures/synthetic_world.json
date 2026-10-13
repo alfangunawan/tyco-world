@@ -1,0 +1,41 @@
+{
+  "version": 0.6,
+  "elements": [
+    {"type": "node", "id": 1, "lat": -6.97265, "lon": 107.63400},
+    {"type": "node", "id": 2, "lat": -6.97265, "lon": 107.63420},
+    {"type": "node", "id": 3, "lat": -6.97245, "lon": 107.63420},
+    {"type": "node", "id": 4, "lat": -6.97245, "lon": 107.63400},
+    {"type": "node", "id": 5, "lat": -6.97260, "lon": 107.63405},
+    {"type": "node", "id": 6, "lat": -6.97260, "lon": 107.63415},
+    {"type": "node", "id": 7, "lat": -6.97250, "lon": 107.63415},
+    {"type": "node", "id": 8, "lat": -6.97250, "lon": 107.63405},
+    {"type": "node", "id": 11, "lat": -6.97300, "lon": 107.634000},
+    {"type": "node", "id": 12, "lat": -6.97300, "lon": 107.634108},
+    {"type": "node", "id": 13, "lat": -6.972928, "lon": 107.634108},
+    {"type": "node", "id": 14, "lat": -6.972928, "lon": 107.634000},
+    {"type": "node", "id": 21, "lat": -6.97280, "lon": 107.63390},
+    {"type": "node", "id": 22, "lat": -6.97280, "lon": 107.63430},
+    {"type": "node", "id": 31, "lat": -6.97320, "lon": 107.63380},
+    {"type": "node", "id": 32, "lat": -6.97320, "lon": 107.63395},
+    {"type": "node", "id": 33, "lat": -6.97305, "lon": 107.63395},
+    {"type": "node", "id": 34, "lat": -6.97305, "lon": 107.63380},
+    {"type": "node", "id": 41, "lat": -6.97270, "lon": 107.63395},
+    {"type": "node", "id": 42, "lat": -6.97270, "lon": 107.63425},
+    {"type": "node", "id": 43, "lat": -6.97240, "lon": 107.63425},
+    {"type": "node", "id": 44, "lat": -6.97240, "lon": 107.63395},
+    {"type": "node", "id": 301, "lat": -6.97290, "lon": 107.63380, "tags": {"natural": "tree"}},
+    {"type": "way", "id": 101, "nodes": [1, 2, 3]},
+    {"type": "way", "id": 102, "nodes": [1, 4, 3]},
+    {"type": "way", "id": 103, "nodes": [5, 6, 7, 8, 5]},
+    {"type": "way", "id": 401, "nodes": [11, 12, 13, 14, 11], "tags": {"building": "house", "height": "10;12", "building:levels": "abc", "check_date": "2023-05-01", "name": "Rumah Sintetis"}},
+    {"type": "way", "id": 402, "nodes": [21, 22], "tags": {"highway": "residential", "width": "6,5", "name": "Gang Sintetis"}},
+    {"type": "way", "id": 403, "nodes": [21, 999], "tags": {"highway": "footway"}},
+    {"type": "way", "id": 404, "nodes": [31, 32, 33, 34, 31], "tags": {"landuse": "grass"}},
+    {"type": "way", "id": 405, "nodes": [41, 42, 43, 44, 41], "tags": {"amenity": "university", "name": "Kampus Sintetis"}},
+    {"type": "relation", "id": 201, "members": [
+      {"type": "way", "ref": 101, "role": "outer"},
+      {"type": "way", "ref": 102, "role": "outer"},
+      {"type": "way", "ref": 103, "role": "inner"}
+    ], "tags": {"type": "multipolygon", "building": "university", "name": "Gedung Sintetis"}}
+  ]
+}
