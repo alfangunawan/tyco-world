@@ -252,8 +252,9 @@ Aturan tambahan:
 | Air (garis) | 0.050 |
 | Jalan | 0.060 + rank × 0.005 (rank di §7.1) |
 
-Satu-satunya permukaan yang bisa dipijak adalah collider ground. Selisih maksimal 0.1 m antara collider
-dan permukaan visual tidak terlihat dari kamera orang pertama.
+Ground, jalan, area, dan air punya collider (lihat spec `2026-10-13-fps-player-design.md` §5). Permukaan yang
+lebih tinggi digambar di atas dan juga dipijak lebih dulu, jadi raycast ke bawah selalu mengenai permukaan yang
+terlihat. Setiap collider permukaan membawa `GroundSurface` (jenis permukaan dari material).
 
 ### 7.1 Jalan
 
@@ -286,7 +287,7 @@ Jarak lampu 0 berarti tidak dipasang lampu.
   tekstur diatur di material.
 - Pita dipotong tepat di batas area (Liang–Barsky).
 - Jembatan (`bridge=yes`) diperlakukan sama seperti jalan biasa (datar).
-- Jalan tidak punya collider.
+- Jalan punya MeshCollider (non-convex, static) dan GroundSurface (Asphalt/Paving/Dirt).
 
 ### 7.2 Bangunan
 
@@ -392,15 +393,16 @@ Geometrinya:
 `landuse=residential` tidak digambar (cukup ground).
 
 - Poligon area dipotong di batas area (Sutherland–Hodgman), lalu ditriangulasi.
-- UV dalam meter (proyeksi XZ). Area tidak punya collider.
+- UV dalam meter (proyeksi XZ). Area punya MeshCollider dan GroundSurface.
 - **Air (area)**: poligon datar dengan material `Water`.
 - **Air (garis)**: pita dengan lebar dari tag `width`, atau default river 8, canal 4, stream 3, drain/ditch 1.5 m.
-- Air hanya visual, tanpa collider maupun kedalaman.
+- Air punya MeshCollider datar dan GroundSurface Water, tanpa kedalaman.
 
 ### 7.4 Ground
 
 - Satu bidang seukuran batas area di y = 0, dengan material `Ground_Dirt` dan UV dalam meter.
 - BoxCollider setebal 1 m dengan permukaan atas di y = 0.
+- GroundSurface Dirt. Empat BoxCollider tak terlihat (WorldEdge, setinggi 30 m, tebal 2 m) memagari batas area.
 
 ## 8. Props
 
@@ -489,8 +491,9 @@ Isi awal:
 | 1293369802 | Gedung Tokong Nanas |
 | 1293369773 | Asrama Putra Gedung 1 |
 | 1293369796 | Asrama Putri Gedung A |
+| 409467778 | Kos Raflesia 3 (kos pemain, spec #2 §3) |
 
-Kos di Sukabirus ditambahkan pengguna belakangan lewat Settings.
+Kos Raflesia 3 (kos pemain) ditambahkan di sub-proyek #2.
 
 ## 11. Output
 
@@ -498,11 +501,12 @@ Kos di Sukabirus ditambahkan pengguna belakangan lewat Settings.
 
 ```
 World_Generated            [GeneratedRoot]
-  Ground
-  Roads/Chunk_ix_iz/<nama jalan atau Road_<id>>                [OsmFeature]
+  Ground                                                       [GroundSurface, BoxCollider]
+  WorldEdge/Edge_West|East|South|North                         [BoxCollider]
+  Roads/Chunk_ix_iz/<nama jalan atau Road_<id>>                [OsmFeature, GroundSurface, MeshCollider]
   Buildings/Chunk_ix_iz/<nama gedung atau Building_<id>>       [OsmFeature, MeshCollider]
-  Areas/Chunk_ix_iz/<Area_<kategori>_<id>>                     [OsmFeature]
-  Water/Chunk_ix_iz/<Water_<id>>                               [OsmFeature]
+  Areas/Chunk_ix_iz/<Area_<kategori>_<id>>                     [OsmFeature, GroundSurface, MeshCollider]
+  Water/Chunk_ix_iz/<Water_<id>>                               [OsmFeature, GroundSurface, MeshCollider]
   Props/Trees/Chunk_ix_iz/...   Props/Lamps/Chunk_ix_iz/...
   KeyBuildings/<label>         [OsmFeature, KeyBuildingMarker]
 ```
@@ -622,8 +626,10 @@ Semua nilai default di tabel ini sama dengan yang tertulis di spec ini, dan diis
 2. Generate → Console tanpa error, bangunan yang dilewati < 2%, waktu generate < 60 detik.
 3. Generate kedua kalinya → hash semua chunk identik dan tidak ada asset yatim.
 4. Raycast di edit mode:
-   - ke bawah di 20 titik acak → semuanya mengenai ground di y = 0;
-   - horizontal ke 5 gedung kunci → semuanya mengenai MeshCollider.
+   - ke bawah di 20 titik acak → semuanya mengenai ground (y = 0) atau permukaan jalan/area/air (y ≤ 0,1);
+   - horizontal ke 6 gedung kunci → semuanya mengenai MeshCollider.
+8. Sub-proyek #2: raycast ke bawah di Jl. Sukabirus mengenai collider jalan dengan GroundSurface Asphalt; 4 dinding
+   WorldEdge ada; tidak ada warning PhysX segitiga > 500 m (sisi segitiga permukaan pijak ≤ 100 m).
 5. Screenshot tampak atas seluruh area: tata letaknya cocok dengan openstreetmap.org.
 6. Screenshot dari `PreviewCam` di Jl. Sukabirus: tekstur terlihat, lampu menyala, grain/fog aktif.
 7. Play mode di `PreviewCam`: frame time dan jumlah batches dicatat sebagai baseline (bukan syarat lulus).

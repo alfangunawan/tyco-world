@@ -27,6 +27,7 @@ namespace TycoWorld.WorldGen.Authoring
         public MeshData Mesh;
         public Material[] Materials = new Material[0];
         public bool AddCollider;
+        public SurfaceType Surface;
         public KeyBuilding Key;
         public Obb Obb;
         public string Category = "";
@@ -46,6 +47,9 @@ namespace TycoWorld.WorldGen.Authoring
     /// <summary>Pure pipeline: classified features → meshes, materials, props, chunk hashes. Touches no scene or asset.</summary>
     public static class WorldMeshPipeline
     {
+        /// <summary>Longest triangle edge allowed in walkable (collider) meshes; PhysX warns above 500 m.</summary>
+        public const float MaxColliderEdge = 100f;
+
         public static Vector2Int ChunkOf(Vector2 p, float chunkSize) =>
             new Vector2Int(Mathf.FloorToInt(p.x / chunkSize), Mathf.FloorToInt(p.y / chunkSize));
 
@@ -67,6 +71,7 @@ namespace TycoWorld.WorldGen.Authoring
             AddBuildings(world, settings, built, report);
             AddAreas(world, built, report);
             AddWater(world, settings, built, report);
+            foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
             var placer = new PropPlacer(world.Buildings, world.Roads);
             int treeVariants = settings.treePrefabs != null ? settings.treePrefabs.Length : 0;
@@ -85,12 +90,14 @@ namespace TycoWorld.WorldGen.Authoring
                 foreach (var piece in road.Pieces)
                     RoadMeshBuilder.AddRibbon(mesh, 0, piece.Points, road.Width, road.Y, piece.ExtendStart, piece.ExtendEnd);
                 if (mesh.IsEmpty) { report.Skip(SkipReasons.RoadEmptyMesh, road.Id); continue; }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = MidPoint(road.Pieces);
                 built.Features.Add(new BuiltFeature
                 {
                     Kind = FeatureKind.Road, OsmId = road.Id, ElementType = OsmElementType.Way, Name = road.Name,
                     Group = FeatureGroups.Roads, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { road.Rule.material }, Category = road.Highway, Tags = road.Tags
+                    Mesh = mesh, Materials = new[] { road.Rule.material }, Category = road.Highway, Tags = road.Tags,
+                    AddCollider = true
                 });
                 report.Count("Road");
             }
@@ -144,12 +151,14 @@ namespace TycoWorld.WorldGen.Authoring
                     report.Skip(SkipReasons.AreaTriangulationFailed, area.Id);
                     continue;
                 }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = Polygon2D.Centroid(area.Shape.Outer);
                 built.Features.Add(new BuiltFeature
                 {
                     Kind = FeatureKind.Area, OsmId = area.Id, ElementType = area.ElementType, Name = area.Name,
                     Group = FeatureGroups.Areas, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { area.Rule.material }, Category = area.Rule.category.ToString(), Tags = area.Tags
+                    Mesh = mesh, Materials = new[] { area.Rule.material }, Category = area.Rule.category.ToString(), Tags = area.Tags,
+                    AddCollider = true
                 });
                 report.Count("Area");
             }
@@ -165,12 +174,14 @@ namespace TycoWorld.WorldGen.Authoring
                     report.Skip(SkipReasons.AreaTriangulationFailed, water.Id);
                     continue;
                 }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = Polygon2D.Centroid(water.Shape.Outer);
                 built.Features.Add(new BuiltFeature
                 {
                     Kind = FeatureKind.WaterArea, OsmId = water.Id, ElementType = water.ElementType, Name = water.Name,
                     Group = FeatureGroups.Water, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = water.Tags
+                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = water.Tags,
+                    AddCollider = true
                 });
                 report.Count("WaterArea");
             }
@@ -179,12 +190,14 @@ namespace TycoWorld.WorldGen.Authoring
                 var mesh = new MeshData(1);
                 foreach (var piece in line.Pieces) RoadMeshBuilder.AddRibbon(mesh, 0, piece.Points, line.Width, line.Y, false, false);
                 if (mesh.IsEmpty) { report.Skip(SkipReasons.WaterEmptyMesh, line.Id); continue; }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = MidPoint(line.Pieces);
                 built.Features.Add(new BuiltFeature
                 {
                     Kind = FeatureKind.WaterLine, OsmId = line.Id, ElementType = OsmElementType.Way, Name = line.Name,
                     Group = FeatureGroups.Water, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = line.Tags
+                    Mesh = mesh, Materials = new[] { settings.waterMaterial }, Category = "Water", Tags = line.Tags,
+                    AddCollider = true
                 });
                 report.Count("WaterLine");
             }

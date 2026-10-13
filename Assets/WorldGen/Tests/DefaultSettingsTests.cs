@@ -119,9 +119,22 @@ namespace TycoWorld.WorldGen.Tests
         [Test]
         public void KeyBuildings_MatchSpec()
         {
-            CollectionAssert.AreEqual(new long[] { 1257717375, 197341486, 1293369802, 1293369773, 1293369796 },
+            CollectionAssert.AreEqual(new long[] { 1257717375, 197341486, 1293369802, 1293369773, 1293369796, 409467778 },
                 s.keyBuildings.Select(k => k.osmId).ToArray());
             Assert.AreEqual("Telkom University Landmark Tower (TULT)", s.keyBuildings[0].label);
+            Assert.AreEqual("Kos Raflesia 3", s.keyBuildings[5].label);
+            Assert.AreEqual(0, s.keyBuildings[5].overrideLevels);
+            Assert.AreEqual(RoofOverride.Auto, s.keyBuildings[5].overrideRoof);
+        }
+
+        [Test]
+        public void SavedAsset_HasKosRaflesia3()
+        {
+            var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset);
+            Assert.IsNotNull(asset);
+            var kos = asset.keyBuildings.SingleOrDefault(k => k.osmId == 409467778);
+            Assert.IsNotNull(kos);
+            Assert.AreEqual("Kos Raflesia 3", kos.label);
         }
 
         [Test]

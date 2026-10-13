@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d664f539d953c634a96f39668e3e131d, type: 3}
+  m_Name: PlayerTuning
+  m_EditorClassIdentifier: TycoWorld.Player::TycoWorld.Player.PlayerTuning
+  body:
+    height: 1.8
+    radius: 0.35
+    stepOffset: 0.3
+    skinWidth: 0.05
+    slopeLimit: 50
+  movement:
+    walkSpeed: 3
+    sprintSpeed: 5.5
+    crouchSpeed: 1.5
+    acceleration: 12
+    deceleration: 16
+    airControl: 0.3
+    jumpHeight: 0.8
+    gravity: 9.81
+    groundStick: 2
+    coyoteTime: 0.1
+  stamina:
+    max: 100
+    sprintDrainPerSecond: 18
+    regenPerSecond: 14
+    regenDelay: 1
+    recoverThreshold: 0.3
+    jumpCost: 8
+  look:
+    degreesPerPixel: 0.1
+    pitchLimit: 85
+    fieldOfView: 70
+  crouch:
+    crouchHeight: 1
+    standingEyeHeight: 1.6
+    crouchEyeHeight: 0.85
+    transitionSpeed: 4
+  bob:
+    walkStride: 0.75
+    sprintStride: 1
+    crouchStride: 0.55
+    walkAmplitude: 0.045
+    sprintAmplitude: 0.07
+    crouchAmplitude: 0.025
+    lateralRatio: 0.5
+    fadeSpeed: 4
+    landingMinSpeed: 3
+  interaction:
+    range: 2.2
+    sphereRadius: 0.12
+  flashlight:
+    outerAngle: 55
+    innerAngle: 30
+    range: 22
+    intensity: 3
+    color: {r: 1, g: 0.95, b: 0.85, a: 1}
+    lagSpeed: 14
+    startOn: 0
+  hud:
+    messageSeconds: 2.5
+    staminaHideDelay: 0.8
+  respawnBelowY: -20
+  worldWaitSeconds: 15

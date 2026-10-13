@@ -10,16 +10,30 @@ namespace TycoWorld.WorldGen
 
         [SerializeField] string generatedScenePath = DefaultScenePath;
 
-        void Awake()
+        /// <summary>True when the generated scene cannot be loaded (never generated, or missing from Build Settings).</summary>
+        public bool LoadFailed { get; private set; }
+
+        public void Configure(string scenePath) => generatedScenePath = scenePath;
+
+        void Awake() => TryLoad();
+
+        public bool TryLoad()
         {
-            if (SceneManager.GetSceneByPath(generatedScenePath).isLoaded) return;
+            if (SceneManager.GetSceneByPath(generatedScenePath).isLoaded) return true;
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(generatedScenePath);
-            if (buildIndex < 0)
+            bool missing = buildIndex < 0;
+#if UNITY_EDITOR
+            // The generated folder is git-ignored: on a fresh clone Build Settings still list the scene but the file does not exist.
+            missing |= !System.IO.File.Exists(System.IO.Path.Combine(System.IO.Directory.GetParent(Application.dataPath).FullName, generatedScenePath));
+#endif
+            if (missing)
             {
-                Debug.LogError($"[WorldGen] '{generatedScenePath}' tidak ada di Build Settings. Jalankan Generate dulu.");
-                return;
+                LoadFailed = true;
+                Debug.LogError($"[WorldGen] '{generatedScenePath}' belum di-generate atau tidak ada di Build Settings. Jalankan Tyco World > World Generator > Generate.");
+                return false;
             }
             SceneManager.LoadScene(buildIndex, LoadSceneMode.Additive);
+            return true;
         }
     }
 }

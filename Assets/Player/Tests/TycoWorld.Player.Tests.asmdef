@@ -1,0 +1,25 @@
+{
+    "name": "TycoWorld.Player.Tests",
+    "rootNamespace": "TycoWorld.Player.Tests",
+    "references": [
+        "TycoWorld.Player",
+        "TycoWorld.Player.Editor",
+        "TycoWorld.WorldGen",
+        "TycoWorld.WorldGen.Editor",
+        "Unity.InputSystem",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.GPUDriven.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
