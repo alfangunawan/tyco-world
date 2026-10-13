@@ -207,7 +207,7 @@ Proyeksi equirectangular lokal di sekitar titik nol (φ₀ = -6.97265°, λ₀ =
 
 ```
 mPerDegLat = 111132.92 − 559.82·cos(2φ₀) + 1.175·cos(4φ₀)            ≈ 110590.64
-mPerDegLon = 111412.84·cos(φ₀) − 93.5·cos(3φ₀) + 0.118·cos(5φ₀)     ≈ 110501.59
+mPerDegLon = 111412.84·cos(φ₀) − 93.5·cos(3φ₀) + 0.118·cos(5φ₀)     ≈ 110501.61
 x (timur) = (λ − λ₀) · mPerDegLon
 z (utara) = (φ − φ₀) · mPerDegLat
 ```
