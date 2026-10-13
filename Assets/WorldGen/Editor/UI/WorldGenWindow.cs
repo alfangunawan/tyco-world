@@ -55,6 +55,8 @@ namespace TycoWorld.WorldGen.Authoring
                 if (GUILayout.Button("Generate") && !WorldGenerationRunner.Generate(settings, true, out string error))
                     EditorUtility.DisplayDialog("Generate gagal", error, "OK");
                 if (GUILayout.Button("Clear")) WorldGenerationRunner.Clear(true, out _);
+                if (GUILayout.Button("Setup Preview Scene") && !PreviewSceneSetup.Run(settings, true, out string previewError))
+                    EditorUtility.DisplayDialog("Setup Preview gagal", previewError, "OK");
             }
 
             var report = WorldGenerationRunner.LastReport;
