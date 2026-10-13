@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c0ec98c98da3b42bc56c9cdd600464, type: 3}
+  m_Name: DayCycleProfile
+  m_EditorClassIdentifier: TycoWorld.DayCycle::TycoWorld.DayCycle.DayCycleProfile
+  sunrise: 5.75
+  sunset: 17.75
+  sunMaxElevation: 75
+  sunIntensity: 1.3
+  sunHorizonColor: {r: 1, g: 0.69, b: 0.44, a: 1}
+  sunNoonColor: {r: 1, g: 0.957, b: 0.878, a: 1}
+  moonIntensity: 0.15
+  moonColor: {r: 0.616, g: 0.706, b: 1, a: 1}
+  skyExposureDay: 1.3
+  skyExposureDusk: 0.8
+  skyExposureNight: 0.08
+  skyTintDay: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  skyTintNight: {r: 0.2, g: 0.25, b: 0.4, a: 1}
+  ambientSkyDay: {r: 0.624, g: 0.722, b: 0.847, a: 1}
+  ambientEquatorDay: {r: 0.541, g: 0.604, b: 0.659, a: 1}
+  ambientGroundDay: {r: 0.353, g: 0.314, b: 0.251, a: 1}
+  ambientSkyDusk: {r: 0.69, g: 0.478, b: 0.549, a: 1}
+  ambientEquatorDusk: {r: 0.753, g: 0.541, b: 0.416, a: 1}
+  ambientGroundDusk: {r: 0.227, g: 0.188, b: 0.188, a: 1}
+  ambientSkyNight: {r: 0.071, g: 0.094, b: 0.149, a: 1}
+  ambientEquatorNight: {r: 0.055, g: 0.071, b: 0.094, a: 1}
+  ambientGroundNight: {r: 0.02, g: 0.024, b: 0.031, a: 1}
+  fogDensityDay: 0.004
+  fogDensityDusk: 0.008
+  fogDensityNight: 0.02
+  fogColorDay: {r: 0.722, g: 0.769, b: 0.8, a: 1}
+  fogColorDusk: {r: 0.753, g: 0.541, b: 0.416, a: 1}
+  fogColorNight: {r: 0.055, g: 0.071, b: 0.094, a: 1}
+  horrorFadeHours: 0.5
+  horrorFogMultiplier: 1.6
+  horrorFogColor: {r: 0.027, g: 0.035, b: 0.047, a: 1}
+  flickerFraction: 0.08
+  deadFraction: 0.03
+  lampOnBelowElevation: 5
+  lampFadeDegrees: 6
+  lampIntensity: 3
+  dayClip: {fileID: 8300000, guid: d2a2b24540df1ef48a82d9178d77a337, type: 3}
+  nightClip: {fileID: 8300000, guid: 0738919f9b961394fadb940d6ad3a854, type: 3}
+  horrorDroneClip: {fileID: 8300000, guid: d1f677c3d02604045bccee4097ff2cf9, type: 3}
+  dayVolume: 0.35
+  nightVolume: 0.4
+  droneVolume: 0.3

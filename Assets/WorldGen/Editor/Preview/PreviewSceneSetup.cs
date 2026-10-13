@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 
 namespace TycoWorld.WorldGen.Authoring
 {
-    /// <summary>Fills World.unity with night lighting, fog, a VHS volume and a street-level preview camera (spec section 13).</summary>
+    /// <summary>Fills World.unity with night lighting (unless a runtime lighting owner exists), fog, a VHS volume and a street-level preview camera (spec section 13).</summary>
     public static class PreviewSceneSetup
     {
         public const float EyeHeight = 1.6f;
@@ -60,22 +60,10 @@ namespace TycoWorld.WorldGen.Authoring
             if (!WorldScenes.CheckSaved(interactive, out error)) return false;
             var world = WorldScenes.EnsureWorldSceneOpen();
 
-            var moonGo = FindOrCreate(world, "Moon");
-            moonGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            var moon = GetOrAdd<Light>(moonGo);
-            moon.type = LightType.Directional;
-            moon.intensity = 0.15f;
-            moon.color = Hex("9DB4FF");
-            moon.shadows = LightShadows.Soft;
-
-            RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = Hex("121826");
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Exponential;
-            RenderSettings.fogDensity = 0.02f;
-            RenderSettings.fogColor = Hex("0E1218");
-            RenderSettings.skybox = null;
-            RenderSettings.sun = moon;
+            if (HasLightingOwner(world.GetRootGameObjects()))
+                Debug.Log("[WorldGen] Pencahayaan dikelola siklus pagi/malam; Moon dan RenderSettings tidak diubah.");
+            else
+                ApplyNightLighting(world);
 
             var camGo = FindOrCreate(world, "PreviewCam");
             camGo.tag = "MainCamera";
@@ -107,6 +95,34 @@ namespace TycoWorld.WorldGen.Authoring
             WorldScenes.OpenGeneratedSceneAdditive();
             SceneManager.SetActiveScene(world);
             return true;
+        }
+
+        /// <summary>True when a root object (or a child) drives scene lighting at runtime, e.g. the day cycle director.</summary>
+        public static bool HasLightingOwner(IEnumerable<GameObject> roots)
+        {
+            foreach (var go in roots)
+                if (go != null && go.GetComponentInChildren<ISceneLightingOwner>(true) != null) return true;
+            return false;
+        }
+
+        static void ApplyNightLighting(Scene world)
+        {
+            var moonGo = FindOrCreate(world, "Moon");
+            moonGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            var moon = GetOrAdd<Light>(moonGo);
+            moon.type = LightType.Directional;
+            moon.intensity = 0.15f;
+            moon.color = Hex("9DB4FF");
+            moon.shadows = LightShadows.Soft;
+
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = Hex("121826");
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Exponential;
+            RenderSettings.fogDensity = 0.02f;
+            RenderSettings.fogColor = Hex("0E1218");
+            RenderSettings.skybox = null;
+            RenderSettings.sun = moon;
         }
 
         static bool TryLoadPose(WorldGenSettings settings, out Vector3 position, out float yaw)

@@ -1,7 +1,7 @@
 # Siklus Pagi/Malam — Design Spec
 
 - **Tanggal:** 2026-10-13
-- **Status:** Menunggu review
+- **Status:** Disetujui (plan: docs/superpowers/plans/2026-10-13-day-night-cycle.md)
 - **Proyek:** Tyco World (Unity 6000.6.5f1, URP 17.6, Forward+)
 - **Sub-proyek:** #3. Dibangun di atas World Generator (#1) dan First-Person Player (#2), keduanya sudah ada di `main`.
 
@@ -203,3 +203,19 @@ Sub-proyek ini membuat **jam dunia yang berjalan** dengan transisi cahaya halus 
 2. Musuh malam, memakai `IsHorror`.
 3. Tidur di kos untuk melewati malam (setelah interior ada).
 4. Jendela bangunan menyala di malam hari.
+
+## 11. Catatan implementasi (dari plan)
+
+- **Lapisan Volume.** URP mencampur Volume global urut prioritas.
+  - Malam (`Global Volume`, `Preview_NightVHS`, prioritas 0) jadi dasar dengan bobot tetap 1.
+  - Siang (prioritas 1, bobot = bobot Siang) meng-override semua parameter yang di-override Malam, sehingga hasilnya sama dengan lerp(Malam, Siang). Ini menggantikan rumus "Malam = 1 − Siang" di §4.
+  - Horor (prioritas 2, bobot = bobot Horor) di atas keduanya.
+- **`DayCycleProfile.Evaluate(hours)`** menghitung bobot horor sendiri dari jam. Tidak ada parameter `horrorWeight`.
+- **`StreetLampSystem`** adalah kelas C# milik director, bukan MonoBehaviour. Kepala lampu memakai dua salinan material runtime ("On" dengan emisi × intensitas, "Off" hitam) yang dipakai bersama semua lampu. `sharedMaterials` hanya diganti saat status nyala berubah.
+- **Kamera pemain** memakai `CameraClearFlags.Skybox` dari `PlayerRigBuilder`. Day Cycle Setup memberi warning kalau kamera di scene belum skybox, yang berarti Player Setup perlu dijalankan ulang.
+- **Matahari** dimatikan di Edit mode; director menyalakannya saat Play. Di editor, skybox scene = `Sky_Procedural.mat`; saat Play dipakai salinannya.
+- **Audio.**
+  - Malam: "Crickets Ambient Noise – loopable" (Wolfgang_, OpenGameArt, CC0).
+  - Siang dan dengung: sintesis `AmbienceSynth`.
+  - Kalau unduhan jangkrik hilang, `ambience_night.wav` hasil sintesis dipakai.
+- **`DayCycleDirector.FindWorldRoot`** adalah hook `Func<GeneratedRoot>`, karena dunia ada di scene lain dan tidak bisa diserialisasi. Lampu dicari tiap 0,5 s sampai `GeneratedRoot` ada.
