@@ -105,6 +105,47 @@ namespace TycoWorld.Player.Tests
         }
 
         [Test]
+        public void AllBlocked_KeepsPlayerFrozenWithMessage()
+        {
+            var (rig, spawner, _) = Setup(true);
+            fx.Box("Building", new Vector3(0f, 1.8f, 0f), new Vector3(6f, 3f, 6f));
+            fx.Sync();
+            LogAssert.Expect(LogType.Error, new Regex("terhalang"));
+            Assert.IsFalse(spawner.TrySpawnNow());
+            Assert.AreEqual(PlayerSpawner.SpawnState.Blocked, spawner.State);
+            Assert.IsFalse(rig.Player.Locks.Allows(PlayerAbility.Move));
+            Assert.AreEqual(-10f, rig.Local.z, 1e-3f, "player was not moved into the blocker");
+            StringAssert.Contains("terhalang", rig.Player.Hud.Message);
+        }
+
+        GameObject Roof(Vector3 localCenter, Vector3 size)
+        {
+            var roof = fx.Box("Roof", localCenter, size);
+            roof.AddComponent<TycoWorld.WorldGen.OsmFeature>().Initialize(1234, TycoWorld.WorldGen.OsmElementType.Way,
+                TycoWorld.WorldGen.FeatureKind.Building, "kos", null);
+            return roof;
+        }
+
+        [Test]
+        public void CandidateUnderBuildingRoof_IsRejected()
+        {
+            var (_, spawner, point) = Setup(true);
+            Roof(new Vector3(0f, 4f, 0f), new Vector3(1.2f, 0.2f, 1.2f));
+            fx.Sync();
+            Assert.IsTrue(spawner.TryFindSpawn(point.Feet, out var feet));
+            Assert.GreaterOrEqual(new Vector2(feet.x - point.Feet.x, feet.z - point.Feet.z).magnitude, 0.9f);
+        }
+
+        [Test]
+        public void SpawnInsideBuildingShell_IsBlocked()
+        {
+            var (_, spawner, point) = Setup(true);
+            Roof(new Vector3(0f, 4f, 0f), new Vector3(8f, 0.2f, 8f));
+            fx.Sync();
+            Assert.IsFalse(spawner.TryFindSpawn(point.Feet, out _));
+        }
+
+        [Test]
         public void FellOutOfWorld_RespawnsAtPoint()
         {
             var (rig, spawner, _) = Setup(true);
