@@ -1,0 +1,90 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4dacc0651bbae364d8b49a963fc5633e, type: 3}
+  m_Name: FootstepBank
+  m_EditorClassIdentifier: TycoWorld.Player::TycoWorld.Player.FootstepBank
+  surfaces:
+  - surface: 0
+    clips:
+    - {fileID: 8300000, guid: 6b0163d0532165240bc8692489a98e20, type: 3}
+    - {fileID: 8300000, guid: 738b9f8d9cd9af34c8333734ca385476, type: 3}
+    - {fileID: 8300000, guid: 7f68a17520e4fd347b44adbbac7addec, type: 3}
+    - {fileID: 8300000, guid: 1f20afdf1a9a68843b545ae000a44c3c, type: 3}
+    - {fileID: 8300000, guid: eea94d61da111e743ac7aea6f72cbb48, type: 3}
+    volume: 0.45
+    pitchMin: 0.95
+    pitchMax: 1.05
+  - surface: 1
+    clips:
+    - {fileID: 8300000, guid: 6b0163d0532165240bc8692489a98e20, type: 3}
+    - {fileID: 8300000, guid: 738b9f8d9cd9af34c8333734ca385476, type: 3}
+    - {fileID: 8300000, guid: 7f68a17520e4fd347b44adbbac7addec, type: 3}
+    - {fileID: 8300000, guid: 1f20afdf1a9a68843b545ae000a44c3c, type: 3}
+    - {fileID: 8300000, guid: eea94d61da111e743ac7aea6f72cbb48, type: 3}
+    volume: 0.45
+    pitchMin: 0.88
+    pitchMax: 0.98
+  - surface: 3
+    clips:
+    - {fileID: 8300000, guid: 6b0163d0532165240bc8692489a98e20, type: 3}
+    - {fileID: 8300000, guid: 738b9f8d9cd9af34c8333734ca385476, type: 3}
+    - {fileID: 8300000, guid: 7f68a17520e4fd347b44adbbac7addec, type: 3}
+    - {fileID: 8300000, guid: 1f20afdf1a9a68843b545ae000a44c3c, type: 3}
+    - {fileID: 8300000, guid: eea94d61da111e743ac7aea6f72cbb48, type: 3}
+    volume: 0.45
+    pitchMin: 0.98
+    pitchMax: 1.08
+  - surface: 2
+    clips:
+    - {fileID: 8300000, guid: 6b0163d0532165240bc8692489a98e20, type: 3}
+    - {fileID: 8300000, guid: 738b9f8d9cd9af34c8333734ca385476, type: 3}
+    - {fileID: 8300000, guid: 7f68a17520e4fd347b44adbbac7addec, type: 3}
+    - {fileID: 8300000, guid: 1f20afdf1a9a68843b545ae000a44c3c, type: 3}
+    - {fileID: 8300000, guid: eea94d61da111e743ac7aea6f72cbb48, type: 3}
+    volume: 0.45
+    pitchMin: 1.05
+    pitchMax: 1.15
+  - surface: 4
+    clips:
+    - {fileID: 8300000, guid: 8060ec7e6f81e3b46990261c997afeeb, type: 3}
+    - {fileID: 8300000, guid: 0b4cdfc79768da640a7718394600e672, type: 3}
+    - {fileID: 8300000, guid: 0802405f05df5d942803d30dd67443d0, type: 3}
+    - {fileID: 8300000, guid: 6898122707224ed479964ed26d049e80, type: 3}
+    - {fileID: 8300000, guid: 1c79e63c4455d424f8bbf9105fb1ab77, type: 3}
+    volume: 0.5
+    pitchMin: 0.95
+    pitchMax: 1.05
+  - surface: 5
+    clips:
+    - {fileID: 8300000, guid: 4eede824d057cf942a0087b79635e13d, type: 3}
+    - {fileID: 8300000, guid: 89a038e4d6a7e2a4cbc68ff34d0a9753, type: 3}
+    - {fileID: 8300000, guid: 327cfaa670b1cfe47b490737a2e82042, type: 3}
+    - {fileID: 8300000, guid: 06df9759c66c99d4cb0f3e04cdcfea57, type: 3}
+    - {fileID: 8300000, guid: 2070bcf9c7cf41e499e42b0e40ffb57d, type: 3}
+    - {fileID: 8300000, guid: 92352104ea5da77478f0e01b21e86461, type: 3}
+    - {fileID: 8300000, guid: 7e3a6debe80e25b409855f080bb98f8e, type: 3}
+    - {fileID: 8300000, guid: 1cac8e7b47f737d4b87b30359aa3f7ed, type: 3}
+    - {fileID: 8300000, guid: 054710ce38ea98c42a887d656e8d6dd9, type: 3}
+    - {fileID: 8300000, guid: 47a6e4d5b24c6504ba460e9462591b4e, type: 3}
+    volume: 0.5
+    pitchMin: 0.9
+    pitchMax: 1
+  - surface: 6
+    clips:
+    - {fileID: 8300000, guid: 0006785d2165b08439bb1b2fb766ba11, type: 3}
+    - {fileID: 8300000, guid: c5215247df21d0e46a1d6fe02048b221, type: 3}
+    - {fileID: 8300000, guid: 33ad686638e9fe74fad6d0e0769393e2, type: 3}
+    - {fileID: 8300000, guid: d8ca70f8c238a79408c188613423484b, type: 3}
+    - {fileID: 8300000, guid: 3104a318986462d4f8f522afb2392ff9, type: 3}
+    volume: 0.5
+    pitchMin: 0.7
+    pitchMax: 0.8
