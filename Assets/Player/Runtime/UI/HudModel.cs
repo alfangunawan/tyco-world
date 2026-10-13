@@ -20,8 +20,16 @@ namespace TycoWorld.Player
         public float StaminaFill { get; private set; } = 1f;
         public bool StaminaVisible { get; private set; }
         public bool CrosshairVisible { get; set; } = true;
+        public string Clock { get; private set; } = "";
+        public bool ClockVisible { get; private set; }
 
         public void SetPrompt(string prompt) => Prompt = prompt ?? "";
+
+        public void SetClock(string text, bool visible)
+        {
+            Clock = text ?? "";
+            ClockVisible = visible;
+        }
 
         public void ShowMessage(string text, float seconds = -1f)
         {

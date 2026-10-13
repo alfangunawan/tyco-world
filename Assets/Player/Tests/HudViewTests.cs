@@ -16,7 +16,7 @@ namespace TycoWorld.Player.Tests
         public void Build_CreatesNamedElements()
         {
             var (root, _, _) = Make();
-            foreach (var name in new[] { HudView.CrosshairName, HudView.PromptName, HudView.MessageName, HudView.StaminaName, HudView.StaminaFillName })
+            foreach (var name in new[] { HudView.CrosshairName, HudView.PromptName, HudView.MessageName, HudView.StaminaName, HudView.StaminaFillName, HudView.ClockName })
                 Assert.IsNotNull(root.Q(name), name);
         }
 
@@ -55,6 +55,23 @@ namespace TycoWorld.Player.Tests
             model.CrosshairVisible = false;
             view.Render(model);
             Assert.AreEqual(DisplayStyle.None, root.Q(HudView.CrosshairName).style.display.value);
+        }
+
+        [Test]
+        public void Render_ClockTopRight_OnlyWhenVisible()
+        {
+            var (root, view, model) = Make();
+            view.Render(model);
+            var clock = root.Q<Label>(HudView.ClockName);
+            Assert.AreEqual(DisplayStyle.None, clock.style.display.value);
+            model.SetClock("06:30", true);
+            view.Render(model);
+            Assert.AreEqual("06:30", clock.text);
+            Assert.AreEqual(DisplayStyle.Flex, clock.style.display.value);
+            Assert.AreEqual(TextAnchor.MiddleRight, clock.style.unityTextAlign.value);
+            model.SetClock("06:30", false);
+            view.Render(model);
+            Assert.AreEqual(DisplayStyle.None, clock.style.display.value);
         }
 
         [Test]
