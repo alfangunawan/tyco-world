@@ -27,6 +27,17 @@
 - **Senter:** luminansi tengah L0=0,0000 → L1=0,1432 saat menghadap dinding kos. Sorot terlihat di screenshot. Tidak ada masalah batas light Forward+, jadi tidak perlu `LampLightCuller`. Lampu jalan terlihat menerangi fasad bangunan.
 - **Console setelah Play:** tidak ada error maupun warning.
 
+## Setelah final review (4 perbaikan Important)
+- **Tes:** 428 lulus (416 + 12 tes baru), failed=0.
+- **Spawn terhalang atau di dalam bangunan:** pemain tetap beku, HUD memberi tahu, dan satu error tercatat; pemain tidak lagi diteleport ke dalam collider. Posisi di bawah atap bangunan ditolak.
+- **Pagar menolak ditutup saat pemain berada di jalur ayunannya.** Dicek di Play:
+  - saat lewat gerbang lalu berbalik, fokus ke Gate tapi prompt kosong, dan E tidak menutup pagar;
+  - dari dalam halaman, prompt "[E] Tutup pagar" muncul, pagar menutup, dan bunyi gerendel terdengar.
+- **Play sebelum Generate:** loader langsung menandai gagal dengan satu error yang jelas, dan HUD langsung menampilkan "Dunia belum di-generate …" tanpa menunggu 15 s.
+- **Player Setup bisa dijalankan ulang tanpa menimpa editan.** Isi FootstepBank, warna material, dan PanelSettings yang sudah diubah user tetap dipertahankan. Prefab dan mesh placeholder tetap dibangun ulang tiap Setup.
+- **Play dengan hanya World.unity terbuka:** loader memuat World_Generated dan pemain spawn di frame 1. Waktu dari Enter Play sampai poll pertama sekitar 3,1 s, termasuk cooking MeshCollider dan jeda MCP. Console bersih.
+- **Setelah merge di checkout lain:** jalankan Generate ulang, karena scene hasil generate yang lama belum punya collider jalan dan dinding batas.
+
 ## Checklist QA manual (perlu dicoba sendiri, input asli tidak bisa diotomasi)
 - [ ] Klik Game view → kursor terkunci; Esc melepas; klik kiri mengunci lagi; kamera tidak berputar saat kursor lepas.
 - [ ] WASD terasa pas (jalan 3 m/s), Shift lari, stamina habis sekitar 5–6 detik, bar stamina muncul/hilang.
