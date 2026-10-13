@@ -1,0 +1,9 @@
+{
+  "downloadedAtUtc": "2026-10-13T06:02:47.0995637Z",
+  "endpoint": "https://api.openstreetmap.org/api/0.6/map.json (fallback: Overpass 504)",
+  "south": -6.985,
+  "west": 107.6255,
+  "north": -6.9675,
+  "east": 107.638,
+  "elementCount": 33374
+}
