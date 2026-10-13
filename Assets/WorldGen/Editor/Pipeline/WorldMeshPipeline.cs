@@ -47,6 +47,9 @@ namespace TycoWorld.WorldGen.Authoring
     /// <summary>Pure pipeline: classified features → meshes, materials, props, chunk hashes. Touches no scene or asset.</summary>
     public static class WorldMeshPipeline
     {
+        /// <summary>Longest triangle edge allowed in walkable (collider) meshes; PhysX warns above 500 m.</summary>
+        public const float MaxColliderEdge = 100f;
+
         public static Vector2Int ChunkOf(Vector2 p, float chunkSize) =>
             new Vector2Int(Mathf.FloorToInt(p.x / chunkSize), Mathf.FloorToInt(p.y / chunkSize));
 
@@ -87,6 +90,7 @@ namespace TycoWorld.WorldGen.Authoring
                 foreach (var piece in road.Pieces)
                     RoadMeshBuilder.AddRibbon(mesh, 0, piece.Points, road.Width, road.Y, piece.ExtendStart, piece.ExtendEnd);
                 if (mesh.IsEmpty) { report.Skip(SkipReasons.RoadEmptyMesh, road.Id); continue; }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = MidPoint(road.Pieces);
                 built.Features.Add(new BuiltFeature
                 {
@@ -147,6 +151,7 @@ namespace TycoWorld.WorldGen.Authoring
                     report.Skip(SkipReasons.AreaTriangulationFailed, area.Id);
                     continue;
                 }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = Polygon2D.Centroid(area.Shape.Outer);
                 built.Features.Add(new BuiltFeature
                 {
@@ -169,6 +174,7 @@ namespace TycoWorld.WorldGen.Authoring
                     report.Skip(SkipReasons.AreaTriangulationFailed, water.Id);
                     continue;
                 }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = Polygon2D.Centroid(water.Shape.Outer);
                 built.Features.Add(new BuiltFeature
                 {
@@ -184,6 +190,7 @@ namespace TycoWorld.WorldGen.Authoring
                 var mesh = new MeshData(1);
                 foreach (var piece in line.Pieces) RoadMeshBuilder.AddRibbon(mesh, 0, piece.Points, line.Width, line.Y, false, false);
                 if (mesh.IsEmpty) { report.Skip(SkipReasons.WaterEmptyMesh, line.Id); continue; }
+                mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = MidPoint(line.Pieces);
                 built.Features.Add(new BuiltFeature
                 {

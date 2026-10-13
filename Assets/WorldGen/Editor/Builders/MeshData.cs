@@ -73,6 +73,69 @@ namespace TycoWorld.WorldGen.Authoring
             list.Add(start); list.Add(start + 2); list.Add(start + 3);
         }
 
+        /// <summary>
+        /// Copy whose triangles all have edges no longer than <paramref name="maxEdge"/> (longest-edge bisection, UVs interpolated);
+        /// returns this instance when nothing is longer. PhysX warns about (and loses query precision on) triangles over 500 m.
+        /// </summary>
+        public MeshData SplitLongTriangles(float maxEdge)
+        {
+            float max2 = maxEdge * maxEdge;
+            bool any = false;
+            for (int s = 0; s < submeshes.Length && !any; s++)
+            {
+                var list = submeshes[s];
+                for (int t = 0; t < list.Count && !any; t += 3)
+                    any = LongestEdge2(Vertices[list[t]], Vertices[list[t + 1]], Vertices[list[t + 2]]) > max2;
+            }
+            if (!any) return this;
+            var result = new MeshData(submeshes.Length);
+            for (int s = 0; s < submeshes.Length; s++)
+            {
+                var list = submeshes[s];
+                for (int t = 0; t < list.Count; t += 3)
+                {
+                    int i0 = list[t], i1 = list[t + 1], i2 = list[t + 2];
+                    result.AddSplit(s, Vertices[i0], Vertices[i1], Vertices[i2], Uvs[i0], Uvs[i1], Uvs[i2], Normals[i0], max2, 0);
+                }
+            }
+            return result;
+        }
+
+        static float LongestEdge2(Vector3 a, Vector3 b, Vector3 c) =>
+            Mathf.Max((b - a).sqrMagnitude, Mathf.Max((c - b).sqrMagnitude, (a - c).sqrMagnitude));
+
+        void AddSplit(int submesh, Vector3 a, Vector3 b, Vector3 c, Vector2 uvA, Vector2 uvB, Vector2 uvC, Vector3 normal, float max2, int depth)
+        {
+            float ab = (b - a).sqrMagnitude, bc = (c - b).sqrMagnitude, ca = (a - c).sqrMagnitude;
+            float longest = Mathf.Max(ab, Mathf.Max(bc, ca));
+            if (longest <= max2 || depth >= 32)
+            {
+                AddTriangle(submesh, a, b, c, uvA, uvB, uvC, normal);
+                return;
+            }
+            if (longest == ab)
+            {
+                Vector3 m = (a + b) * 0.5f;
+                Vector2 uvM = (uvA + uvB) * 0.5f;
+                AddSplit(submesh, a, m, c, uvA, uvM, uvC, normal, max2, depth + 1);
+                AddSplit(submesh, m, b, c, uvM, uvB, uvC, normal, max2, depth + 1);
+            }
+            else if (longest == bc)
+            {
+                Vector3 m = (b + c) * 0.5f;
+                Vector2 uvM = (uvB + uvC) * 0.5f;
+                AddSplit(submesh, a, b, m, uvA, uvB, uvM, normal, max2, depth + 1);
+                AddSplit(submesh, a, m, c, uvA, uvM, uvC, normal, max2, depth + 1);
+            }
+            else
+            {
+                Vector3 m = (c + a) * 0.5f;
+                Vector2 uvM = (uvC + uvA) * 0.5f;
+                AddSplit(submesh, a, b, m, uvA, uvB, uvM, normal, max2, depth + 1);
+                AddSplit(submesh, m, b, c, uvM, uvB, uvC, normal, max2, depth + 1);
+            }
+        }
+
         /// <summary>Writes into an existing mesh. Empty submeshes are dropped; usedSubmeshes maps mesh submesh k to MeshData submesh.</summary>
         public void WriteTo(Mesh mesh, out int[] usedSubmeshes)
         {

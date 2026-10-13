@@ -96,6 +96,20 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void LongRoadAndLargeArea_AreSplitBelowColliderEdgeLimit()
+        {
+            var osm = new TestOsm();
+            osm.Rect(900, -400f, -400f, 800f, 800f, ("landuse", "farmland"));
+            osm.Way(901, new[] { new Vector2(-600f, 50f), new Vector2(400f, 50f) }, false, ("highway", "residential"));
+            var report = new GenerationReport();
+            var built = WorldMeshPipeline.Build(new FeatureClassifier(settings, report).Classify(osm.Data), settings, report);
+            var walkable = built.Features.Where(f => f.OsmId == 900 || f.OsmId == 901).ToList();
+            Assert.AreEqual(2, walkable.Count);
+            foreach (var f in walkable)
+                Assert.LessOrEqual(MeshDataSplitTests.MaxEdge(f.Mesh), WorldMeshPipeline.MaxColliderEdge + 1e-3f, f.Kind + " " + f.OsmId);
+        }
+
+        [Test]
         public void Synthetic_BuildingMaterialsFollowVariantRule()
         {
             var upper = Materials(3);
