@@ -10,3 +10,4 @@
 - Play mode (PreviewCam, Jl. Sukabirus): 3.391 draw call, 43 SetPass, 61.521 segitiga, 156.099 verteks, 929 light, 8.033 MeshRenderer, tanpa error Console
 - Frame time tidak tercatat dengan andal: editor tidak fokus saat diukur lewat Unity MCP, sehingga `UnityStats` membeku di 362 ms. Ukur ulang dengan jendela Game + Stats saat editor fokus.
 - Catatan visual: lampu jalan tampak menyala (kepala lampu emissive), tapi sebaran cahayanya di aspal belum terlihat pada intensitas 3 / jangkauan 12 m.
+- Setelah perbaikan final review: 1.278 pohon (pohon di air/lapangan/parkir tidak lagi ditaruh), 876 lampu (tiang di badan jalan lain dibuang); generate 11.469 ms; tanpa warning/error Console

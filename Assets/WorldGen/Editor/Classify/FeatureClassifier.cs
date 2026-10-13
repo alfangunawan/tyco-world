@@ -80,6 +80,12 @@ namespace TycoWorld.WorldGen.Authoring
                 var p = LocalOf(node);
                 if (bounds.Contains(p)) world.Trees.Add(new TreeFeature(node.Id, p));
             }
+
+            var classifiedIds = new HashSet<long>(world.Buildings.Select(b => b.Id));
+            foreach (var key in keyBuildings.Values.OrderBy(k => k.osmId))
+                if (!classifiedIds.Contains(key.osmId))
+                    report.Warn("Gedung kunci '" + key.label + "' (OSM id " + key.osmId.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                                ") tidak ditemukan atau dilewati; KeyBuildingMarker tidak dibuat.");
             return world;
         }
 

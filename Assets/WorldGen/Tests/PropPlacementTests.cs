@@ -140,6 +140,34 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Lamps_AreNotPlacedOnOtherRoads()
+        {
+            var main = Road(1, 6f, 30f, new Vector2(0, 0), new Vector2(200, 0));
+            var side = Road(2, 5f, 0f, new Vector2(15, 0), new Vector2(15, 100));
+            var placer = new PropPlacer(new BuildingFeature[0], new[] { main, side });
+            var lamps = placer.PlaceLamps(new[] { main, side }, 8f, 0.6f, new GenerationReport());
+            Assert.IsFalse(lamps.Any(l => Mathf.Abs(l.Position.x - 15f) < 2.5f && l.Position.y > 0f));
+            Assert.AreEqual(6, lamps.Count);
+        }
+
+        [Test]
+        public void Trees_AvoidNoTreeAreasAndWater()
+        {
+            var pitch = new AreaFeature
+            {
+                Id = 5, Shape = Square(20, 20, 20, 20),
+                Rule = new AreaRule { category = AreaCategory.Pitch, treeSpacing = 0f }
+            };
+            var water = Square(60, 60, 20, 20);
+            var placer = new PropPlacer(new BuildingFeature[0], new RoadFeature[0]);
+            var trees = placer.PlaceTrees(new TreeFeature[0], new[] { Grass(3, Square(0, 0, 100, 100), 4f), pitch }, 4000, 1,
+                new GenerationReport(), new[] { water });
+            Assert.Greater(trees.Count, 50);
+            Assert.IsFalse(trees.Any(t => pitch.Shape.Contains(t.Position)));
+            Assert.IsFalse(trees.Any(t => water.Contains(t.Position)));
+        }
+
+        [Test]
         public void Lamps_SkipRoadsWithoutSpacing()
         {
             var placer = new PropPlacer(new BuildingFeature[0], new RoadFeature[0]);

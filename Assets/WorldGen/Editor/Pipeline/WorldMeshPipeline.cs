@@ -70,7 +70,8 @@ namespace TycoWorld.WorldGen.Authoring
 
             var placer = new PropPlacer(world.Buildings, world.Roads);
             int treeVariants = settings.treePrefabs != null ? settings.treePrefabs.Length : 0;
-            built.Trees = placer.PlaceTrees(world.Trees, world.Areas, settings.maxTrees, treeVariants, report);
+            var waterShapes = world.WaterAreas.Select(w => w.Shape).ToList();
+            built.Trees = placer.PlaceTrees(world.Trees, world.Areas, settings.maxTrees, treeVariants, report, waterShapes);
             built.Lamps = placer.PlaceLamps(world.Roads, settings.lampMinSpacing, settings.lampOffset, report);
             ComputeChunkHashes(built, report);
             return built;

@@ -254,6 +254,19 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void MissingKeyBuilding_IsWarned()
+        {
+            settings.keyBuildings.Clear();
+            settings.keyBuildings.Add(new KeyBuilding(77, "Gedung Ada"));
+            settings.keyBuildings.Add(new KeyBuilding(88, "Gedung Hilang"));
+            var osm = new TestOsm();
+            osm.Rect(77, 0, 0, 10, 10, ("building", "house"));
+            Classify(osm.Data);
+            Assert.IsTrue(report.Warnings.Any(w => w.Contains("88") && w.Contains("Gedung Hilang")));
+            Assert.IsFalse(report.Warnings.Any(w => w.Contains("Gedung Ada")));
+        }
+
+        [Test]
         public void RelationWithOpenOuter_IsSkipped()
         {
             var osm = new TestOsm();

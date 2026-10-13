@@ -35,28 +35,48 @@ namespace TycoWorld.WorldGen.Authoring
 
             var fetcher = OsmFetcher.Active;
             bool downloading = fetcher != null && !fetcher.IsDone;
+            // Each action changes what the next layout pass draws, so it ends the current GUI pass with ExitGUI.
             using (new EditorGUI.DisabledScope(downloading))
             {
                 if (GUILayout.Button("Download Data"))
+                {
                     OsmFetcher.Start(settings, done =>
                     {
                         if (!done.Succeeded) EditorUtility.DisplayDialog("Download gagal", done.Error, "OK");
                         Repaint();
                     });
+                    GUIUtility.ExitGUI();
+                }
             }
             if (downloading)
             {
                 EditorGUILayout.HelpBox(fetcher.Status, MessageType.Info);
-                if (GUILayout.Button("Batalkan Download")) fetcher.Cancel();
+                if (GUILayout.Button("Batalkan Download"))
+                {
+                    fetcher.Cancel();
+                    GUIUtility.ExitGUI();
+                }
             }
 
             using (new EditorGUI.DisabledScope(downloading))
             {
-                if (GUILayout.Button("Generate") && !WorldGenerationRunner.Generate(settings, true, out string error))
-                    EditorUtility.DisplayDialog("Generate gagal", error, "OK");
-                if (GUILayout.Button("Clear")) WorldGenerationRunner.Clear(true, out _);
-                if (GUILayout.Button("Setup Preview Scene") && !PreviewSceneSetup.Run(settings, true, out string previewError))
-                    EditorUtility.DisplayDialog("Setup Preview gagal", previewError, "OK");
+                if (GUILayout.Button("Generate"))
+                {
+                    if (!WorldGenerationRunner.Generate(settings, true, out string error))
+                        EditorUtility.DisplayDialog("Generate gagal", error, "OK");
+                    GUIUtility.ExitGUI();
+                }
+                if (GUILayout.Button("Clear"))
+                {
+                    WorldGenerationRunner.Clear(true, out _);
+                    GUIUtility.ExitGUI();
+                }
+                if (GUILayout.Button("Setup Preview Scene"))
+                {
+                    if (!PreviewSceneSetup.Run(settings, true, out string previewError))
+                        EditorUtility.DisplayDialog("Setup Preview gagal", previewError, "OK");
+                    GUIUtility.ExitGUI();
+                }
             }
 
             var report = WorldGenerationRunner.LastReport;

@@ -19,6 +19,7 @@ namespace TycoWorld.WorldGen.Authoring
         public const float TreeBuildingBuffer = 1f;
         public const float TreeRoadClearance = 1f;
         public const float LampBuildingBuffer = 0.3f;
+        public const float LampRoadClearance = 0.2f;
 
         readonly struct RoadSegment
         {
@@ -82,7 +83,7 @@ namespace TycoWorld.WorldGen.Authoring
         }
 
         public List<PropPlacement> PlaceTrees(IReadOnlyList<TreeFeature> osmTrees, IReadOnlyList<AreaFeature> areas,
-            int maxTrees, int variantCount, GenerationReport report)
+            int maxTrees, int variantCount, GenerationReport report, IReadOnlyList<Polygon> noTreeZones = null)
         {
             var accepted = new List<Vector2>();
             var gapGrid = new SpatialGrid<int>(MinTreeGap * 2f);
@@ -105,6 +106,20 @@ namespace TycoWorld.WorldGen.Authoring
                 fromOsm.Add(Make(tree.Position, SplitMix64.For(tree.Id, "tree"), variantCount));
             }
 
+            var blocked = new List<(Rect bounds, Polygon shape)>();
+            foreach (var area in areas)
+                if (area.Shape != null && (area.Rule == null || area.Rule.treeSpacing <= 0f)) blocked.Add((area.Shape.Bounds, area.Shape));
+            if (noTreeZones != null)
+                foreach (var zone in noTreeZones)
+                    if (zone != null) blocked.Add((zone.Bounds, zone));
+
+            bool InNoTreeZone(Vector2 p)
+            {
+                foreach (var (zoneBounds, shape) in blocked)
+                    if (zoneBounds.Contains(p) && shape.Contains(p)) return true;
+                return false;
+            }
+
             var scatter = new List<(ulong key, PropPlacement placement)>();
             foreach (var area in areas.OrderBy(a => a.Id))
             {
@@ -113,7 +128,7 @@ namespace TycoWorld.WorldGen.Authoring
                 var rng = SplitMix64.For(area.Id, "trees");
                 foreach (var p in PoissonDisk.Sample(area.Shape.Bounds, spacing, rng))
                 {
-                    if (!area.Shape.Contains(p) || IsInsideBuilding(p, TreeBuildingBuffer) || IsOnRoad(p, TreeRoadClearance)) continue;
+                    if (!area.Shape.Contains(p) || InNoTreeZone(p) || IsInsideBuilding(p, TreeBuildingBuffer) || IsOnRoad(p, TreeRoadClearance)) continue;
                     if (!TryReserve(p)) continue;
                     scatter.Add((rng.NextULong(), Make(p, rng, variantCount)));
                 }
@@ -165,7 +180,8 @@ namespace TycoWorld.WorldGen.Authoring
                             Vector2 center = a + dir * (next - travelled);
                             Vector2 position = center + left * (side * (hw + offset));
                             Vector2 towardRoad = -left * side;
-                            if (!IsInsideBuilding(position, LampBuildingBuffer) && !NearOther(position, result, grid, minSpacing))
+                            if (!IsInsideBuilding(position, LampBuildingBuffer) && !IsOnRoad(position, LampRoadClearance) &&
+                                !NearOther(position, result, grid, minSpacing))
                             {
                                 grid.Insert(new Rect(position, Vector2.zero), result.Count);
                                 result.Add(new PropPlacement

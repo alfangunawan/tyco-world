@@ -72,6 +72,7 @@ namespace TycoWorld.WorldGen.Authoring
                 AssetDatabase.SaveAssets();
                 LastReport = report;
                 Debug.Log("[WorldGen] Generate selesai.\n" + report.Summary());
+                foreach (var warning in report.Warnings) Debug.LogWarning("[WorldGen] " + warning);
                 return true;
             }
             catch (Exception ex)
