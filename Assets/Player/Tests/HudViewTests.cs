@@ -75,6 +75,53 @@ namespace TycoWorld.Player.Tests
         }
 
         [Test]
+        public void VehiclePanel_IsBuiltHidden_WithIndonesianTexts()
+        {
+            var (root, _, _) = Make();
+            foreach (var name in new[] { HudView.VehicleName, HudView.SpeedName, HudView.UnitName, HudView.LampName, HudView.ExitName })
+                Assert.IsNotNull(root.Q(name), name);
+            Assert.AreEqual(DisplayStyle.None, root.Q(HudView.VehicleName).style.display.value);
+            Assert.AreEqual("km/j", root.Q<Label>(HudView.UnitName).text);
+            Assert.AreEqual("LAMPU", root.Q<Label>(HudView.LampName).text);
+            Assert.AreEqual("[E] Turun", root.Q<Label>(HudView.ExitName).text);
+        }
+
+        [Test]
+        public void Render_ShowsSpeedAndExitHint_HidesStamina()
+        {
+            var (root, view, model) = Make();
+            model.Tick(0.1f, 0.5f);
+            Assert.IsTrue(model.StaminaVisible);
+            model.SetVehicle(true, 42.4f, false, true);
+            view.Render(model);
+            Assert.AreEqual(DisplayStyle.Flex, root.Q(HudView.VehicleName).style.display.value);
+            Assert.AreEqual("42", root.Q<Label>(HudView.SpeedName).text);
+            Assert.AreEqual(DisplayStyle.Flex, root.Q(HudView.ExitName).style.display.value);
+            Assert.AreEqual(DisplayStyle.None, root.Q(HudView.StaminaName).style.display.value);
+            model.SetVehicle(true, 30f, true, false);
+            view.Render(model);
+            Assert.AreEqual("30", root.Q<Label>(HudView.SpeedName).text);
+            Assert.AreEqual(DisplayStyle.None, root.Q(HudView.ExitName).style.display.value);
+            model.SetVehicle(false, 0f, false, false);
+            view.Render(model);
+            Assert.AreEqual(DisplayStyle.None, root.Q(HudView.VehicleName).style.display.value);
+            Assert.AreEqual(DisplayStyle.Flex, root.Q(HudView.StaminaName).style.display.value);
+        }
+
+        [Test]
+        public void Render_HeadlightOn_BrightensTheLampLabel()
+        {
+            var (root, view, model) = Make();
+            model.SetVehicle(true, 10f, false, false);
+            view.Render(model);
+            float off = root.Q<Label>(HudView.LampName).style.color.value.a;
+            model.SetVehicle(true, 10f, true, false);
+            view.Render(model);
+            float on = root.Q<Label>(HudView.LampName).style.color.value.a;
+            Assert.Greater(on, off);
+        }
+
+        [Test]
         public void PlayerHud_WithoutPanel_DoesNotThrow()
         {
             using (var fx = new PhysicsFixture())

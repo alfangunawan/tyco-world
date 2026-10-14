@@ -74,5 +74,24 @@ namespace TycoWorld.Player.Tests
             m.Tick(0.4f, 1f);
             Assert.IsFalse(m.StaminaVisible);
         }
+
+        [Test]
+        public void SetVehicle_RoundsSpeedAndHidesEverythingWhenOff()
+        {
+            var m = Make();
+            Assert.IsFalse(m.VehicleVisible);
+            m.SetVehicle(true, 42.6f, true, false);
+            Assert.IsTrue(m.VehicleVisible);
+            Assert.AreEqual(43, m.VehicleSpeedKmh);
+            Assert.IsTrue(m.VehicleHeadlight);
+            Assert.IsFalse(m.VehicleCanExit);
+            m.SetVehicle(true, -8.6f, false, true);
+            Assert.AreEqual(9, m.VehicleSpeedKmh, "mundur ditampilkan positif");
+            Assert.IsTrue(m.VehicleCanExit);
+            m.SetVehicle(false, 30f, true, true);
+            Assert.IsFalse(m.VehicleVisible);
+            Assert.AreEqual(0, m.VehicleSpeedKmh);
+            Assert.IsFalse(m.VehicleHeadlight || m.VehicleCanExit);
+        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -12,9 +13,21 @@ namespace TycoWorld.Player
         public const string StaminaName = "stamina";
         public const string StaminaFillName = "stamina-fill";
         public const string ClockName = "clock";
+        public const string VehicleName = "vehicle";
+        public const string SpeedName = "vehicle-speed";
+        public const string UnitName = "vehicle-unit";
+        public const string LampName = "vehicle-lamp";
+        public const string ExitName = "vehicle-exit";
+        public const string UnitText = "km/j";
+        public const string LampText = "LAMPU";
+        public const string ExitText = "[E] Turun";
 
-        readonly VisualElement crosshair, staminaBar, staminaFill;
-        readonly Label prompt, message, clock;
+        static readonly Color LampOnColor = new Color(1f, 0.92f, 0.55f, 1f);
+        static readonly Color LampOffColor = new Color(0.92f, 0.92f, 0.88f, 0.3f);
+
+        readonly VisualElement crosshair, staminaBar, staminaFill, vehicle;
+        int shownSpeed = -1;
+        readonly Label prompt, message, clock, speed, lamp, exit;
 
         public HudView(VisualElement root)
         {
@@ -65,11 +78,27 @@ namespace TycoWorld.Player
             clock.style.color = new Color(0.92f, 0.92f, 0.88f, 0.9f);
             clock.style.display = DisplayStyle.None;
 
+            vehicle = new VisualElement { name = VehicleName, pickingMode = PickingMode.Ignore };
+            Absolute(vehicle);
+            vehicle.style.right = 36f;
+            vehicle.style.bottom = 40f;
+            vehicle.style.alignItems = Align.FlexEnd;
+            vehicle.style.display = DisplayStyle.None;
+            speed = VehicleLabel(SpeedName, "0", 56f);
+            speed.style.unityFontStyleAndWeight = FontStyle.Bold;
+            lamp = VehicleLabel(LampName, LampText, 18f);
+            exit = VehicleLabel(ExitName, ExitText, 20f);
+            vehicle.Add(speed);
+            vehicle.Add(VehicleLabel(UnitName, UnitText, 20f));
+            vehicle.Add(lamp);
+            vehicle.Add(exit);
+
             root.Add(crosshair);
             root.Add(prompt);
             root.Add(message);
             root.Add(staminaBar);
             root.Add(clock);
+            root.Add(vehicle);
         }
 
         public void Render(HudModel model)
@@ -79,10 +108,30 @@ namespace TycoWorld.Player
             prompt.style.display = model.Prompt.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             message.text = model.Message;
             message.style.display = model.Message.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            staminaBar.style.display = model.StaminaVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            staminaBar.style.display = model.StaminaVisible && !model.VehicleVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            vehicle.style.display = model.VehicleVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (model.VehicleVisible)
+            {
+                if (shownSpeed != model.VehicleSpeedKmh)
+                {
+                    shownSpeed = model.VehicleSpeedKmh;
+                    speed.text = shownSpeed.ToString(CultureInfo.InvariantCulture);
+                }
+                lamp.style.color = model.VehicleHeadlight ? LampOnColor : LampOffColor;
+                exit.style.display = model.VehicleCanExit ? DisplayStyle.Flex : DisplayStyle.None;
+            }
             staminaFill.style.width = Length.Percent(model.StaminaFill * 100f);
             clock.text = model.Clock;
             clock.style.display = model.ClockVisible && model.Clock.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        static Label VehicleLabel(string name, string text, float size)
+        {
+            var label = new Label(text) { name = name, pickingMode = PickingMode.Ignore };
+            label.style.fontSize = size;
+            label.style.color = new Color(0.92f, 0.92f, 0.88f, 1f);
+            label.style.unityTextAlign = TextAnchor.MiddleRight;
+            return label;
         }
 
         static void Absolute(VisualElement e) => e.style.position = Position.Absolute;
