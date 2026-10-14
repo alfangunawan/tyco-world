@@ -147,14 +147,35 @@ namespace TycoWorld.WorldGen.Authoring
             foreach (var (o, at) in openings)
             {
                 float half = o.Width * 0.5f;
-                float lo = Mathf.Max(cursor, u0 + f.gateEndMargin) + half, hi = u1 - f.gateEndMargin - half;
-                if (lo > hi) continue;
-                float centre = Mathf.Clamp(at, lo, hi);
-                AddPiece(run, line, cursor, centre - half, f, chunkSize, r);
-                AddOpening(run, o, line, centre, e, f, chunkSize, r);
-                cursor = centre + half;
+                if (u1 - cursor < o.Width) continue;
+                float start = OpeningStart(at - half, cursor, u1 - o.Width, f.pilasterMinGap);
+                AddPiece(run, line, cursor, start, f, chunkSize, r);
+                AddOpening(run, o, line, start + half, e, f, chunkSize, r);
+                cursor = start + o.Width;
             }
             AddPiece(run, line, cursor, u1, f, chunkSize, r);
+        }
+
+        /// <summary>
+        /// Where an opening starts between lo and hi (its start's range): as near <paramref name="wanted"/> as possible, but
+        /// either flush with a lot end (sharing its pilaster) or at least <paramref name="minStub"/> from it, so no stub of
+        /// wall stands squeezed between two pilasters.
+        /// </summary>
+        static float OpeningStart(float wanted, float lo, float hi, float minStub)
+        {
+            float best = lo, bestDistance = Mathf.Abs(wanted - lo);
+            void Consider(float x)
+            {
+                float d = Mathf.Abs(wanted - x);
+                if (d < bestDistance - 1e-5f)
+                {
+                    best = x;
+                    bestDistance = d;
+                }
+            }
+            if (lo + minStub <= hi - minStub) Consider(Mathf.Clamp(wanted, lo + minStub, hi - minStub));
+            Consider(hi);
+            return best;
         }
 
         static void AddPiece(WallRun run, WallLine line, float u0, float u1, FrontageSettings f, float chunkSize, FrontageMeshResult r)

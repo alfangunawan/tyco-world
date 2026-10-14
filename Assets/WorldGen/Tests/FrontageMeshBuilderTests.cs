@@ -237,6 +237,32 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual(2f, Length(r.OpeningSpans.Single()), 0.01f);
         }
 
+        static void AssertNoTwoPilastersCloserThan(FrontageMeshResult r, float gap)
+        {
+            var p = r.PilasterPositions;
+            for (int i = 0; i < p.Count; i++)
+                for (int j = i + 1; j < p.Count; j++)
+                    Assert.GreaterOrEqual(Vector2.Distance(p[i], p[j]), gap, "pilasters at " + p[i] + " and " + p[j]);
+        }
+
+        [Test]
+        public void GateNearTheLotEnd_SharesTheBoundaryPilasterInsteadOfAStub()
+        {
+            // Wanted at s = 3.4 in a run starting at 2: a 0.4 m stub would stand between two pilasters.
+            var r = Build(Run(Straight(), WallStyle.Plaster, 1.8f, 0, 2f, 18f, Gate(3.4f)));
+            var span = r.OpeningSpans.Single();
+            Assert.AreEqual(2f, span[0].x, 1e-3f, "the gate starts at the lot boundary");
+            AssertNoTwoPilastersCloserThan(r, settings.frontage.pilasterMinGap - 1e-3f);
+        }
+
+        [Test]
+        public void GateAlmostAMetreIn_LeavesAFullMetreOfWall()
+        {
+            var r = Build(Run(Straight(), WallStyle.Plaster, 1.8f, 0, 2f, 18f, Gate(3.9f)));
+            Assert.AreEqual(3f, r.OpeningSpans.Single()[0].x, 1e-3f, "a stub shorter than pilasterMinGap grows to it");
+            AssertNoTwoPilastersCloserThan(r, settings.frontage.pilasterMinGap - 1e-3f);
+        }
+
         [Test]
         public void ProfileChange_JoinsTheTwoWallLinesWithAReturn()
         {
