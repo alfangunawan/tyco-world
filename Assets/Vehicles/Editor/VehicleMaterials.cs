@@ -49,11 +49,28 @@ namespace TycoWorld.Vehicles.Authoring
             return material;
         }
 
+        /// <summary>
+        /// URP's material validation re-derives _EMISSION from the GI flags and drops it when they are None, so light
+        /// materials use RealtimeEmissive. Repairs older assets without touching colours the user edited.
+        /// </summary>
+        static void KeepEmission(Material material)
+        {
+            if (material.globalIlluminationFlags == MaterialGlobalIlluminationFlags.RealtimeEmissive
+                && material.IsKeywordEnabled(EmissionKeyword)) return;
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            material.EnableKeyword(EmissionKeyword);
+            EditorUtility.SetDirty(material);
+        }
+
         static Material Create(string name, string hex, float smoothness, Color emission)
         {
             string path = VehiclePaths.MaterialsFolder + "/" + name + ".mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material != null) return material;
+            if (material != null)
+            {
+                if (emission.maxColorComponent > 0f) KeepEmission(material);
+                return material;
+            }
             material = new Material(Shader.Find("Universal Render Pipeline/Simple Lit"));
             ColorUtility.TryParseHtmlString("#" + hex, out var color);
             material.SetColor("_BaseColor", color);
@@ -62,7 +79,7 @@ namespace TycoWorld.Vehicles.Authoring
             {
                 material.EnableKeyword(EmissionKeyword);
                 material.SetColor("_EmissionColor", emission);
-                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             }
             AssetDatabase.CreateAsset(material, path);
             // CreateAsset drops the emission keyword on a fresh material; enabling it again afterwards makes it stick.
