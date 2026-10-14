@@ -1,0 +1,152 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace TycoWorld.WorldGen.Authoring
+{
+    public sealed class FrontageMeshResult
+    {
+        public readonly Dictionary<Vector2Int, MeshData> Render = new Dictionary<Vector2Int, MeshData>();
+        public readonly Dictionary<Vector2Int, MeshData> Collider = new Dictionary<Vector2Int, MeshData>();
+        public readonly List<WallSegment> Blockers = new List<WallSegment>();
+        public readonly SortedDictionary<string, float> MetersByStyle = new SortedDictionary<string, float>(System.StringComparer.Ordinal);
+        public float WallMeters;
+        public int Gates, Doors, Slabs, Pilasters;
+    }
+
+    /// <summary>Walls, coping, pilasters, fence bands, gates and gutter slabs as per-chunk meshes (spec street-frontage §7).</summary>
+    public static class FrontageMeshBuilder
+    {
+        public const string WallsName = "Walls";
+        public const int SubWall = 0, SubConcrete = 1, SubFence = 2, SubMetal = 3, SubmeshCount = 4;
+        const float RailSize = 0.04f, GateFrame = 0.06f, GateBottom = 0.1f, LeafThickness = 0.05f, GateColliderThickness = 0.06f;
+
+        public static FrontageMeshResult Build(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize)
+        {
+            var result = new FrontageMeshResult();
+            var pilasters = new HashSet<long>();
+            foreach (var run in runs) AddRun(run, e, f, chunkSize, result, pilasters);
+            return result;
+        }
+
+        static void AddRun(WallRun run, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r, HashSet<long> pilasters)
+        {
+            float lineOffset = FrontagePlanner.LineOffset(run.Chain, run.Profile, e, f);
+            float centre = lineOffset + f.wallThickness * 0.5f;
+            var openings = new List<WallOpening>(run.Openings);
+            openings.Sort((a, b) => a.S.CompareTo(b.S));
+            float cursor = run.S0;
+            foreach (var o in openings)
+            {
+                AddPiece(run, cursor, o.S - o.Width * 0.5f, centre, f, chunkSize, r, pilasters);
+                AddOpening(run, o, centre, lineOffset, e, f, chunkSize, r);
+                cursor = o.S + o.Width * 0.5f;
+            }
+            AddPiece(run, cursor, run.S1, centre, f, chunkSize, r, pilasters);
+        }
+
+        static void AddPiece(WallRun run, float s0, float s1, float centre, FrontageSettings f, float chunkSize, FrontageMeshResult r,
+            HashSet<long> pilasters)
+        {
+            if (s1 - s0 < 0.05f) return;
+            var chain = run.Chain;
+            float copingTop = run.Height + f.copingHeight;
+            float fence = run.Style.fenceHeight;
+            float total = copingTop + fence;
+            var band = BoxUv.AtlasBand(run.Band, f.atlasBands, f.atlasBandMeters, f.atlasTileMeters);
+            string style = run.Style.style.ToString();
+            var along = new List<float>();
+            var center = Polyline2D.Slice(chain.Points, chain.Cum, s0, s1, along);
+            var line = Polyline2D.Offset(center, along, run.Side * centre, new List<float>());
+            for (int j = 0; j + 1 < line.Count; j++)
+            {
+                Vector2 a = line[j], b = line[j + 1];
+                float length = Vector2.Distance(a, b);
+                if (length < 1e-3f) continue;
+                var chunk = WorldMeshPipeline.ChunkOf((a + b) * 0.5f, chunkSize);
+                var m = MeshIn(r.Render, chunk, SubmeshCount);
+                var col = MeshIn(r.Collider, chunk, 1);
+                SolidBox.Add(m, SubWall, a, b, 0f, run.Height, f.wallThickness, band);
+                SolidBox.Add(m, SubConcrete, a, b, run.Height, copingTop, f.wallThickness + 2f * f.copingOverhang, BoxUv.Meters);
+                if (fence > 0f)
+                {
+                    FenceBand(m, a, b, copingTop, fence - RailSize);
+                    SolidBox.Add(m, SubMetal, a, b, total - RailSize, total, RailSize, BoxUv.Meters);
+                }
+                SolidBox.Add(col, 0, a, b, 0f, total, f.wallThickness, BoxUv.Meters);
+                r.Blockers.Add(new WallSegment(a, b));
+                r.WallMeters += length;
+                r.MetersByStyle.TryGetValue(style, out float meters);
+                r.MetersByStyle[style] = meters + length;
+                Vector2 dir = (b - a) / length;
+                int inner = Mathf.FloorToInt(length / f.pilasterSpacing);
+                for (int k = 1; k <= inner; k++) Pilaster(a + dir * (k * length / (inner + 1)), dir, total, f, chunkSize, r, pilasters);
+            }
+            for (int j = 0; j < line.Count; j++)
+            {
+                int k = j + 1 < line.Count ? j + 1 : j - 1;
+                if (k < 0) continue;
+                var dir = line[k] - line[j];
+                if (dir.sqrMagnitude < 1e-8f) continue;
+                Pilaster(line[j], dir.normalized, total, f, chunkSize, r, pilasters);
+            }
+        }
+
+        static void Pilaster(Vector2 p, Vector2 dir, float total, FrontageSettings f, float chunkSize, FrontageMeshResult r, HashSet<long> pilasters)
+        {
+            long key = ((long)Mathf.RoundToInt(p.x * 20f) << 32) ^ (uint)Mathf.RoundToInt(p.y * 20f);
+            if (!pilasters.Add(key)) return;
+            var chunk = WorldMeshPipeline.ChunkOf(p, chunkSize);
+            float top = total + f.pilasterExtra;
+            SolidBox.AddPost(MeshIn(r.Render, chunk, SubmeshCount), SubConcrete, p, dir, f.pilasterSize, 0f, top, BoxUv.Meters);
+            SolidBox.AddPost(MeshIn(r.Collider, chunk, 1), 0, p, dir, f.pilasterSize, 0f, top, BoxUv.Meters);
+            r.Pilasters++;
+        }
+
+        /// <summary>Two opposite-facing quads (both sides lit correctly) carrying the alpha-clipped bar texture: u = metres, v = 0..1.</summary>
+        static void FenceBand(MeshData m, Vector2 a, Vector2 b, float y0, float height)
+        {
+            if (height <= 0f) return;
+            float length = Vector2.Distance(a, b);
+            var normal = Xz.Dir(Polyline2D.LeftNormal((b - a) / length));
+            Vector3 p0 = Xz.At(a, y0), p1 = Xz.At(b, y0), p2 = Xz.At(b, y0 + height), p3 = Xz.At(a, y0 + height);
+            Vector2 u0 = new Vector2(0f, 0f), u1 = new Vector2(length, 0f), u2 = new Vector2(length, 1f), u3 = new Vector2(0f, 1f);
+            m.AddQuad(SubFence, p0, p1, p2, p3, u0, u1, u2, u3, normal);
+            m.AddQuad(SubFence, p0, p1, p2, p3, u0, u1, u2, u3, -normal);
+        }
+
+        static void AddOpening(WallRun run, WallOpening o, float centre, float lineOffset, RoadEdgeSettings e, FrontageSettings f, float chunkSize,
+            FrontageMeshResult r)
+        {
+            var chain = run.Chain;
+            var c = chain.PointAt(o.S, out var t);
+            var outward = Polyline2D.LeftNormal(t) * run.Side;
+            var mid = c + outward * centre;
+            Vector2 g0 = mid - t * (o.Width * 0.5f), g1 = mid + t * (o.Width * 0.5f);
+            var chunk = WorldMeshPipeline.ChunkOf(mid, chunkSize);
+            var m = MeshIn(r.Render, chunk, SubmeshCount);
+            var col = MeshIn(r.Collider, chunk, 1);
+            float top = f.gateHeight;
+            SolidBox.Add(m, SubMetal, g0, g1, GateBottom, GateBottom + GateFrame, LeafThickness, BoxUv.Meters);
+            SolidBox.Add(m, SubMetal, g0, g1, top - GateFrame, top, LeafThickness, BoxUv.Meters);
+            SolidBox.AddPost(m, SubMetal, g0 + t * (GateFrame * 0.5f), t, GateFrame, GateBottom, top, BoxUv.Meters);
+            SolidBox.AddPost(m, SubMetal, g1 - t * (GateFrame * 0.5f), t, GateFrame, GateBottom, top, BoxUv.Meters);
+            FenceBand(m, g0, g1, GateBottom + GateFrame, top - GateBottom - 2f * GateFrame);
+            SolidBox.Add(col, 0, g0, g1, 0f, top, GateColliderThickness, BoxUv.Meters);
+            r.Blockers.Add(new WallSegment(g0, g1));
+            if (o.IsGate) r.Gates++;
+            else r.Doors++;
+            if (run.Profile != EdgeProfile.Gutter) return;
+            Vector2 near = c + outward * (chain.HalfWidth + e.shoulderWidth), far = c + outward * lineOffset;
+            float width = o.Width + f.slabExtraWidth;
+            SolidBox.Add(m, SubConcrete, near, far, 0f, f.slabTopY, width, BoxUv.Meters);
+            SolidBox.Add(col, 0, near, far, 0f, f.slabTopY, width, BoxUv.Meters);
+            r.Slabs++;
+        }
+
+        static MeshData MeshIn(Dictionary<Vector2Int, MeshData> meshes, Vector2Int chunk, int submeshes)
+        {
+            if (!meshes.TryGetValue(chunk, out var mesh)) meshes[chunk] = mesh = new MeshData(submeshes);
+            return mesh;
+        }
+    }
+}
