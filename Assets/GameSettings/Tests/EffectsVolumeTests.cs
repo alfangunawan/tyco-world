@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using TycoWorld.DayCycle;
+using TycoWorld.Vehicles;
 using UnityEngine;
 
 namespace TycoWorld.GameSettings.Tests
@@ -49,6 +50,19 @@ namespace TycoWorld.GameSettings.Tests
             source.volume = 0.3f;
             effects.Apply(new[] { source }, 0.5f);
             Assert.AreEqual(0.3f, source.volume, 1e-5f);
+        }
+
+        [Test]
+        public void Apply_SkipsMotorbikeSources()
+        {
+            var bike = fx.Track(new GameObject("Motorbike"));
+            bike.AddComponent<MotorbikeAudio>();
+            var audio = new GameObject("Audio");
+            audio.transform.SetParent(bike.transform, false);
+            var source = audio.AddComponent<AudioSource>();
+            source.volume = 0.7f;
+            effects.Apply(new[] { source }, 0.5f);
+            Assert.AreEqual(0.7f, source.volume, 1e-5f, "volume mesin diatur MotorbikeAudio.Level");
         }
 
         [Test]

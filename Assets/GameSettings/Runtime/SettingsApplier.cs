@@ -1,6 +1,7 @@
 using System;
 using TycoWorld.DayCycle;
 using TycoWorld.Player;
+using TycoWorld.Vehicles;
 using TycoWorld.WorldGen;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -144,6 +145,7 @@ namespace TycoWorld.GameSettings
             quality.Apply(s, camera, new[] { sun, moon });
             AudioListener.volume = s.masterVolume / 100f;
             effects.Apply(UnityEngine.Object.FindObjectsByType<AudioSource>(), s.effectsVolume / 100f);
+            foreach (var bike in UnityEngine.Object.FindObjectsByType<MotorbikeAudio>()) bike.Level = s.effectsVolume / 100f;
             ApplyScreen(s);
             targetsReady = player != null && player.IsInitialized && (director == null || director.IsInitialized);
             Applied?.Invoke(s);

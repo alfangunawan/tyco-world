@@ -11,6 +11,7 @@
         "TycoWorld.Player.Tests",
         "TycoWorld.WorldGen",
         "TycoWorld.WorldGen.Editor",
+        "TycoWorld.Vehicles",
         "Unity.InputSystem",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",

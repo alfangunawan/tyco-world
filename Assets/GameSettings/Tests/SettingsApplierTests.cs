@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using TycoWorld.DayCycle;
 using TycoWorld.Player;
+using TycoWorld.Vehicles;
 using TycoWorld.WorldGen;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -106,6 +107,17 @@ namespace TycoWorld.GameSettings.Tests
             applier.Apply(new SettingsData { masterVolume = 40, effectsVolume = 50 });
             Assert.AreEqual(0.4f, source.volume, 1e-5f, "tidak mengecil berulang");
             Assert.AreEqual(dayBefore, director.Ambience.Day.volume, 1e-5f, "ambience diatur lewat Level, bukan Efek");
+        }
+
+        [Test]
+        public void Apply_SetsTheMotorbikeLevel_FromEffects()
+        {
+            applier.Initialize();
+            var bike = fx.Track(new GameObject("Motorbike")).AddComponent<MotorbikeAudio>();
+            applier.Apply(new SettingsData { effectsVolume = 40 });
+            Assert.AreEqual(0.4f, bike.Level, 1e-5f);
+            applier.Apply(new SettingsData { effectsVolume = 100 });
+            Assert.AreEqual(1f, bike.Level, 1e-5f);
         }
 
         [Test]
