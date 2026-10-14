@@ -106,7 +106,7 @@ namespace TycoWorld.Vehicles.Tests
             Assert.AreEqual(LightType.Spot, light.type);
             Assert.AreEqual(30f, light.range, 1e-4f);
             Assert.AreEqual(60f, light.spotAngle, 1e-4f);
-            Assert.AreEqual(4f, light.intensity, 1e-4f);
+            Assert.AreEqual(tuning.headlightIntensity, light.intensity, 1e-4f, "intensitas dari BikeTuning");
             Assert.AreEqual(LightShadows.None, light.shadows);
             Assert.IsFalse(light.enabled);
             var audio = root.GetComponent<MotorbikeAudio>();

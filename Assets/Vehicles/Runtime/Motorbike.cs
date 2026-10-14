@@ -51,6 +51,10 @@ namespace TycoWorld.Vehicles
         public float Yaw => transform.eulerAngles.y;
         public bool HeadlightOn { get; private set; }
         public bool CanDismount => IsMounted && Mathf.Abs(Speed) <= tuning.dismountMaxSpeed;
+        /// <summary>"[E] Turun" on the HUD: allowed to get off and past the exit guard that follows mounting.</summary>
+        bool HudCanExit => CanDismount && exitGuard <= 0f;
+        /// <summary>A riderless bike holds its brake, so one left rolling (rider teleported away) stops instead of coasting on.</summary>
+        static VehicleIntent ParkingBrake => new VehicleIntent { Brake = true };
         /// <summary>Head-on wall hits above bumpSpeed since Initialize.</summary>
         public int Bumps { get; private set; }
         public Vector3 HomePosition => homePosition;
@@ -92,7 +96,12 @@ namespace TycoWorld.Vehicles
             rideCamera = new RideCamera(tuning);
             homePosition = transform.position;
             homeYaw = transform.eulerAngles.y;
-            if (visuals != null) visuals.Initialize();
+            if (visuals != null)
+            {
+                // Runtime change of this instance's Light only (never the prefab asset).
+                MotorbikeVisuals.ConfigureHeadlight(visuals.Headlight, tuning);
+                visuals.Initialize();
+            }
             if (Application.isPlaying && InputSystem.actions != null && !IsMounted)
             {
                 // The Input System enables every project-wide map on startup; the Vehicle map is only live while seated (spec #5 §5).
@@ -128,8 +137,8 @@ namespace TycoWorld.Vehicles
             player.Seat(seat);
             player.Unseated += OnRiderUnseated;
             player.Hud.CrosshairVisible = false;
-            player.Hud.SetVehicle(true, SpeedKmh, HeadlightOn, CanDismount);
             exitGuard = tuning.exitGuardSeconds;
+            player.Hud.SetVehicle(true, SpeedKmh, HeadlightOn, HudCanExit);
             rideCamera.Reset(Yaw);
             if (sound != null) sound.StartEngine();
             return true;
@@ -185,7 +194,7 @@ namespace TycoWorld.Vehicles
         {
             if (!IsInitialized) Initialize();
             if (dt <= 0f) return;
-            var intent = IsMounted ? ReadIntent(dt) : default;
+            var intent = IsMounted ? ReadIntent(dt) : ParkingBrake;
             if (exitGuard > 0f) exitGuard -= dt;
             if (IsMounted) HandleButtons(intent);
             model.Step(intent, dt);
@@ -199,7 +208,7 @@ namespace TycoWorld.Vehicles
             if (IsMounted)
             {
                 rideCamera.Update(intent.LookDegrees, Yaw, model.Speed, dt);
-                Rider.Hud.SetVehicle(true, SpeedKmh, HeadlightOn, CanDismount);
+                Rider.Hud.SetVehicle(true, SpeedKmh, HeadlightOn, HudCanExit);
             }
             if (transform.position.y < tuning.respawnBelowY) ResetToHome();
         }
@@ -225,8 +234,12 @@ namespace TycoWorld.Vehicles
                 if (IsInitialized && Rider != null)
                 {
                     var player = Rider;
-                    if (player.IsSeated) player.Unseat(transform.position - transform.right * tuning.dismountSideOffset, Yaw);
-                    else ReleaseRider();
+                    // By reference: when the bike is torn down with its children the seat may already be destroyed, and
+                    // the player (whose IsSeated then reads false) must still leave it and get the camera rig back.
+                    bool onOurSeat = player.IsSeated || (!ReferenceEquals(seat, null) && ReferenceEquals(player.CurrentSeat, seat));
+                    // Teleport raises Unseated once, which releases the rider; ReleaseRider is then a no-op.
+                    if (onOurSeat) player.Teleport(transform.position - transform.right * tuning.dismountSideOffset, Yaw);
+                    ReleaseRider();
                 }
                 if (reader != null) reader.Disable();
             }

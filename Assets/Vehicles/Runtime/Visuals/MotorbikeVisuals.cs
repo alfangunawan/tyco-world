@@ -48,6 +48,18 @@ namespace TycoWorld.Vehicles
 
         void OnDestroy() => Shutdown();
 
+        /// <summary>
+        /// Headlight beam from the tuning (spec #5 §4). The prefab builder bakes it and the bike re-applies it to its own
+        /// scene instance at start, so the BikeTuning asset stays the single source of truth. Null-safe.
+        /// </summary>
+        public static void ConfigureHeadlight(Light light, BikeTuning t)
+        {
+            if (light == null || t == null) return;
+            light.range = t.headlightRange;
+            light.spotAngle = t.headlightAngle;
+            light.intensity = t.headlightIntensity;
+        }
+
         public void Initialize()
         {
             if (initialized) return;

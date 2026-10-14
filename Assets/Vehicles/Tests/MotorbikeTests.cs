@@ -1,3 +1,4 @@
+using System.Globalization;
 using NUnit.Framework;
 using TycoWorld.Player;
 using UnityEngine;
@@ -52,6 +53,8 @@ namespace TycoWorld.Vehicles.Tests
         }
 
         static float Flat(Vector3 a, Vector3 b) => Vector2.Distance(new Vector2(a.x, a.z), new Vector2(b.x, b.z));
+
+        static string F(float v) => v.ToString("F2", CultureInfo.InvariantCulture);
 
         [Test]
         public void Mount_SeatsThePlayer_LocksEverythingButLook()
@@ -124,13 +127,29 @@ namespace TycoWorld.Vehicles.Tests
         [Test]
         public void WallAhead_StopsWithoutPenetrating_EvenWithLongFrames()
         {
-            fx.Box("Wall", new Vector3(0f, 1.5f, 30f), new Vector3(10f, 3f, 0.5f));
+            // Wall face 120 m ahead: the bike reaches 60 km/j after ±62 m and hits the wall at full speed after ±9,8 s.
+            const float wallFace = 120f;
+            const float dt = 0.1f;
+            fx.Box("Wall", new Vector3(0f, 1.5f, wallFace + 0.25f), new Vector3(10f, 3f, 0.5f));
             fx.Sync();
             bike.Mount(player);
-            input.Hold(Gas, 8f);
-            Run(8f, 0.1f);
+            input.Hold(Gas, 11f);
+            float maxKmh = 0f, impactKmh = -1f;
+            for (int i = 0; i < 110; i++)
+            {
+                float before = bike.SpeedKmh;
+                int bumps = bike.Bumps;
+                bike.Tick(dt);
+                player.Tick(dt);
+                bike.LateTick();
+                maxKmh = Mathf.Max(maxKmh, bike.SpeedKmh);
+                if (bike.Bumps > bumps && impactKmh < 0f) impactKmh = before;
+            }
             float front = bike.transform.position.z + tuning.blockHalfExtents.z;
-            Assert.LessOrEqual(front, O.z + 29.75f + 0.01f);
+            string numbers = "front=" + F(front - O.z) + " maxKmh=" + F(maxKmh) + " impactKmh=" + F(impactKmh);
+            Assert.GreaterOrEqual(maxKmh, 59f, numbers);
+            Assert.GreaterOrEqual(impactKmh, 59f, "menabrak pada kecepatan penuh; " + numbers);
+            Assert.LessOrEqual(front, O.z + wallFace + 0.01f, numbers);
             Assert.AreEqual(0f, bike.Speed, 1e-3f);
             Assert.GreaterOrEqual(bike.Bumps, 1);
         }
@@ -138,12 +157,15 @@ namespace TycoWorld.Vehicles.Tests
         [Test]
         public void GlancingWall_SlidesAlong()
         {
+            // The wall crosses the bike's path (x = 0) at z ≈ 23 under 20°: the bike meets it and is pushed toward -x.
             fx.Box("Wall", new Vector3(3f, 1.5f, 15f), new Vector3(0.5f, 3f, 40f), -20f);
             fx.Sync();
             bike.Mount(player);
             input.Hold(Gas, 6f);
             Run(6f);
-            Assert.Greater(bike.Speed, 2f, "menyerong tidak berhenti");
+            string numbers = "x=" + F(bike.transform.position.x - O.x) + " z=" + F(bike.transform.position.z - O.z) + " speed=" + F(bike.Speed);
+            Assert.Less(bike.transform.position.x, O.x - 1f, "motor menyentuh tembok dan terdorong ke samping; " + numbers);
+            Assert.Greater(bike.Speed, 2f, "menyerong tidak berhenti; " + numbers);
             Assert.AreEqual(0, bike.Bumps);
         }
 
@@ -151,10 +173,13 @@ namespace TycoWorld.Vehicles.Tests
         public void ExitPressedRightAfterMounting_IsIgnored()
         {
             bike.Mount(player);
+            Assert.IsFalse(player.Hud.VehicleCanExit, "\"[E] Turun\" belum tampil selama jeda 0,3 s");
             input.Press(ExitPress);
             Run(Dt);
             Assert.IsTrue(bike.IsMounted, "E yang sama tidak boleh langsung menurunkan");
+            Assert.IsFalse(player.Hud.VehicleCanExit);
             Run(0.4f);
+            Assert.IsTrue(player.Hud.VehicleCanExit, "diam dan jeda lewat: \"[E] Turun\" tampil");
             input.Press(ExitPress);
             Run(Dt);
             Assert.IsFalse(bike.IsMounted);
@@ -221,6 +246,81 @@ namespace TycoWorld.Vehicles.Tests
             Assert.IsFalse(player.IsSeated);
             Assert.IsFalse(bike.IsMounted);
             Assert.IsTrue(player.Locks.Allows(PlayerAbility.All));
+        }
+
+        [Test]
+        public void SeatDestroyed_WhileRidden_ShutdownAndTick_FreeThePlayer()
+        {
+            bike.Mount(player);
+            Run(0.1f);
+            int unseated = 0;
+            player.Unseated += () => unseated++;
+            Assert.AreNotEqual(Vector3.zero, player.View.localPosition, "kamera sedang dipegang motor");
+            Object.DestroyImmediate(bike.Seat.gameObject);
+            bike.Shutdown();
+            player.Tick(Dt);
+            Assert.IsFalse(bike.IsMounted);
+            Assert.IsFalse(player.IsSeated);
+            Assert.IsTrue(ReferenceEquals(player.CurrentSeat, null));
+            Assert.AreEqual(1, unseated);
+            Assert.IsTrue(player.Locks.Allows(PlayerAbility.All));
+            Assert.IsTrue(player.GetComponent<CharacterController>().enabled);
+            Assert.AreEqual(Vector3.zero, player.View.localPosition);
+            Assert.AreEqual(Quaternion.identity, player.View.localRotation);
+            Assert.IsFalse(player.Hud.VehicleVisible);
+            Assert.IsTrue(player.Hud.CrosshairVisible);
+        }
+
+        [Test]
+        public void RiderTeleportedWhileRiding_TheBikeBrakesToAStop()
+        {
+            bike.Mount(player);
+            input.Hold(Gas, 3f);
+            Run(3f);
+            Assert.Greater(bike.Speed, 5f, "motor melaju saat ditinggal");
+            player.Teleport(O + new Vector3(-20f, 0f, 0f), 0f);
+            Assert.IsFalse(bike.IsMounted);
+            var released = bike.transform.position;
+            for (int i = 0; i < 100; i++) bike.Tick(Dt);
+            Assert.AreEqual(0f, bike.Speed, 1e-3f, "motor tanpa pengendara mengerem sendiri");
+            Assert.Less(Flat(released, bike.transform.position), 15f);
+        }
+
+        [Test]
+        public void Initialize_AppliesTheHeadlightTuning()
+        {
+            var custom = fx.Track(ScriptableObject.CreateInstance<BikeTuning>());
+            custom.headlightRange = 12f;
+            custom.headlightAngle = 45f;
+            custom.headlightIntensity = 33f;
+            var root = fx.Track(new GameObject("LitBike"));
+            root.transform.position = O + new Vector3(20f, 0f, 0f);
+            root.AddComponent<CharacterController>();
+            var seat = new GameObject("Seat").transform;
+            seat.SetParent(root.transform, false);
+            var light = new GameObject("Headlight").AddComponent<Light>();
+            light.transform.SetParent(root.transform, false);
+            light.type = LightType.Spot;
+            light.range = 30f;
+            light.spotAngle = 60f;
+            light.intensity = 4f;
+            var visuals = root.AddComponent<MotorbikeVisuals>();
+            visuals.Configure(null, null, null, null, null, light, null, null);
+            var lit = root.AddComponent<Motorbike>();
+            lit.Configure(custom, seat, visuals, null);
+            try
+            {
+                lit.Initialize();
+                Assert.AreEqual(12f, light.range, 1e-4f);
+                Assert.AreEqual(45f, light.spotAngle, 1e-4f);
+                Assert.AreEqual(33f, light.intensity, 1e-4f);
+                Assert.DoesNotThrow(() => MotorbikeVisuals.ConfigureHeadlight(null, custom));
+                Assert.DoesNotThrow(() => MotorbikeVisuals.ConfigureHeadlight(light, null));
+            }
+            finally
+            {
+                visuals.Shutdown();
+            }
         }
 
         [Test]

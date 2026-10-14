@@ -55,9 +55,7 @@ namespace TycoWorld.Vehicles.Authoring
             var headlight = GetOrAdd<Light>(Child(HeadlightName, bar, new Vector3(0f, 0.97f, 0.13f)).gameObject);
             headlight.transform.localRotation = Quaternion.Euler(6f, 0f, 0f);
             headlight.type = LightType.Spot;
-            headlight.range = tuning.headlightRange;
-            headlight.spotAngle = tuning.headlightAngle;
-            headlight.intensity = tuning.headlightIntensity;
+            MotorbikeVisuals.ConfigureHeadlight(headlight, tuning);
             headlight.color = VehicleMaterials.LensEmission;
             headlight.shadows = LightShadows.None;
             headlight.enabled = false;

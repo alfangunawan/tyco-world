@@ -74,7 +74,6 @@ namespace TycoWorld.Player.Tests
             rig.Run(0.5f);
             Assert.Less(Quaternion.Angle(flashlight.transform.rotation, rig.View.rotation), 1f);
         }
-    
 
         [Test]
         public void TurnOff_SwitchesOffWithoutAClick()
@@ -88,5 +87,5 @@ namespace TycoWorld.Player.Tests
             flashlight.TurnOff();
             Assert.IsFalse(flashlight.IsOn);
         }
-}
+    }
 }

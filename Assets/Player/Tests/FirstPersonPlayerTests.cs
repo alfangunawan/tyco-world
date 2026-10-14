@@ -260,7 +260,6 @@ namespace TycoWorld.Player.Tests
             Assert.IsFalse(rig.Player.InvertY);
             Assert.IsTrue(rig.Player.EscapeUnlocksCursor);
         }
-    
 
         Transform NewSeat(Vector3 local, float yaw)
         {
@@ -357,5 +356,29 @@ namespace TycoWorld.Player.Tests
             rig.Player.Locks.Release(owner);
             Assert.IsFalse(rig.Root.GetComponent<CharacterController>().enabled);
         }
-}
+
+        [Test]
+        public void SeatDestroyed_WhileSeated_GetsOffInPlaceOnTheNextTick()
+        {
+            var rig = FloorRig();
+            var seat = NewSeat(new Vector3(0f, 0.85f, 0f), 30f);
+            rig.Player.Seat(seat);
+            rig.View.localPosition = new Vector3(1f, 2f, -3f);
+            rig.View.localRotation = Quaternion.Euler(10f, 20f, 0f);
+            int events = 0;
+            rig.Player.Unseated += () => events++;
+            Object.DestroyImmediate(seat.gameObject);
+            rig.Player.Tick(1f / 60f);
+            Assert.IsFalse(rig.Player.IsSeated);
+            Assert.IsTrue(ReferenceEquals(rig.Player.CurrentSeat, null), "kursi yang sudah hancur dilepas");
+            Assert.AreEqual(1, events);
+            Assert.AreEqual(Vector3.zero, rig.View.localPosition);
+            Assert.AreEqual(Quaternion.identity, rig.View.localRotation);
+            Assert.IsTrue(rig.Player.Locks.Allows(PlayerAbility.All));
+            Assert.IsTrue(rig.Root.GetComponent<CharacterController>().enabled);
+            Assert.AreEqual(30f, rig.Player.Yaw, 1e-3f);
+            rig.Player.Tick(1f / 60f);
+            Assert.AreEqual(1, events, "event hanya sekali");
+        }
+    }
 }

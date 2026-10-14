@@ -135,6 +135,9 @@ namespace TycoWorld.Player
         {
             if (!IsInitialized) Initialize();
             if (dt <= 0f) return;
+            // The seat was destroyed under us (vehicle torn down while ridden): get off where we are, which clears the
+            // seat, gives the camera rig back, raises Unseated and restores the body per the locks.
+            if (!ReferenceEquals(seat, null) && seat == null) Teleport(transform.position, Yaw);
             var source = ActiveSource;
             var raw = source != null ? source.Read(dt) : default;
             if (reader != null && ReferenceEquals(source, reader))
@@ -313,10 +316,13 @@ namespace TycoWorld.Player
             yawPitch = new Vector2(Mathf.Repeat(yaw, 360f), 0f);
         }
 
-        /// <summary>Leaves the seat and gives the camera rig back to the player; true when the player was seated.</summary>
+        /// <summary>
+        /// Leaves the seat and gives the camera rig back to the player; true when the player was seated. By reference, so a
+        /// seat that was destroyed while still held is cleared too.
+        /// </summary>
         bool ClearSeat()
         {
-            if (seat == null) return false;
+            if (ReferenceEquals(seat, null)) return false;
             seat = null;
             if (cameraView != null)
             {
