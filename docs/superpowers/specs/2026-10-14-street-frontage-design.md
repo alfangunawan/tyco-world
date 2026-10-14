@@ -405,7 +405,7 @@ Shader: URP Simple Lit, sama dengan spec #1 §9.
 | `Edge_Kerb` | Prosedural `StreetTextureGenerator.KerbStripes` | 2 blok/m (hitam, putih) + noise kotor |
 | `Road_Marking` | Warna putih kusam DCDCD2 | Smoothness 0.2 |
 | `Frontage_WallAtlas` | Prosedural atlas 8 band dari ambientCG plester dan bata | Tiap band di-tint, ditambah noda air (gradien gelap dari bawah) dan lumut di 25 cm bawah |
-| `Frontage_Fence` | Prosedural `StreetTextureGenerator.FenceBars` | Jeruji vertikal dan dua palang, alpha clip 0.5, cull off |
+| `Frontage_Fence` | Prosedural `StreetTextureGenerator.FenceBars` | Jeruji vertikal dan dua palang, alpha clip 0.5, cull back (`_Cull: 2`); dua quad berlawanan arah menerangi kedua sisi (§7) |
 | `Frontage_GateMetal` | Warna 2B2F33 | Smoothness 0.45 |
 
 - Id ambientCG baru (plester dan bata) dipilih dan diverifikasi saat implementasi. Lisensinya harus CC0.
@@ -671,6 +671,7 @@ Tes `SavedAsset_HasStreetDressing` memastikan asset yang tersimpan memuat ketiga
 
 - Semua tes EditMode lulus. Langkah integrasi 1–7 lulus dan tercatat di `docs/superpowers/notes/2026-10-xx-street-frontage-verification.md`.
 - Draw call (preset Sedang) ≤ +15%, dan FPS ≥ 90% dari angka before di titik yang sama.
+- Deviasi: setelah mitigasi (bayangan tepi mati, wajah tersembunyi dibuang) FPS ≥ 90% lulus di keenam titik, tetapi batches masih melebihi +15% di road dan high pada jam 10 dan 21 (+25% sampai +33%); kos lulus. Pengukuran dilakukan di preset High (bukan Sedang) dengan pengaturan yang sama seperti before. Tidak ada waiver dari user. Detail: `docs/superpowers/notes/2026-10-14-street-frontage-verification.md`, bagian "Setelah mitigasi".
 - Visual:
   - tepi jalan punya garis tegas;
   - koridor jalan tertutup tembok atau rumah;

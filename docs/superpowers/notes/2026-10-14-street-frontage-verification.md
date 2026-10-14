@@ -1,6 +1,6 @@
 # Street Frontage + Road Dressing — verifikasi
 
-## Before (main 38a40ee, sebelum perubahan kode)
+## Before (commit 62e4814 = main 38a40ee + hanya dokumen, sebelum perubahan kode)
 
 - Generate: 14378 ms; Features: Area=36, Building=4915, KeyBuilding=6, Road=763, WaterArea=3, WaterLine=18; Trees/Lamps: Trees 1278 (dropped by cap 0), Lamps 876
 - Hash chunk: `.superpowers/sdd/2026-10-14-street-frontage/hashes-before.txt` (278 chunk)
@@ -61,6 +61,23 @@
 | high | 21 | 186.7 | 177.2 (94.9%) | 3796 | 5074 (+33.7%) | **TIDAK** (batches) |
 
 Kriteria: batches ≤ +15%, fps ≥ 90% dari before. Tiga dari enam titik gagal (high di kedua jam, road 21); angka settings tidak diubah. Untuk perbaikan: kurangi draw call dari tembok/tepi/infill (mis. gabung per chunk lebih agresif, atau cull jarak jauh untuk Frontage dan RoadEdges), lalu ukur ulang.
+
+## Setelah mitigasi (final fix wave)
+
+- Preset grafis aktif saat pengukuran: **High** (`SettingsApplier.Current.preset=High`, viewDistance 500, renderScale 100, shadows High, quality level `PC`). Kriteria spec §15 menyebut preset Sedang, tetapi pengukuran before dan Task 16 juga memakai pengaturan tersimpan yang sama, jadi perbandingan ini apple-to-apple di High, bukan di Sedang. Pengaturan grafis tidak diubah (tidak di-tune agar lulus).
+- Perubahan: (1) `RoadEdge` tidak melempar bayangan (`ShadowCastingMode.Off`); (2) wajah tersembunyi dibuang dari render mesh tembok: tutup ujung hanya di ujung potongan dan tikungan >= 10 derajat, tanpa sisi atas tembok di bawah coping (collider tetap solid tertutup); (3) gerbang/pintu dibangun dari irisan dan offset mitred yang sama dengan potongan tembok.
+- Generate: total 24284 ms (run kedua; run pertama 25031 ms); sub-tahap run pertama: meshes.base 320, meshes.street 7, meshes.edges 1375, meshes.frontage1 3116, meshes.infill 179, meshes.frontage2 3612 (meshes total 8770), assets 11877, scene 3476 ms. Determinisme: generate 2x `IDENTICAL chunks=280`. Tes: passed=969 failed=0.
+
+| Titik | Jam | fps before | fps Task 16 | fps sesudah mitigasi | batches before | batches Task 16 | batches sesudah mitigasi | lulus? |
+|---|---|---|---|---|---|---|---|---|
+| kos | 10 | 162.2 | 174.9 | 182.5 (112.5%) | 8025 | 9160 (+14.1%) | 9125 (+13.7%) | ya |
+| road | 10 | 189.5 | 185.1 | 199.2 (105.1%) | 5645 | 6419 (+13.7%) | 7058 (+25.0%) | **TIDAK** (batches) |
+| high | 10 | 218.7 | 173.4 | 219.8 (100.5%) | 3782 | 5045 (+33.4%) | 5023 (+32.8%) | **TIDAK** (batches) |
+| kos | 21 | 152.8 | 158.1 | 162.9 (106.6%) | 8273 | 9414 (+13.8%) | 9367 (+13.2%) | ya |
+| road | 21 | 180.0 | 155.0 | 172.5 (95.8%) | 5707 | 7156 (+25.4%) | 7129 (+24.9%) | **TIDAK** (batches) |
+| high | 21 | 186.7 | 177.2 | 196.7 (105.4%) | 3796 | 5074 (+33.7%) | 5047 (+33.0%) | **TIDAK** (batches) |
+
+Hasil: fps lulus di semua enam titik (>= 90%); batches masih gagal di empat titik (road dan high, kedua jam). Mitigasi bayangan dan wajah tersembunyi hampir tidak menggeser jumlah batch (batch ditentukan jumlah renderer chunk, bukan segitiga); tris turun (kos 10: 431k -> 408k). Nilai road 10 (7058) lebih tinggi dari Task 16 (6419) pada titik yang sama; selisih ini tidak dijelaskan oleh perubahan kode di atas dan dicatat apa adanya. Tidak ada tuning lain dan tidak ada waiver dari user.
 
 ## QA manual (user)
 - [ ] Jalan kaki dan naik motor di Jl. Sukabirus, gang dekat kos, dan Jl. Raya Bojongsoang; siang dan malam.
