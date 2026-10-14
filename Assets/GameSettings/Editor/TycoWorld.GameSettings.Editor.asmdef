@@ -1,0 +1,25 @@
+{
+    "name": "TycoWorld.GameSettings.Editor",
+    "rootNamespace": "TycoWorld.GameSettings.Authoring",
+    "references": [
+        "TycoWorld.GameSettings",
+        "TycoWorld.Player",
+        "TycoWorld.Player.Editor",
+        "TycoWorld.DayCycle",
+        "TycoWorld.DayCycle.Editor",
+        "TycoWorld.WorldGen",
+        "TycoWorld.WorldGen.Editor",
+        "Unity.InputSystem",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
