@@ -168,6 +168,26 @@ namespace TycoWorld.WorldGen.Authoring
             return false;
         }
 
+        /// <summary>True when the rings' areas touch: a vertex of one inside the other, or crossing edges.</summary>
+        public static bool RingsOverlap(IReadOnlyList<Vector2> a, IReadOnlyList<Vector2> b)
+        {
+            if (!Bounds(a).Overlaps(Bounds(b))) return false;
+            foreach (var p in a) if (ContainsPoint(b, p)) return true;
+            foreach (var p in b) if (ContainsPoint(a, p)) return true;
+            for (int i = 0; i < a.Count; i++)
+                for (int j = 0; j < b.Count; j++)
+                    if (SegmentsCross(a[i], a[(i + 1) % a.Count], b[j], b[(j + 1) % b.Count])) return true;
+            return false;
+        }
+
+        /// <summary>Shortest distance between segments ab and cd (0 when they cross).</summary>
+        public static float SegmentDistance(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
+        {
+            if (SegmentsCross(a, b, c, d)) return 0f;
+            return Mathf.Min(Mathf.Min(DistanceToSegment(a, c, d), DistanceToSegment(b, c, d)),
+                Mathf.Min(DistanceToSegment(c, a, b), DistanceToSegment(d, a, b)));
+        }
+
         static bool SegmentsCross(Vector2 a, Vector2 b, Vector2 c, Vector2 d)
         {
             float d1 = Cross(d - c, a - c), d2 = Cross(d - c, b - c);
