@@ -14,7 +14,7 @@ Spec: `docs/superpowers/specs/2026-10-14-motorbike-design.md`. Plan: `docs/super
 | Tembok lurus 60 km/j | berhenti di z 7149,00 (muka tembok 7150, ujung depan 7149,95), kmh 0, bumps +1 |
 | Pause saat melaju | timeScale 0, audioPaused True, pos dan kmh identik antar dua status; lanjut: timeScale 1 dan pos berubah; lookFree False hanya selama menu pause (dikunci menu pause, bukan motor), True setelah lanjut |
 | Kamera V | ThirdPerson -> FirstPerson -> ThirdPerson; camDist orang ketiga di jalan terbuka 4,55 m |
-| Lampu depan malam | luminansi tengah 0,0099 -> 0,0101 (naik tipis; sudut pandang menghadap rumah dekat) |
+| Lampu depan malam | di lintasan uji (21:00, lantai datar, tanpa lampu lain): luminansi tengah off 0,0658, on 0,0665 (orang ketiga), 0,0691 (orang pertama); kenaikan hanya 1-5% dan tidak ada bercak terang di screenshot. Dengan intensitas 60 (uji diagnostik runtime) tampak bercak terang jelas (0,0917). Lampu aktif (enabled, intensity 4, range 30, spot 60, Realtime, URP PerPixel, maks 4 lampu tambahan), jadi intensitas 4 terlalu redup di render ini; perlu dinilai manual / dinaikkan |
 | Performa Sedang, malam, melaju | 164,2 fps (6,09 ms, terburuk 113,7 ms), lampu aktif 18, batches 1416 (catatan #4: 203,9 fps). Sebagian jendela sampling motor berhenti menabrak sesuatu |
 | Turun saat berhenti | kaki 1,1 m dari motor, mounted=False, moveFree=True, crosshair True, mesin dan lampu mati, bisa berjalan lagi |
 | Teleport saat naik | otomatis turun (mounted=False, seated=False, moveFree=True, HUD kendaraan hilang, engine=False) |
