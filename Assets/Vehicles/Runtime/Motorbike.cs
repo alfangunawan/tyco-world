@@ -10,6 +10,9 @@ namespace TycoWorld.Vehicles
     /// </summary>
     [RequireComponent(typeof(CharacterController))]
     [DisallowMultipleComponent]
+    // After FirstPersonPlayer (order 0): Exit and Interact are both E, so in the dismount frame the seated player
+    // (Interact still locked) must tick first; otherwise the released lock lets the same press fire the Interactor.
+    [DefaultExecutionOrder(100)]
     public sealed class Motorbike : MonoBehaviour
     {
         public const string SlowDownMessage = "Pelankan motor dulu.";
@@ -29,7 +32,7 @@ namespace TycoWorld.Vehicles
         IVehicleIntentSource scriptedSource;
         VehicleInputReader reader;
         float verticalSpeed, exitGuard, steer;
-        bool touchingWall;
+        bool touchingWall, shuttingDown;
         Vector3 homePosition;
         float homeYaw;
 
@@ -90,6 +93,12 @@ namespace TycoWorld.Vehicles
             homePosition = transform.position;
             homeYaw = transform.eulerAngles.y;
             if (visuals != null) visuals.Initialize();
+            if (Application.isPlaying && InputSystem.actions != null && !IsMounted)
+            {
+                // The Input System enables every project-wide map on startup; the Vehicle map is only live while seated (spec #5 §5).
+                var vehicleMap = InputSystem.actions.FindActionMap(VehicleInputReader.MapName);
+                if (vehicleMap != null) vehicleMap.Disable();
+            }
             IsInitialized = true;
         }
 
@@ -98,7 +107,8 @@ namespace TycoWorld.Vehicles
         {
             controller.radius = t.bodyRadius;
             controller.height = t.bodyHeight;
-            controller.center = new Vector3(0f, t.bodyHeight * 0.5f, 0f);
+            // Lifted by the skin width: the controller rests skinWidth above the ground, so the root lands on it.
+            controller.center = new Vector3(0f, t.bodyHeight * 0.5f + controller.skinWidth, 0f);
             controller.slopeLimit = t.slopeLimit;
             controller.stepOffset = t.stepOffset;
             controller.minMoveDistance = 0f;
@@ -110,7 +120,7 @@ namespace TycoWorld.Vehicles
         public bool Mount(FirstPersonPlayer player)
         {
             if (!IsInitialized) Initialize();
-            if (IsMounted || player == null || !player.IsInitialized || seat == null) return false;
+            if (IsMounted || player == null || !player.IsInitialized || player.IsSeated || seat == null) return false;
             Rider = player;
             player.Locks.Acquire(this, RiderLocks);
             var flashlight = player.GetComponentInChildren<Flashlight>(true);
@@ -208,13 +218,22 @@ namespace TycoWorld.Vehicles
         /// <summary>Frees the rider (bike destroyed, scene unloaded) so the player is never left locked on a missing seat.</summary>
         public void Shutdown()
         {
-            if (IsInitialized && Rider != null)
+            // The visuals may already have shut down (their own OnDestroy); resetting them now would re-create material copies.
+            shuttingDown = true;
+            try
             {
-                var player = Rider;
-                if (player.IsSeated) player.Unseat(transform.position - transform.right * tuning.dismountSideOffset, Yaw);
-                else ReleaseRider();
+                if (IsInitialized && Rider != null)
+                {
+                    var player = Rider;
+                    if (player.IsSeated) player.Unseat(transform.position - transform.right * tuning.dismountSideOffset, Yaw);
+                    else ReleaseRider();
+                }
+                if (reader != null) reader.Disable();
             }
-            if (reader != null) reader.Disable();
+            finally
+            {
+                shuttingDown = false;
+            }
         }
 
         void HandleButtons(VehicleIntent intent)
@@ -269,6 +288,12 @@ namespace TycoWorld.Vehicles
                 touchingWall = false;
                 return motion;
             }
+            if (hit.normal.y >= Mathf.Cos(tuning.slopeLimit * Mathf.Deg2Rad))
+            {
+                // A climbable slope, not a wall: the CharacterController walks up it.
+                touchingWall = false;
+                return motion;
+            }
             if (Vector3.Dot(hit.normal, -direction) > tuning.headOnDot)
             {
                 float impact = Mathf.Abs(model.Speed);
@@ -302,7 +327,7 @@ namespace TycoWorld.Vehicles
             HeadlightOn = false;
             if (reader != null) reader.Disable();
             if (sound != null) sound.StopEngine();
-            if (visuals != null) visuals.Apply(model.Speed, 0f, model.Lean, false, false, false, 0f);
+            if (visuals != null && !shuttingDown) visuals.Apply(model.Speed, 0f, model.Lean, false, false, false, 0f);
         }
     }
 }

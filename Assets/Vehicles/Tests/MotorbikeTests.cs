@@ -73,6 +73,13 @@ namespace TycoWorld.Vehicles.Tests
         public void Mount_Twice_OrWithoutAPlayer_Fails()
         {
             Assert.IsFalse(bike.Mount(null));
+            var seated = fx.CreatePlayer(new Vector3(0f, 0f, 6f));
+            var otherSeat = fx.Track(new GameObject("OtherSeat")).transform;
+            otherSeat.position = O + new Vector3(0f, 0.86f, 6f);
+            seated.Seat(otherSeat);
+            Assert.IsFalse(bike.Mount(seated), "pemain yang sudah duduk di kendaraan lain tidak boleh naik");
+            Assert.IsFalse(bike.IsMounted);
+            Assert.AreSame(otherSeat, seated.CurrentSeat);
             Assert.IsTrue(bike.Mount(player));
             var other = fx.CreatePlayer(new Vector3(3f, 0f, 0f));
             Assert.IsFalse(bike.Mount(other));
@@ -220,11 +227,87 @@ namespace TycoWorld.Vehicles.Tests
         public void ZeroDt_DoesNothing()
         {
             bike.Mount(player);
-            input.Hold(Gas, 5f);
+            input.Hold(Gas, 10f);
+            Run(2f);
             var before = bike.transform.position;
+            float speed = bike.Speed;
+            bool headlight = bike.HeadlightOn;
+            Assert.Greater(speed, 2f, "motor harus sudah melaju sebelum pause");
+            input.Press(new VehicleIntent { ToggleHeadlight = true });
             bike.Tick(0f);
             Assert.AreEqual(before, bike.transform.position);
-            Assert.AreEqual(0f, bike.Speed);
+            Assert.AreEqual(speed, bike.Speed);
+            Assert.AreEqual(headlight, bike.HeadlightOn);
+            bike.Tick(Dt);
+            Assert.AreNotEqual(headlight, bike.HeadlightOn, "tekanan tombol tetap tertunda selama pause dan diproses pada tick berikutnya");
+        }
+
+        [Test]
+        public void Motorbike_TicksAfterThePlayer()
+        {
+            Assert.Greater(ExecutionOrder(typeof(Motorbike)), ExecutionOrder(typeof(FirstPersonPlayer)),
+                "pada frame turun, pemain (Interact masih terkunci) harus tick dulu supaya E tidak ikut memicu Interactor");
+        }
+
+        static int ExecutionOrder(System.Type type)
+        {
+            var attributes = type.GetCustomAttributes(typeof(DefaultExecutionOrder), true);
+            return attributes.Length > 0 ? ((DefaultExecutionOrder)attributes[0]).order : 0;
+        }
+
+        [Test]
+        public void Ramp_WithinSlopeLimit_IsClimbed()
+        {
+            // 32° ramp (below the 35° slopeLimit, above the 30° where sin θ passes headOnDot 0.5) rising toward +z;
+            // the near edge of its top face sits at floor level 3 m ahead of the bike root (2.05 m ahead of its nose).
+            const float angle = 32f;
+            var rotation = Quaternion.Euler(-angle, 0f, 0f);
+            var size = new Vector3(6f, 1f, 30f);
+            var nearTopEdge = new Vector3(0f, -0.01f, 3f);
+            var center = nearTopEdge - rotation * Vector3.up * (size.y * 0.5f) + rotation * Vector3.forward * (size.z * 0.5f);
+            fx.Box("Ramp", center, size).transform.rotation = rotation;
+            fx.Sync();
+            bike.Mount(player);
+            input.Hold(Gas, 3f);
+            Run(3f);
+            Assert.Greater(bike.transform.position.y - O.y, 3f, "motor naik tanjakan");
+            Assert.AreEqual(0, bike.Bumps);
+        }
+
+        [Test]
+        public void Body_RestsOnTheGround()
+        {
+            bike.Mount(player);
+            Run(0.5f);
+            Assert.AreEqual(O.y, bike.transform.position.y, 0.01f, "akar motor di tanah, tidak melayang setebal skin width");
+        }
+
+        [Test]
+        public void Shutdown_AfterTheVisualsShutDown_DoesNotRecreateMaterialCopies()
+        {
+            var tail = new GameObject("TailLight").AddComponent<MeshRenderer>();
+            tail.transform.SetParent(bike.transform, false);
+            var material = fx.Track(new Material(Shader.Find("Universal Render Pipeline/Simple Lit")));
+            tail.sharedMaterial = material;
+            var visuals = bike.gameObject.AddComponent<MotorbikeVisuals>();
+            visuals.Configure(null, null, null, null, null, null, tail, null);
+            bike.Configure(tuning, bike.Seat, visuals, null);
+            visuals.Initialize();
+            try
+            {
+                bike.Mount(player);
+                Run(0.1f);
+                Assert.AreNotSame(material, tail.sharedMaterial, "selama dinaiki, lampu belakang memakai salinan runtime");
+                visuals.Shutdown();
+                Assert.AreSame(material, tail.sharedMaterial);
+                bike.Shutdown();
+                Assert.IsFalse(bike.IsMounted);
+                Assert.AreSame(material, tail.sharedMaterial, "Shutdown motor tidak boleh membuat salinan material baru");
+            }
+            finally
+            {
+                visuals.Shutdown();
+            }
         }
 
         [Test]

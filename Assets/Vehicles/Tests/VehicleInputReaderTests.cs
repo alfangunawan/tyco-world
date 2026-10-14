@@ -12,13 +12,23 @@ namespace TycoWorld.Vehicles.Tests
         public void Constructor_FindsActions_IdleReadIsEmpty()
         {
             var asset = AssetDatabase.LoadAssetAtPath<InputActionAsset>(PlayerPaths.InputActionsAsset);
-            var reader = new VehicleInputReader(asset, 0.1f);
-            Assert.IsFalse(reader.IsEnabled);
-            var intent = reader.Read(0.016f);
-            Assert.AreEqual(0f, intent.Throttle);
-            Assert.AreEqual(0f, intent.Steer);
-            Assert.AreEqual(Vector2.zero, intent.LookDegrees);
-            Assert.IsFalse(intent.Brake || intent.Horn || intent.ToggleHeadlight || intent.ToggleCamera || intent.Exit);
+            // A copy: the Input System enables every map of the project-wide asset on each editor domain reload,
+            // so the shared asset's enabled state is global and not ours to assume. A fresh copy's maps start disabled.
+            var copy = UnityEngine.Object.Instantiate(asset);
+            try
+            {
+                var reader = new VehicleInputReader(copy, 0.1f);
+                Assert.IsFalse(reader.IsEnabled);
+                var intent = reader.Read(0.016f);
+                Assert.AreEqual(0f, intent.Throttle);
+                Assert.AreEqual(0f, intent.Steer);
+                Assert.AreEqual(Vector2.zero, intent.LookDegrees);
+                Assert.IsFalse(intent.Brake || intent.Horn || intent.ToggleHeadlight || intent.ToggleCamera || intent.Exit);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(copy);
+            }
         }
     }
 }
