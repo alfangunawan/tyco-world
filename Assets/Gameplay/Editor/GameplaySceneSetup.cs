@@ -66,7 +66,8 @@ namespace TycoWorld.Gameplay.Authoring
             if (newDocument) document.sortingOrder = HudSortingOrder;
             var director = root.GetComponent<KampungDirector>();
             if (director == null) director = root.AddComponent<KampungDirector>();
-            director.Configure(data, catalog, material);
+            var bike = AssetDatabase.LoadAssetAtPath<GameObject>(TycoWorld.Vehicles.Authoring.VehiclePaths.MotorbikePrefab);
+            director.Configure(data, catalog, material, bike);
             EditorUtility.SetDirty(director);
             EditorUtility.SetDirty(root);
             return root;

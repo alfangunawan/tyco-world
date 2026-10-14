@@ -16,7 +16,8 @@ namespace TycoWorld.Gameplay
     public sealed class Pedestrian
     {
         public const float WalkSpeedMin = 1.05f, WalkSpeedMax = 1.5f;
-        public const float RunSpeed = 4.2f, ChaseSpeed = 5.6f;
+        /// <summary>Chasers run a touch slower than the player's sprint (5.5): you can get away while your stamina lasts.</summary>
+        public const float RunSpeed = 4.2f, ChaseSpeed = 5.3f;
 
         public readonly GameObject Root;
         public readonly PersonFigure Figure;

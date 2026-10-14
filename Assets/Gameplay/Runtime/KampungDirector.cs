@@ -31,6 +31,8 @@ namespace TycoWorld.Gameplay
         [SerializeField] KampungData data;
         [SerializeField] ItemCatalog catalog;
         [SerializeField] Material baseMaterial;
+        [Tooltip("Parked warga bikes are copies of this (the Motorbike prefab); empty builds plain code bikes.")]
+        [SerializeField] GameObject bikePrefab;
 
         public Func<FirstPersonPlayer> FindPlayer = () => FindAnyObjectByType<FirstPersonPlayer>();
         public Func<DayCycleDirector> FindDayCycle = () => FindAnyObjectByType<DayCycleDirector>();
@@ -54,6 +56,7 @@ namespace TycoWorld.Gameplay
 
         public KampungData Data => data;
         public ItemCatalog Catalog => catalog;
+        public GameObject BikePrefab => bikePrefab;
         public Palette Palette => palette;
         public GameState State { get; } = new GameState();
         public FirstPersonPlayer Player { get; private set; }
@@ -91,11 +94,12 @@ namespace TycoWorld.Gameplay
 
         public event Action Ready;
 
-        public void Configure(KampungData kampung, ItemCatalog items, Material template)
+        public void Configure(KampungData kampung, ItemCatalog items, Material template, GameObject bike = null)
         {
             data = kampung;
             catalog = items;
             baseMaterial = template;
+            bikePrefab = bike;
         }
 
         public void AddSystem(IKampungSystem system)
@@ -339,6 +343,18 @@ namespace TycoWorld.Gameplay
             var feet = point.Feet;
             if (spawner.TryFindSpawn(point.Feet, out var safe)) feet = safe;
             Player.Teleport(feet, point.Yaw);
+        }
+
+        /// <summary>Fades to black, runs <paramref name="atBlack"/> unseen (caught by warga...), and fades back.</summary>
+        public void FadeThrough(Action atBlack)
+        {
+            if (IsFading) return;
+            StartFade(() =>
+            {
+                CloseShop();
+                ClosePhone();
+                atBlack?.Invoke();
+            });
         }
 
         void StartFade(Action atBlack)

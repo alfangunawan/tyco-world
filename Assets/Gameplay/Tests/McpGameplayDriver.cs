@@ -217,6 +217,86 @@ namespace TycoWorld.Gameplay.Tests
             return best.Interact(context) ? "used " + best.name + " (" + prompt + ")" : "cannot use " + best.name + " (" + prompt + ")";
         }
 
+        static VehicleSystem Cars => Director != null ? Director.GetSystem<VehicleSystem>() : null;
+
+        /// <summary>Parked/taken vehicles around, the heat, chasers and a running break-in.</summary>
+        public static string Vehicles()
+        {
+            var cars = Cars;
+            if (cars == null) return "no vehicle system";
+            var player = Director.Player.transform.position;
+            int bikes = 0, autos = 0, moved = 0;
+            float nearest = float.PositiveInfinity;
+            foreach (var v in cars.Vehicles)
+            {
+                if (!v.Active) continue;
+                if (v.Kind == VehicleKind.Bike) bikes++;
+                else autos++;
+                if (v.Moved) moved++;
+                nearest = Mathf.Min(nearest, Vector3.Distance(v.Position, player));
+            }
+            var people = Director.GetSystem<PedestrianSystem>();
+            var ridden = cars.Ridden;
+            return "bikes=" + bikes + " cars=" + autos + " taken=" + moved + " nearest=" + nearest.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                + " heat=" + cars.Heat.Level + " unseen=" + cars.Heat.Unseen.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)
+                + " chasers=" + (people != null ? people.ChaserCount : 0) + " hotwire=" + (cars.Hotwiring != null ? cars.HotwireProgress.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                + " riding=" + (ridden != null ? ridden.name : "-") + " caught=" + cars.Caught + " stars='" + Director.Hud.StarsText + "'";
+        }
+
+        /// <summary>Stands the player 2 m beside the nearest parked warga bike (kind "bike") or car, facing it.</summary>
+        public static string GoToVehicle(string kind)
+        {
+            var cars = Cars;
+            if (cars == null) return "no vehicle system";
+            var want = kind == "car" ? VehicleKind.Car : VehicleKind.Bike;
+            var player = Director.Player.transform.position;
+            WorldVehicle best = null;
+            foreach (var v in cars.Vehicles)
+                if (v.Active && !v.Moved && v.Kind == want && (best == null || (v.Position - player).sqrMagnitude < (best.Position - player).sqrMagnitude)) best = v;
+            if (best == null) return "no parked " + kind + " near";
+            var side = best.Body.transform.right * (want == VehicleKind.Car ? 1.9f : 1.3f);
+            var at = best.Position + side;
+            at.y = best.Position.y + 0.1f;
+            Director.Player.Teleport(at, Mathf.Atan2(-side.x, -side.z) * Mathf.Rad2Deg);
+            return "beside " + best.Root.name + " at " + best.Position.ToString("F1");
+        }
+
+        /// <summary>Breaks into (or gets on) the nearest warga vehicle within 4 m, as if E was pressed at it.</summary>
+        public static string Steal()
+        {
+            var cars = Cars;
+            if (cars == null) return "no vehicle system";
+            var player = Director.Player.transform.position;
+            WorldVehicle best = null;
+            foreach (var v in cars.Vehicles)
+                if (v.Active && (best == null || (v.Position - player).sqrMagnitude < (best.Position - player).sqrMagnitude)) best = v;
+            if (best == null || Vector3.Distance(best.Position, player) > 4f) return "no vehicle within 4 m";
+            var context = new TycoWorld.Player.InteractionContext(Director.Player, Director.Player.Hud, Director.Player.View.position);
+            string prompt = best.Lock.GetPrompt(context);
+            return best.Lock.Interact(context) ? "used " + best.Root.name + " (" + prompt + ")" : "cannot (" + prompt + ")";
+        }
+
+        /// <summary>Puts the nearest passer-by <paramref name="metres"/> from the player, standing and watching.</summary>
+        public static string Witness(float metres)
+        {
+            var people = Director != null ? Director.GetSystem<PedestrianSystem>() : null;
+            if (people == null) return "no pedestrian system";
+            var player = Director.Player.transform.position;
+            Pedestrian best = null;
+            foreach (var p in people.Pool)
+                if (p.Active && p.State != PedestrianState.Chase && (best == null || (p.Position - player).sqrMagnitude < (best.Position - player).sqrMagnitude)) best = p;
+            if (best == null) return "nobody out";
+            var forward = Director.Player.View.forward;
+            forward.y = 0f;
+            var at = player + forward.normalized * metres;
+            at.y = player.y;
+            best.Place(at, player - at);
+            best.State = PedestrianState.Wait;
+            best.Timer = 4f;
+            Physics.SyncTransforms();
+            return best.Root.name + " watching from " + metres.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " m";
+        }
+
         public static string ForceSosok()
         {
             var people = Director != null ? Director.GetSystem<PedestrianSystem>() : null;

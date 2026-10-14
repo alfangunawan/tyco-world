@@ -17,6 +17,8 @@ namespace TycoWorld.Gameplay
         public const float TalkSeconds = 3.5f;
         public const float WitnessRadius = 18f;
         public const float CatchDistance = 1.3f;
+        /// <summary>A chaser this far behind gives up and walks back to the lanes.</summary>
+        public const float GiveUpDistance = 45f;
         const int PoolSize = 30;
         const float PersonalSpace = 1.1f;
 
@@ -46,10 +48,12 @@ namespace TycoWorld.Gameplay
         readonly HashSet<Collider> people = new HashSet<Collider>();
         readonly RaycastHit[] hits = new RaycastHit[8];
         SeededRandom rng = new SeededRandom(0x5EED5EEDUL);
-        float spawnTimer;
+        float spawnTimer, lastHours = -1f;
         int serial;
 
         public int Order => 10;
+        /// <summary>Fills the streets by the hour (and lets the figure appear); tests turn it off and place people themselves.</summary>
+        public bool AutoSpawn { get; set; } = true;
         float GroundLevel => director != null ? director.GroundLevel : 0f;
         public LaneGraph Graph => graph;
         public IReadOnlyList<Pedestrian> Pool => pool;
@@ -111,6 +115,10 @@ namespace TycoWorld.Gameplay
             if (graph == null || graph.LaneCount == 0) return;
             var viewer = Viewer;
             int target = PedestrianSchedule.TargetCount(director.Hours);
+            // The clock jumped (sleep, fainting: the screen was black): the street changes at once.
+            float hours = director.Hours;
+            bool jumped = lastHours >= 0f && Mathf.Abs(Mathf.DeltaAngle(hours * 15f, lastHours * 15f)) > 0.5f * 15f;
+            lastHours = hours;
             int active = 0;
             foreach (var p in pool)
             {
@@ -123,12 +131,12 @@ namespace TycoWorld.Gameplay
                 foreach (var p in pool)
                 {
                     if (active <= target) break;
-                    if (!p.Active || p.State == PedestrianState.Chase || Visible(p.Position, 35f)) continue;
+                    if (!p.Active || p.State == PedestrianState.Chase || (!jumped && Visible(p.Position, 35f))) continue;
                     Despawn(p);
                     active--;
                 }
             spawnTimer -= dt;
-            if (spawnTimer <= 0f && active < target)
+            if (AutoSpawn && spawnTimer <= 0f && active < target)
             {
                 spawnTimer = 0.15f;
                 foreach (var p in pool)
@@ -140,7 +148,7 @@ namespace TycoWorld.Gameplay
             }
             foreach (var p in pool)
                 if (p.Active) Step(p, dt, viewer);
-            TickSosok(dt, viewer);
+            if (AutoSpawn) TickSosok(dt, viewer);
         }
 
         static float Flat(Vector3 v)
@@ -328,6 +336,11 @@ namespace TycoWorld.Gameplay
             d.y = 0f;
             float distance = d.magnitude;
             p.CurrentSpeed = Pedestrian.ChaseSpeed;
+            if (distance > GiveUpDistance)
+            {
+                ReturnToLane(p);
+                return;
+            }
             if (distance < CatchDistance)
             {
                 p.CurrentSpeed = 0f;
@@ -434,8 +447,11 @@ namespace TycoWorld.Gameplay
 
         // ---------- witnesses and the angry crowd ----------
 
-        /// <summary>Active (non-chasing) people within <paramref name="radius"/> of <paramref name="point"/> who can see it.</summary>
-        public List<Pedestrian> Witnesses(Vector3 point, float radius)
+        /// <summary>
+        /// Active (non-chasing) people within <paramref name="radius"/> of <paramref name="point"/> who can see it; the
+        /// <paramref name="target"/> object itself (the car being broken into) does not block the view of it.
+        /// </summary>
+        public List<Pedestrian> Witnesses(Vector3 point, float radius, Transform target = null)
         {
             var result = new List<Pedestrian>();
             foreach (var p in pool)
@@ -446,7 +462,7 @@ namespace TycoWorld.Gameplay
                 float d = to.magnitude;
                 if (d > radius) continue;
                 if (Physics.Raycast(eye, to / d, out var hit, d - 0.6f, PlayerLayers.QueryMask, QueryTriggerInteraction.Ignore) &&
-                    hit.collider.gameObject != p.Root) continue;
+                    hit.collider.gameObject != p.Root && (target == null || !hit.transform.IsChildOf(target))) continue;
                 result.Add(p);
             }
             return result;
@@ -491,38 +507,41 @@ namespace TycoWorld.Gameplay
         public void CalmDown()
         {
             foreach (var p in pool)
+                if (p.Active && p.State == PedestrianState.Chase) ReturnToLane(p);
+        }
+
+        /// <summary>A chaser stops and walks on from the nearest lane (or goes home when there is none near).</summary>
+        void ReturnToLane(Pedestrian p)
+        {
+            if (graph.LaneCount == 0)
             {
-                if (!p.Active || p.State != PedestrianState.Chase) continue;
-                if (graph.LaneCount == 0)
-                {
-                    Despawn(p);
-                    continue;
-                }
-                // Back onto the nearest lane.
-                var at = new Vector2(p.Position.x, p.Position.z);
-                graph.Near(at, 15f, lanesNear);
-                int best = -1;
-                float bestDistance = float.PositiveInfinity, bestS = 0f;
-                foreach (int lane in lanesNear)
-                {
-                    float s = graph.Project(lane, at, out float d);
-                    if (d < bestDistance)
-                    {
-                        best = lane;
-                        bestDistance = d;
-                        bestS = s;
-                    }
-                }
-                if (best < 0)
-                {
-                    Despawn(p);
-                    continue;
-                }
-                p.Lane = best;
-                p.S = bestS;
-                p.State = PedestrianState.Walk;
-                p.Speed = rng.Range(Pedestrian.WalkSpeedMin, Pedestrian.WalkSpeedMax);
+                Despawn(p);
+                return;
             }
+            // Back onto the nearest lane.
+            var at = new Vector2(p.Position.x, p.Position.z);
+            graph.Near(at, 15f, lanesNear);
+            int best = -1;
+            float bestDistance = float.PositiveInfinity, bestS = 0f;
+            foreach (int lane in lanesNear)
+            {
+                float s = graph.Project(lane, at, out float d);
+                if (d < bestDistance)
+                {
+                    best = lane;
+                    bestDistance = d;
+                    bestS = s;
+                }
+            }
+            if (best < 0)
+            {
+                Despawn(p);
+                return;
+            }
+            p.Lane = best;
+            p.S = bestS;
+            p.State = PedestrianState.Walk;
+            p.Speed = rng.Range(Pedestrian.WalkSpeedMin, Pedestrian.WalkSpeedMax);
         }
 
         /// <summary>Puts a walker at a lane position (tests).</summary>
