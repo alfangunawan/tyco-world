@@ -48,6 +48,7 @@ namespace TycoWorld.WorldGen.Authoring
         public readonly List<BuiltFeature> Features = new List<BuiltFeature>();
         public List<PropPlacement> Trees = new List<PropPlacement>();
         public List<PropPlacement> Lamps = new List<PropPlacement>();
+        public readonly List<InfillHouse> Infill = new List<InfillHouse>();
     }
 
     /// <summary>Pure pipeline: classified features → meshes, materials, props, chunk hashes. Touches no scene or asset.</summary>
@@ -58,6 +59,7 @@ namespace TycoWorld.WorldGen.Authoring
         /// <summary>Prop containers under the generated root; WorldChunkIndex culls by these names.</summary>
         public const string TreesGroup = "Props/Trees";
         public const string LampsGroup = "Props/Lamps";
+        static readonly IReadOnlyDictionary<string, string> InfillTags = new Dictionary<string, string> { { "generated", "infill" } };
 
         public static Vector2Int ChunkOf(Vector2 p, float chunkSize) =>
             new Vector2Int(Mathf.FloorToInt(p.x / chunkSize), Mathf.FloorToInt(p.y / chunkSize));
@@ -83,11 +85,14 @@ namespace TycoWorld.WorldGen.Authoring
             AddWater(world, settings, built, report);
             var street = StreetContext.From(world, settings);
             AddEdges(built, network, street, settings, report);
+            var houses = InfillPlanner.Plan(FrontagePlanner.Plan(network, street, settings), network, street, settings, report);
+            AddInfill(built, houses, settings, report);
             var walls = AddFrontage(built, FrontagePlanner.Plan(network, street, settings), settings, report);
             foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
             var placer = new PropPlacer(world.Buildings, world.Roads, network, settings.roadEdges);
             placer.AddWalls(walls);
+            placer.AddBuildings(houses.Select(h => h.AsBuildingFeature()));
             int treeVariants = settings.treePrefabs != null ? settings.treePrefabs.Length : 0;
             var waterShapes = world.WaterAreas.Select(w => w.Shape).ToList();
             built.Trees = placer.PlaceTrees(world.Trees, world.Areas, settings.maxTrees, treeVariants, report, waterShapes);
@@ -152,16 +157,72 @@ namespace TycoWorld.WorldGen.Authoring
                 feature.Obb = info.Obb;
                 if (info.RoofFailed) report.Skip(SkipReasons.RoofTriangulationFailed, b.Id);
 
-                var set = settings.MaterialSet(b.Rule.materialSet);
-                int upper = SplitMix64.Pick(b.Id, "upper", Length(set.upper));
-                var roofs = info.Roof == RoofKind.Gable ? set.gableRoof : set.flatRoof;
-                feature.Materials = new Material[BuildingMeshBuilder.SubmeshCount];
-                feature.Materials[BuildingMeshBuilder.SubGround] = At(set.groundFloor, SplitMix64.Pick(b.Id, "ground", Length(set.groundFloor)));
-                feature.Materials[BuildingMeshBuilder.SubUpper] = At(set.upper, upper);
-                feature.Materials[BuildingMeshBuilder.SubTrim] = At(set.trim, upper);
-                feature.Materials[BuildingMeshBuilder.SubRoof] = At(roofs, SplitMix64.Pick(b.Id, "roof", Length(roofs)));
+                feature.Materials = BuildingMaterials(settings.MaterialSet(b.Rule.materialSet), b.Id, info.Roof);
                 built.Features.Add(feature);
                 report.Count(b.Key != null ? "KeyBuilding" : "Building");
+            }
+        }
+
+        static Material[] BuildingMaterials(BuildingMaterialSet set, long id, RoofKind roof)
+        {
+            int upper = SplitMix64.Pick(id, "upper", Length(set.upper));
+            var roofs = roof == RoofKind.Gable ? set.gableRoof : set.flatRoof;
+            var materials = new Material[BuildingMeshBuilder.SubmeshCount];
+            materials[BuildingMeshBuilder.SubGround] = At(set.groundFloor, SplitMix64.Pick(id, "ground", Length(set.groundFloor)));
+            materials[BuildingMeshBuilder.SubUpper] = At(set.upper, upper);
+            materials[BuildingMeshBuilder.SubTrim] = At(set.trim, upper);
+            materials[BuildingMeshBuilder.SubRoof] = At(roofs, SplitMix64.Pick(id, "roof", Length(roofs)));
+            return materials;
+        }
+
+        static void AddInfill(BuiltWorld built, List<InfillHouse> houses, WorldGenSettings settings, GenerationReport report)
+        {
+            built.Infill.AddRange(houses);
+            var byChunk = new Dictionary<Vector2Int, List<InfillHouse>>();
+            foreach (var h in houses)
+            {
+                var chunk = ChunkOf(h.Centroid, built.ChunkSize);
+                if (!byChunk.TryGetValue(chunk, out var list)) byChunk[chunk] = list = new List<InfillHouse>();
+                list.Add(h);
+            }
+            var chunks = new List<Vector2Int>(byChunk.Keys);
+            chunks.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+            var meshParams = settings.MeshParams;
+            foreach (var chunk in chunks)
+            {
+                var list = byChunk[chunk];
+                list.Sort((a, b) => a.Id.CompareTo(b.Id));
+                var materials = new List<Material>();
+                var parts = new List<(MeshData mesh, int[] map)>();
+                foreach (var h in list)
+                {
+                    var mesh = BuildingMeshBuilder.Build(h.Spec, meshParams, out var info);
+                    if (info.RoofFailed) report.Skip(SkipReasons.RoofTriangulationFailed, h.Id);
+                    var picked = BuildingMaterials(settings.residentialMaterials, h.Id, info.Roof);
+                    var map = new int[BuildingMeshBuilder.SubmeshCount];
+                    for (int s = 0; s < map.Length; s++)
+                    {
+                        int index = materials.IndexOf(picked[s]);
+                        if (index < 0)
+                        {
+                            index = materials.Count;
+                            materials.Add(picked[s]);
+                        }
+                        map[s] = index;
+                    }
+                    parts.Add((mesh, map));
+                }
+                var merged = new MeshData(Mathf.Max(1, materials.Count));
+                foreach (var (mesh, map) in parts) merged.Append(mesh, map);
+                if (materials.Count == 0) materials.Add(null);
+                built.Features.Add(new BuiltFeature
+                {
+                    Kind = FeatureKind.Building, OsmId = ChunkFeatureId(FeatureGroups.Buildings, "Infill", chunk), ElementType = OsmElementType.Way,
+                    Name = "Infill", Group = FeatureGroups.Buildings, Chunk = chunk,
+                    Anchor = new Vector2((chunk.x + 0.5f) * built.ChunkSize, (chunk.y + 0.5f) * built.ChunkSize),
+                    Mesh = merged, Materials = materials.ToArray(), AddCollider = true, Category = "Infill", Tags = InfillTags
+                });
+                report.Count("Infill", list.Count);
             }
         }
 

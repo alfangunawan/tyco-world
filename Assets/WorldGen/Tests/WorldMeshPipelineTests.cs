@@ -152,6 +152,56 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Street_InfillIsOneObjectPerChunk()
+        {
+            var report = new GenerationReport();
+            var built = BuildStreet(report);
+            var infill = built.Features.Where(f => f.Kind == FeatureKind.Building && f.Name == "Infill").ToList();
+            Assert.Greater(infill.Count, 0);
+            Assert.AreEqual(infill.Count, infill.Select(f => f.Chunk).Distinct().Count());
+            foreach (var f in infill)
+            {
+                Assert.AreEqual(FeatureGroups.Buildings, f.Group);
+                Assert.AreEqual("Infill", f.Category);
+                Assert.IsTrue(f.HasOsmIdentity);
+                Assert.IsTrue(f.AddCollider);
+                Assert.Less(f.OsmId, 0);
+                Assert.IsTrue(f.Tags.TryGetValue("generated", out var generated) && generated == "infill");
+                Assert.AreEqual(f.Materials.Length, f.Mesh.SubmeshCount);
+                Assert.IsFalse(f.Mesh.HasInvalidValues());
+            }
+            Assert.Greater(built.Infill.Count, 0);
+            Assert.AreEqual(built.Infill.Count, report.GetCount("Infill"));
+        }
+
+        [Test]
+        public void Street_InfillMaterialsFollowTheVariantRule()
+        {
+            var upper = Materials(3);
+            settings.residentialMaterials = new BuildingMaterialSet
+            {
+                groundFloor = Materials(2), upper = upper, trim = Materials(3), flatRoof = Materials(1), gableRoof = Materials(1)
+            };
+            var built = BuildStreet(new GenerationReport());
+            var byChunk = built.Features.Where(f => f.Kind == FeatureKind.Building && f.Name == "Infill").ToDictionary(f => f.Chunk);
+            foreach (var h in built.Infill)
+            {
+                var feature = byChunk[WorldMeshPipeline.ChunkOf(h.Centroid, built.ChunkSize)];
+                CollectionAssert.Contains(feature.Materials, upper[SplitMix64.Pick(h.Id, "upper", 3)]);
+            }
+        }
+
+        [Test]
+        public void Street_WallsStandInFrontOfSetBackInfill()
+        {
+            var report = new GenerationReport();
+            var built = BuildStreet(report);
+            int setBack = built.Infill.Count(h => !h.Flush);
+            Assert.Greater(setBack, 0);
+            Assert.GreaterOrEqual(report.GetCount("Gates") + report.GetCount("Doors"), 2, "OSM house H1 plus at least one infill house");
+        }
+
+        [Test]
         public void LongStraightRoad_WallCollidersStayUnder100m()
         {
             var osm = new TestOsm();
