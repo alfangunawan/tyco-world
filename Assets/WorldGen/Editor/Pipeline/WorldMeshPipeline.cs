@@ -85,7 +85,7 @@ namespace TycoWorld.WorldGen.Authoring
             AddEdges(built, network, street, settings, report);
             foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
-            var placer = new PropPlacer(world.Buildings, world.Roads);
+            var placer = new PropPlacer(world.Buildings, world.Roads, network, settings.roadEdges);
             int treeVariants = settings.treePrefabs != null ? settings.treePrefabs.Length : 0;
             var waterShapes = world.WaterAreas.Select(w => w.Shape).ToList();
             built.Trees = placer.PlaceTrees(world.Trees, world.Areas, settings.maxTrees, treeVariants, report, waterShapes);
