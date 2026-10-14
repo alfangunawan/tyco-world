@@ -214,8 +214,9 @@ Sub-proyek ini membuat **jam dunia yang berjalan** dengan transisi cahaya halus 
 - **`StreetLampSystem`** adalah kelas C# milik director, bukan MonoBehaviour. Kepala lampu memakai dua salinan material runtime ("On" dengan emisi × intensitas, "Off" hitam) yang dipakai bersama semua lampu. `sharedMaterials` hanya diganti saat status nyala berubah.
 - **Kamera pemain** memakai `CameraClearFlags.Skybox` dari `PlayerRigBuilder`. Day Cycle Setup memberi warning kalau kamera di scene belum skybox, yang berarti Player Setup perlu dijalankan ulang.
 - **Matahari** dimatikan di Edit mode; director menyalakannya saat Play. Di editor, skybox scene = `Sky_Procedural.mat`; saat Play dipakai salinannya.
+- **Bulan saat senja dan subuh.** Begitu matahari turun di bawah horizon, `RenderSettings.sun` pindah ke bulan. Supaya langit procedural tidak meloncat, rotasi bulan di-slerp dari arah matahari (di horizon) ke pose scene-nya. Bobotnya smoothstep dari elevasi 0° sampai −12° (batas twilight profil). Di malam yang lebih dalam, bulan memakai pose scene yang disimpan saat `Initialize`.
 - **Audio.**
   - Malam: "Crickets Ambient Noise – loopable" (Wolfgang_, OpenGameArt, CC0).
   - Siang dan dengung: sintesis `AmbienceSynth`.
   - Kalau unduhan jangkrik hilang, `ambience_night.wav` hasil sintesis dipakai.
-- **`DayCycleDirector.FindWorldRoot`** adalah hook `Func<GeneratedRoot>`, karena dunia ada di scene lain dan tidak bisa diserialisasi. Lampu dicari tiap 0,5 s sampai `GeneratedRoot` ada.
+- **`DayCycleDirector.FindWorldRoot`** adalah hook `Func<GeneratedRoot>`, karena dunia ada di scene lain dan tidak bisa diserialisasi. Lampu dicari tiap frame sampai `GeneratedRoot` ada, lalu pencarian berhenti.

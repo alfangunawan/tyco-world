@@ -10,6 +10,8 @@ namespace TycoWorld.DayCycle
         public bool SunEnabled;
         public float MoonIntensity;
         public bool MoonEnabled;
+        /// <summary>0 = the moon light sits where the sun is (at or above the horizon), 1 = at its scene pose (end of twilight and deeper).</summary>
+        public float MoonPoseWeight;
         public Color AmbientSky, AmbientEquator, AmbientGround;
         public float FogDensity;
         public Color FogColor;

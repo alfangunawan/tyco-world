@@ -131,6 +131,7 @@ namespace TycoWorld.DayCycle
             s.SunIntensity = s.SunEnabled ? sunIntensity * Mathf.Clamp01(elevation / 10f) : 0f;
             s.MoonEnabled = !s.SunEnabled;
             s.MoonIntensity = s.MoonEnabled ? moonIntensity * Mathf.Clamp01(-elevation / 6f) : 0f;
+            s.MoonPoseWeight = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(-elevation / TwilightBand));
             s.NightAmbience = 1f - s.DayAmbience;
             return s;
         }

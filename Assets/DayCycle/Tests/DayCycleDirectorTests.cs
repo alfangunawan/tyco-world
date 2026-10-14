@@ -162,6 +162,61 @@ namespace TycoWorld.DayCycle.Tests
             Assert.AreSame(fx.Sky, RenderSettings.skybox);
         }
 
+        [TestCase(17.6f, 18.4f)]
+        [TestCase(5.2f, 6.0f)]
+        public void SkyLight_DirectionIsContinuous_AcrossTheHorizon(float from, float to)
+        {
+            fx.Moon.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            fx.Director.Initialize(from);
+            var previous = RenderSettings.sun.transform.forward;
+            while (fx.Director.Clock.Hours < to)
+            {
+                fx.Director.Tick(0.6f);
+                var now = RenderSettings.sun.transform.forward;
+                Assert.Less(Vector3.Angle(previous, now), 5f, fx.Director.Clock.Display);
+                previous = now;
+            }
+        }
+
+        [Test]
+        public void DeepNight_MoonKeepsItsSceneRotation()
+        {
+            var pose = Quaternion.Euler(50f, -30f, 0f);
+            fx.Moon.transform.rotation = pose;
+            fx.Director.Initialize(22f);
+            Assert.Less(Quaternion.Angle(pose, fx.Moon.transform.rotation), 0.01f);
+        }
+
+        [Test]
+        public void HorrorStarted_SeesLightingAlreadyApplied()
+        {
+            float weightAtEvent = -1f, fogAtEvent = -1f;
+            fx.Director.HorrorStarted += () =>
+            {
+                weightAtEvent = fx.Director.State.HorrorWeight;
+                fogAtEvent = RenderSettings.fogDensity;
+            };
+            fx.Director.Initialize(18.9f);
+            fx.Director.Tick(60f);
+            Assert.AreEqual(1f, weightAtEvent, 1e-3f);
+            Assert.AreEqual(0.032f, fogAtEvent, 1e-4f);
+        }
+
+        [Test]
+        public void Lamps_AreCollectedOnTheFrameTheWorldAppears()
+        {
+            var rootGo = fx.Track(new GameObject("World_Generated_Test"));
+            var root = rootGo.AddComponent<GeneratedRoot>();
+            LampFixture.Create(rootGo.transform, LampFixture.PositionWithRole(LampRole.Normal, fx.Profile));
+            bool worldLoaded = false;
+            fx.Director.FindWorldRoot = () => worldLoaded ? root : null;
+            fx.Director.Initialize(22f);
+            fx.Director.Tick(0.016f);
+            worldLoaded = true;
+            fx.Director.Tick(0.016f);
+            Assert.AreEqual(1, fx.Director.Lamps.Count);
+        }
+
         [Test]
         public void NoStreetLamps_WarnsOnce()
         {

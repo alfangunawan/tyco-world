@@ -7,8 +7,9 @@ using UnityEngine.Rendering;
 namespace TycoWorld.DayCycle
 {
     /// <summary>
-    /// The single per-frame driver of the day cycle (spec #3 §3): clock → phase (events) → profile → sun/moon,
-    /// RenderSettings, skybox copy, three volumes, street lamps, ambience and the player HUD.
+    /// The single per-frame driver of the day cycle (spec #3 §3): clock → profile → sun/moon, RenderSettings,
+    /// skybox copy, three volumes, street lamps, ambience and the player HUD → phase events (subscribers see this
+    /// frame's lighting).
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class DayCycleDirector : MonoBehaviour, ISceneLightingOwner
@@ -17,7 +18,6 @@ namespace TycoWorld.DayCycle
         public const string HorrorEndMessage = "Subuh. Malam sudah lewat.";
         public const string MissingProfileWarning = "[DayCycle] DayCycleProfile kosong; memakai nilai default.";
         public const string NoLampsWarning = "[DayCycle] Dunia belum punya penanda StreetLamp. Generate ulang untuk lampu dinamis.";
-        const float LampPollSeconds = 0.5f;
 
         static readonly int ExposureId = Shader.PropertyToID("_Exposure");
         static readonly int SkyTintId = Shader.PropertyToID("_SkyTint");
@@ -36,7 +36,7 @@ namespace TycoWorld.DayCycle
         Material skyCopy;
         bool ownsProfile;
         float elapsed;
-        float nextLampPoll;
+        Quaternion moonPose;
 
         public event Action HorrorStarted;
         public event Action HorrorEnded;
@@ -113,8 +113,8 @@ namespace TycoWorld.DayCycle
                 RenderSettings.skybox = skyCopy;
             }
             if (ambience != null) ambience.Initialize(profile);
+            moonPose = moon != null ? moon.transform.rotation : Quaternion.identity;
             elapsed = 0f;
-            nextLampPoll = 0f;
             IsInitialized = true;
             Apply();
         }
@@ -124,9 +124,9 @@ namespace TycoWorld.DayCycle
             if (!IsInitialized) Initialize();
             if (dt > 0f) elapsed += dt;
             Clock.Tick(dt);
-            phase.Update(Clock.Hours);
             PollLamps();
             Apply();
+            phase.Update(Clock.Hours);
         }
 
         public void ShowMessage(string text)
@@ -135,9 +135,10 @@ namespace TycoWorld.DayCycle
             if (hud != null) hud.ShowMessage(text);
         }
 
-        /// <summary>Restores lamp materials and the skybox asset and frees runtime copies; safe to call twice.</summary>
+        /// <summary>Restores lamp materials, the skybox asset and the moon's scene pose and frees runtime copies; safe to call twice.</summary>
         public void Shutdown()
         {
+            if (IsInitialized && moon != null) moon.transform.rotation = moonPose;
             if (Lamps != null) Lamps.Dispose();
             if (skyCopy != null)
             {
@@ -166,10 +167,10 @@ namespace TycoWorld.DayCycle
             HorrorEnded?.Invoke();
         }
 
+        /// <summary>Every frame until the generated world exists, so its lamps follow the cycle from its first frame.</summary>
         void PollLamps()
         {
-            if (Lamps.Collected || elapsed < nextLampPoll) return;
-            nextLampPoll = elapsed + LampPollSeconds;
+            if (Lamps.Collected) return;
             var root = FindWorldRoot != null ? FindWorldRoot() : null;
             if (root == null) return;
             var found = root.GetComponentsInChildren<StreetLamp>(true);
@@ -181,18 +182,22 @@ namespace TycoWorld.DayCycle
         {
             var s = profile.Evaluate(Clock.Hours);
             State = s;
+            var sunRotation = Quaternion.Euler(s.SunElevation, s.SunYaw, 0f);
             if (sun != null)
             {
                 sun.enabled = s.SunEnabled;
                 sun.intensity = s.SunIntensity;
                 sun.color = s.SunColor;
-                sun.transform.rotation = Quaternion.Euler(s.SunElevation, s.SunYaw, 0f);
+                sun.transform.rotation = sunRotation;
             }
             if (moon != null)
             {
                 moon.enabled = s.MoonEnabled;
                 moon.intensity = s.MoonIntensity;
                 moon.color = profile.moonColor;
+                // The moon takes over RenderSettings.sun (the procedural sky's light) where the sun sets and glides to its
+                // scene pose through twilight, so the sky never jumps at sunset or sunrise.
+                moon.transform.rotation = Quaternion.Slerp(sunRotation, moonPose, s.MoonPoseWeight);
             }
             RenderSettings.sun = s.SunEnabled && sun != null ? sun : moon;
             RenderSettings.ambientMode = AmbientMode.Trilight;
