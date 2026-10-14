@@ -671,7 +671,7 @@ Tes `SavedAsset_HasStreetDressing` memastikan asset yang tersimpan memuat ketiga
 
 - Semua tes EditMode lulus. Langkah integrasi 1–7 lulus dan tercatat di `docs/superpowers/notes/2026-10-xx-street-frontage-verification.md`.
 - Draw call (preset Sedang) ≤ +15%, dan FPS ≥ 90% dari angka before di titik yang sama.
-- Deviasi: setelah mitigasi (bayangan tepi mati, wajah tersembunyi dibuang) FPS ≥ 90% lulus di keenam titik, tetapi batches masih melebihi +15% di road dan high pada jam 10 dan 21 (+25% sampai +33%); kos lulus. Pengukuran dilakukan di preset High (bukan Sedang) dengan pengaturan yang sama seperti before. Tidak ada waiver dari user. Detail: `docs/superpowers/notes/2026-10-14-street-frontage-verification.md`, bagian "Setelah mitigasi".
+- Status: **lulus** sesudah frontage polish + perf pass (`docs/superpowers/specs/2026-10-14-frontage-polish-design.md`, kategori cull Detail 200 m di High). Kenaikan batch +7.5% sampai +12.4% dan FPS ≥ 93.9% di keenam titik. Diukur dengan metode baru (rata-rata 90 frame, pembanding berpasangan di sesi yang sama) di preset tersimpan High. Angka "+25–33%" sebelumnya berasal dari pembacaan satu frame yang naik-turun ±15%. Detail: `docs/superpowers/notes/2026-10-14-street-frontage-verification.md`, bagian "Frontage polish + perf pass".
 - Visual:
   - tepi jalan punya garis tegas;
   - koridor jalan tertutup tembok atau rumah;
