@@ -63,6 +63,12 @@ namespace TycoWorld.DayCycle
         /// <summary>Finds the generated world (another scene, so it cannot be serialized); tests replace it.</summary>
         public Func<GeneratedRoot> FindWorldRoot { get; set; } = () => UnityEngine.Object.FindAnyObjectByType<GeneratedRoot>();
 
+        /// <summary>Where lamp lights are budgeted from: the main camera; tests replace it.</summary>
+        public Func<Vector3?> FindViewer { get; set; } = MainCameraPosition;
+
+        /// <summary>The fog is never thinner than this (view distance setting, spec #4 §5.2); 0 = profile fog only.</summary>
+        public float MinFogDensity { get; set; }
+
         HudModel Hud => player != null && player.IsInitialized ? player.Hud : null;
 
         public void Configure(DayCycleProfile cycleProfile, Light sunLight, Light moonLight, Volume day, Volume night, Volume horror,
@@ -116,7 +122,7 @@ namespace TycoWorld.DayCycle
             moonPose = moon != null ? moon.transform.rotation : Quaternion.identity;
             elapsed = 0f;
             IsInitialized = true;
-            Apply();
+            Apply(0f);
         }
 
         public void Tick(float dt)
@@ -125,7 +131,7 @@ namespace TycoWorld.DayCycle
             if (dt > 0f) elapsed += dt;
             Clock.Tick(dt);
             PollLamps();
-            Apply();
+            Apply(dt);
             phase.Update(Clock.Hours);
         }
 
@@ -178,7 +184,7 @@ namespace TycoWorld.DayCycle
             Lamps.Collect(found);
         }
 
-        void Apply()
+        void Apply(float dt)
         {
             var s = profile.Evaluate(Clock.Hours);
             State = s;
@@ -206,7 +212,7 @@ namespace TycoWorld.DayCycle
             RenderSettings.ambientGroundColor = s.AmbientGround;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Exponential;
-            RenderSettings.fogDensity = s.FogDensity;
+            RenderSettings.fogDensity = Mathf.Max(s.FogDensity, MinFogDensity);
             RenderSettings.fogColor = s.FogColor;
             if (skyCopy != null)
             {
@@ -216,10 +222,17 @@ namespace TycoWorld.DayCycle
             if (nightVolume != null) nightVolume.weight = 1f;
             if (dayVolume != null) dayVolume.weight = s.DayVolumeWeight;
             if (horrorVolume != null) horrorVolume.weight = s.HorrorWeight;
-            Lamps.Apply(s.LampIntensity01, s.HorrorWeight, elapsed);
+            Lamps.Viewer = FindViewer != null ? FindViewer() : null;
+            Lamps.Apply(s.LampIntensity01, s.HorrorWeight, elapsed, dt);
             if (ambience != null) ambience.Apply(s.DayAmbience, s.NightAmbience, s.HorrorDrone);
             var hud = Hud;
             if (hud != null) hud.SetClock(Clock.Display, ShowClock);
+        }
+
+        static Vector3? MainCameraPosition()
+        {
+            var cam = Camera.main;
+            return cam != null ? cam.transform.position : (Vector3?)null;
         }
 
         static void DestroyOwned(UnityEngine.Object obj)

@@ -37,6 +37,7 @@ namespace TycoWorld.DayCycle.Tests
             Director = Root.AddComponent<DayCycleDirector>();
             Wire(null);
             Director.FindWorldRoot = () => null;
+            Director.FindViewer = () => null;
             Director.HorrorStarted += () => Started++;
             Director.HorrorEnded += () => Ended++;
         }
