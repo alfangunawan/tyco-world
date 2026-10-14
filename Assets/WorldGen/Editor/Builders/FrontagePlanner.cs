@@ -62,7 +62,9 @@ namespace TycoWorld.WorldGen.Authoring
                     var kinds = new FrontageKind[n];
                     var owners = new StreetBuilding[n];
                     for (int i = 0; i < n; i++)
-                        kinds[i] = Classify(chain, side, chain.SampleS(i, e.SafeSampleStep), profiles[i], net, ctx, e, f, near, out owners[i]);
+                        kinds[i] = profiles[i] == EdgeProfile.None
+                            ? FrontageKind.Blocked
+                            : Classify(chain, side, chain.SampleS(i, e.SafeSampleStep), profiles[i], net, ctx, e, f, near, out owners[i]);
                     var list = new List<FrontageInterval>();
                     int start = 0;
                     for (int i = 1; i <= n; i++)

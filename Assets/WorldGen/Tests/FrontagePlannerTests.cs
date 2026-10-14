@@ -82,6 +82,17 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void SmallRoundaboutIsland_GetsNoWall()
+        {
+            var ring = new Vector2[17];
+            for (int i = 0; i < 16; i++) ring[i] = V(-250, 200) + new Vector2(Mathf.Cos(i * Mathf.PI / 8f), Mathf.Sin(i * Mathf.PI / 8f)) * 5f;
+            ring[16] = ring[0];
+            var plan = Plan(new StreetFixture(settings, osm => osm.Way(3301, ring, false, ("highway", "residential"))));
+            Assert.IsFalse(Of(plan, 3301, 1).Any(), "nothing to wall on the inside of a 5 m island");
+            Assert.IsTrue(Of(plan, 3301, -1).Any(), "the outside still has a property line");
+        }
+
+        [Test]
         public void FlushHouse_GetsNoWall()
         {
             var plan = Plan(new StreetFixture(settings));

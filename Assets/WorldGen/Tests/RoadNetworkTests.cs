@@ -233,6 +233,36 @@ namespace TycoWorld.WorldGen.Tests
             Assert.Greater(d, 3.5f, "the seam's other side must not count as another road part");
         }
 
+        /// <summary>A closed counter-clockwise way around a circle (its inside is on the left, +1).</summary>
+        static Vector2[] Circle(Vector2 centre, float radius, int segments)
+        {
+            var pts = new Vector2[segments + 1];
+            for (int i = 0; i < segments; i++)
+            {
+                float a = i * Mathf.PI * 2f / segments;
+                pts[i] = centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius;
+            }
+            pts[segments] = pts[0];
+            return pts;
+        }
+
+        [Test]
+        public void SmallRoundaboutIsland_HasNoEdgeOnItsInside()
+        {
+            // Radius 5: the gutter (half width 2.5 + 0.8) would leave under 2 m of island.
+            var c = Net(null, Road(8, "residential", 5f, Circle(V(0, 0), 5f, 16))).Chains.Single();
+            Assert.IsTrue(c.Closed);
+            Assert.IsTrue(c.Profiles(1).All(p => p == EdgeProfile.None), "inside");
+            Assert.IsTrue(c.Profiles(-1).All(p => p == EdgeProfile.Gutter), "outside");
+        }
+
+        [Test]
+        public void LargeLoop_KeepsItsInsideEdge()
+        {
+            var c = Net(null, Road(8, "residential", 5f, Circle(V(0, 0), 15f, 32))).Chains.Single();
+            Assert.IsTrue(c.Profiles(1).All(p => p == EdgeProfile.Gutter));
+        }
+
         [Test]
         public void EdgeLookup_ByRoadAndSide()
         {

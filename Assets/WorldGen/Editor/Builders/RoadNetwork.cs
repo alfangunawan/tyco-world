@@ -258,11 +258,26 @@ namespace TycoWorld.WorldGen.Authoring
             return best;
         }
 
+        /// <summary>Island left inside a loop beyond its edge band, below which the inside is a traffic island: no edge, no frontage.</summary>
+        const float IslandMinMargin = 2f;
+
+        /// <summary>The loop's inside side (+1 left) when its island is too small for an edge and a lot; 0 otherwise.</summary>
+        int SmallIslandSide(RoadChain chain)
+        {
+            if (!chain.Closed || chain.Length < 1e-3f) return 0;
+            var ring = chain.Points.GetRange(0, chain.Points.Count - 1);
+            float area = Polygon2D.SignedArea(ring);
+            // Inradius of the loop, exact for a circle: 2 A / perimeter.
+            float radius = 2f * Mathf.Abs(area) / chain.Length;
+            return radius < chain.HalfWidth + settings.Width(chain.BaseProfile) + IslandMinMargin ? (area > 0f ? 1 : -1) : 0;
+        }
+
         EdgeProfile[] ComputeProfiles(RoadChain chain, int side, IReadOnlyList<Polygon> campus)
         {
             float step = settings.SafeSampleStep;
             int n = Mathf.Max(1, Mathf.CeilToInt(chain.Length / step - 1e-4f) + 1);
             var result = new EdgeProfile[n];
+            if (side == SmallIslandSide(chain)) return result;
             float probe = chain.HalfWidth + settings.sidewalkWidth * 0.5f;
             float cap = settings.campusSidewalkDistance + 1f;
             for (int i = 0; i < n; i++)
