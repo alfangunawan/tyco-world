@@ -131,6 +131,53 @@ namespace TycoWorld.Gameplay.Tests
         /// <summary>The main camera only (no UI), rendered at once.</summary>
         public static string World(string path) => McpRender.SavePng(Camera.main, path, 1280, 720);
 
+        /// <summary>Who is out: active count, states, nearest distance, the figure.</summary>
+        public static string People()
+        {
+            var d = Director;
+            var people = d != null ? d.GetSystem<PedestrianSystem>() : null;
+            if (people == null) return "no pedestrian system";
+            var player = d.Player.transform.position;
+            float nearest = float.PositiveInfinity;
+            var states = new System.Collections.Generic.Dictionary<PedestrianState, int>();
+            foreach (var p in people.Pool)
+            {
+                if (!p.Active) continue;
+                nearest = Mathf.Min(nearest, Vector3.Distance(p.Position, player));
+                states.TryGetValue(p.State, out int n);
+                states[p.State] = n + 1;
+            }
+            var text = new System.Text.StringBuilder();
+            text.Append("time=").Append(d.ClockText).Append(" active=").Append(people.ActiveCount)
+                .Append(" target=").Append(PedestrianSchedule.TargetCount(d.Hours))
+                .Append(" nearest=").Append(nearest.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))
+                .Append(" sosok=").Append(people.Sosok != null && people.Sosok.Active ? people.Sosok.Position.ToString("F1") : "-");
+            foreach (var kv in states) text.Append(' ').Append(kv.Key).Append('=').Append(kv.Value);
+            return text.ToString();
+        }
+
+        public static string ForceSosok()
+        {
+            var people = Director != null ? Director.GetSystem<PedestrianSystem>() : null;
+            return people != null && people.ForceSosok() ? "sosok at " + people.Sosok.Position.ToString("F1") : "no spot ahead";
+        }
+
+        /// <summary>Faces the player toward the nearest active passer-by (for screenshots and greeting).</summary>
+        public static string FaceNearestPerson()
+        {
+            var d = Director;
+            var people = d != null ? d.GetSystem<PedestrianSystem>() : null;
+            if (people == null) return "no pedestrian system";
+            var player = d.Player.transform.position;
+            Pedestrian best = null;
+            foreach (var p in people.Pool)
+                if (p.Active && (best == null || (p.Position - player).sqrMagnitude < (best.Position - player).sqrMagnitude)) best = p;
+            if (best == null) return "nobody out";
+            var to = best.Position - player;
+            d.Player.Teleport(player, Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg);
+            return "facing " + best.Root.name + " at " + to.magnitude.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " m";
+        }
+
         public static string ResetSave()
         {
             PlayerPrefs.DeleteKey(PlayerPrefsSaveBackend.DefaultKey);

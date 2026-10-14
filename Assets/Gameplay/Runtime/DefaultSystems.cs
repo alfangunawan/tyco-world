@@ -5,6 +5,7 @@ namespace TycoWorld.Gameplay
     {
         public static void AddTo(KampungDirector director)
         {
+            director.AddSystem(new PedestrianSystem());
         }
     }
 }
