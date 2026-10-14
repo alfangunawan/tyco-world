@@ -25,14 +25,16 @@ namespace TycoWorld.Gameplay
         public int dataUntilDay;
         public string[] missionsDone = new string[0];
         public int sleeps;
+        /// <summary>The last day the morning allowance was paid (0 in saves made before it was stored).</summary>
+        public int lastAllowanceDay;
 
         public static SaveData FromState(Wallet wallet, Needs needs, Inventory bag, IReadOnlyCollection<string> wardrobe, string wearing,
-            int day, float hours, int dataUntilDay, IReadOnlyCollection<string> missionsDone, int sleeps)
+            int day, float hours, int dataUntilDay, IReadOnlyCollection<string> missionsDone, int sleeps, int lastAllowanceDay = 0)
         {
             var data = new SaveData
             {
                 money = wallet.Balance, lapar = needs.Lapar, energi = needs.Energi, day = day, hours = hours, wearing = wearing ?? "",
-                dataUntilDay = dataUntilDay, sleeps = sleeps
+                dataUntilDay = dataUntilDay, sleeps = sleeps, lastAllowanceDay = lastAllowanceDay
             };
             var ids = new List<string>();
             var counts = new List<int>();

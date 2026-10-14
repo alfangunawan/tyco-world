@@ -96,7 +96,35 @@ namespace TycoWorld.Gameplay.Tests
             Assert.AreEqual(2, copy.Day);
             Assert.IsFalse(copy.HasData);
             Assert.IsTrue(copy.IsMissionDone("galon-1"));
-            Assert.AreEqual(0, copy.WakeUp(), "the loaded day already had its allowance");
+            Assert.AreEqual(GameState.DailyAllowance, copy.WakeUp(), "day 2's allowance was not paid yet; the save remembers that");
+            Assert.AreEqual(0, copy.WakeUp(), "once a day");
+        }
+
+        [Test]
+        public void TheAllowanceDay_SurvivesASave_BetweenMidnightAndSleep()
+        {
+            var state = new GameState();
+            state.NextDay();
+            Assert.AreEqual(2, state.Day);
+            var loaded = new GameState();
+            loaded.Load(state.ToSave(0.5f));
+            Assert.AreEqual(GameState.DailyAllowance, loaded.WakeUp(), "day 2's allowance is still due after the reload");
+            var old = state.ToSave(0.5f);
+            old.lastAllowanceDay = 0;
+            var legacy = new GameState();
+            legacy.Load(old);
+            Assert.AreEqual(0, legacy.WakeUp(), "saves without the field count today's as paid");
+        }
+
+        [Test]
+        public void ASecondDataPackage_TheSameDay_CostsNothing()
+        {
+            var state = new GameState();
+            var data = catalog.Find(ItemCatalog.PaketData);
+            Assert.AreEqual(PurchaseResult.DataActive, state.Buy(data));
+            long after = state.Wallet.Balance;
+            Assert.AreEqual(PurchaseResult.StillActive, state.Buy(data));
+            Assert.AreEqual(after, state.Wallet.Balance);
         }
     }
 }

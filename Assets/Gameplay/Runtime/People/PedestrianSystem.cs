@@ -163,6 +163,8 @@ namespace TycoWorld.Gameplay
                 p.PendingDt = 0f;
             }
             if (AutoSpawn) TickSosok(dt, viewer);
+            // autoSyncTransforms is off: line-of-sight, ground and talk rays later this frame must see the moved capsules.
+            Physics.SyncTransforms();
         }
 
         static float Flat(Vector3 v)

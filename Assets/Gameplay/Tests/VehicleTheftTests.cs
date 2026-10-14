@@ -214,6 +214,93 @@ namespace TycoWorld.Gameplay.Tests
         }
 
         [Test]
+        public void ATakenVehicle_KeepsItsSpot_NoCopySpawnsInsideIt()
+        {
+            var bike = Near(VehicleKind.Bike);
+            var spot = O + new Vector3(4f, 0f, 0f);
+            Assert.IsTrue(bike.Lock.Interact(fx.Context));
+            Run(VehicleSystem.BikeHotwireSeconds + 0.2f);
+            Assert.IsTrue(bike.Body.IsMounted);
+            Run(1.5f);
+            Assert.AreEqual(1, vehicles.Vehicles.Count(v => v.Active && Vector3.Distance(v.Position, spot) < 2f), "only the stolen bike on its spot");
+            // Ridden away (moved 20 m): the spot is free and a parked bike comes back.
+            bike.Body.Teleport(spot + new Vector3(0f, 0f, 20f), 0f);
+            fx.Player.Tick(0.02f);
+            Run(1.5f);
+            Assert.AreEqual(1, vehicles.Vehicles.Count(v => v.Active && !v.Moved && Vector3.Distance(v.Position, spot) < 0.6f));
+        }
+
+        [Test]
+        public void ASeenAttempt_GivenUp_DoesNotHideTheNextOne()
+        {
+            var watcher = Witness(new Vector3(4f, 0f, 12f));
+            var bike = Near(VehicleKind.Bike);
+            Assert.IsTrue(bike.Lock.Interact(fx.Context));
+            Assert.AreEqual(1, vehicles.Heat.Level);
+            fx.Player.Teleport(fx.Player.transform.position + new Vector3(-3f, 0f, 0f), 0f);
+            watcher.Root.SetActive(false);
+            Tick();
+            Assert.IsNull(vehicles.Hotwiring);
+            Assert.IsFalse(bike.Hot, "not stolen: nothing to remember on the bike");
+            float waited = 0f;
+            while (vehicles.Heat.Level > 0 && waited < 40f)
+            {
+                Tick(1);
+                waited += 0.05f;
+            }
+            Assert.AreEqual(0, vehicles.Heat.Level);
+            fx.Player.Teleport(O, 0f);
+            Witness(new Vector3(4f, 0f, 10f));
+            Assert.IsTrue(bike.Lock.Interact(fx.Context));
+            Assert.AreEqual(1, vehicles.Heat.Level, "seen again: MALING! again");
+        }
+
+        [Test]
+        public void NoSleep_WhileWargaHuntYou()
+        {
+            Witness(new Vector3(4f, 0f, 16f));
+            Assert.IsTrue(Near(VehicleKind.Bike).Lock.Interact(fx.Context));
+            Assert.IsTrue(vehicles.Heat.IsHot);
+            fx.Director.JumpClock(23f);
+            fx.Director.Sleep();
+            Assert.IsFalse(fx.Director.IsFading);
+            Assert.IsTrue(fx.Director.Hud.Toasts.Contains(VehicleSystem.HuntedSleepText));
+        }
+
+        [Test]
+        public void CatUlang_WithNothingToPaint_IsRefused_AndCostsNothing()
+        {
+            long before = fx.Director.State.Wallet.Balance;
+            fx.Director.OpenShop(fx.Director.Stalls[0]);
+            Assert.IsFalse(fx.Director.Shop.ClickBuy(ItemCatalog.CatUlang) && fx.Director.State.Wallet.Balance != before);
+            Assert.AreEqual(before, fx.Director.State.Wallet.Balance);
+            Assert.AreEqual(VehicleSystem.NothingToPaintText, fx.Director.Shop.MessageText);
+        }
+
+        [Test]
+        public void Shutdown_MidBreakIn_FreesTheHands()
+        {
+            Assert.IsTrue(Near(VehicleKind.Bike).Lock.Interact(fx.Context));
+            Assert.IsFalse(fx.Player.Locks.Allows(PlayerAbility.Interact));
+            fx.Director.Shutdown();
+            Assert.IsTrue(fx.Player.Locks.Allows(PlayerAbility.All));
+        }
+
+        [Test]
+        public void ThePhone_OnAStoppedBike_HoldsTheBrake_UntilClosed()
+        {
+            var tuning = fx.Fx.Track(ScriptableObject.CreateInstance<BikeTuning>());
+            var own = fx.Fx.CreateBike(new Vector3(-4f, 0f, -4f), 0f, tuning);
+            Assert.IsTrue(own.Mount(fx.Player));
+            fx.Director.TogglePhone();
+            Assert.IsTrue(fx.Director.Phone.IsOpen);
+            Assert.IsInstanceOf<HoldBrakeIntentSource>(own.IntentSourceOverride);
+            fx.Director.TogglePhone();
+            Assert.IsFalse(fx.Director.Phone.IsOpen);
+            Assert.IsNull(own.IntentSourceOverride);
+        }
+
+        [Test]
         public void TheFine_TakesWhatYouHave_WhenYouHaveLess()
         {
             fx.Director.State.Wallet.Set(30000);

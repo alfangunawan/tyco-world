@@ -164,7 +164,8 @@ namespace TycoWorld.Gameplay.Tests
             Assert.IsFalse(Interact(galon.Customer, fx), "nothing to hand over yet");
 
             Go(galon.Shop.counter + new Vector3(0f, 0f, 1.5f));
-            Assert.AreEqual(1, fx.Director.State.Bag.Count(ItemCatalog.Galon));
+            Assert.IsTrue(galon.Carrying);
+            Assert.AreEqual(0, fx.Director.State.Bag.Count(ItemCatalog.Galon), "carried, never in the saved bag");
             Assert.IsFalse(fx.Player.Locks.Allows(PlayerAbility.Sprint), "too heavy to run");
 
             long before = fx.Director.State.Wallet.Balance;
@@ -356,12 +357,59 @@ namespace TycoWorld.Gameplay.Tests
 
             Assert.IsTrue(jobs.StartJob(galon));
             Go(galon.Shop.counter + new Vector3(0f, 0f, 1.5f));
-            Assert.AreEqual(1, fx.Director.State.Bag.Count(ItemCatalog.Galon));
+            Assert.IsTrue(galon.Carrying);
             fx.Director.Faint();
             Tick();
             Assert.IsNull(jobs.Active);
-            Assert.AreEqual(0, fx.Director.State.Bag.Count(ItemCatalog.Galon), "the galon goes back");
+            Assert.IsFalse(galon.Carrying, "the galon goes back");
             Assert.IsTrue(fx.Player.Locks.Allows(PlayerAbility.Sprint));
+        }
+
+        [Test]
+        public void Galon_ABoughtGalon_IsNotTheJob_AndSurvivesACancel()
+        {
+            fx.Director.State.Bag.Add(ItemCatalog.Galon);
+            var galon = jobs.Get<GalonMission>();
+            Assert.IsTrue(jobs.StartJob(galon));
+            Go(galon.Customer.transform.position + new Vector3(0f, 0f, 1.5f));
+            Assert.IsFalse(Interact(galon.Customer, fx), "step 1: fetch the job's galon first");
+            jobs.Toggle("galon");
+            Tick();
+            Assert.AreEqual(1, fx.Director.State.Bag.Count(ItemCatalog.Galon), "the player's own galon stays");
+        }
+
+        [Test]
+        public void Shutdown_MidJob_FreesTheLegs()
+        {
+            var galon = jobs.Get<GalonMission>();
+            Assert.IsTrue(jobs.StartJob(galon));
+            Go(galon.Shop.counter + new Vector3(0f, 0f, 1.5f));
+            Assert.IsFalse(fx.Player.Locks.Allows(PlayerAbility.Sprint));
+            fx.Director.Shutdown();
+            Assert.IsTrue(fx.Player.Locks.Allows(PlayerAbility.All));
+        }
+
+        [Test]
+        public void WithoutData_TheRunningJob_CanStillBeCancelledFromThePhone()
+        {
+            Assert.IsFalse(fx.Director.State.HasData);
+            var galon = jobs.Get<GalonMission>();
+            Assert.IsTrue(jobs.StartJob(galon));
+            fx.Director.TogglePhone();
+            fx.Director.Phone.Select(PhoneTab.Kerjaan);
+            Tick();
+            Assert.IsTrue(fx.Director.Phone.Click(PhoneView.JobPrefix + "galon"), "Batalkan is shown without data");
+            Tick();
+            Assert.IsNull(jobs.Active);
+            Assert.IsFalse(fx.Director.Phone.Click(PhoneView.JobPrefix + "ojek"), "new jobs still need data");
+        }
+
+        [Test]
+        public void PakRt_BeforeTheWatchStarts_IsNotYetOut()
+        {
+            fx.Director.JumpClock(20.5f);
+            Tick();
+            Assert.IsTrue(jobs.PakRt == null || !jobs.PakRt.activeSelf, "the watch starts at 21.00");
         }
 
         [Test]

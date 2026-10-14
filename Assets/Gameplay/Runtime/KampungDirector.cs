@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using TycoWorld.DayCycle;
 using TycoWorld.Player;
+using TycoWorld.Vehicles;
 using TycoWorld.WorldGen;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -17,6 +18,10 @@ namespace TycoWorld.Gameplay
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(UIDocument))]
+    // After FirstPersonPlayer (order 0), like the Motorbike: E both opens a shop (the player's Interactor) and closes it
+    // (here). Ticking last, the closing press meets an Interact still locked by the open window, and the opening press is
+    // ignored here by its tick number.
+    [DefaultExecutionOrder(110)]
     public sealed class KampungDirector : MonoBehaviour
     {
         public const string MissingDataWarning = "[Gameplay] KampungData kosong. Jalankan Tyco World > Gameplay > Bake Kampung Data.";
@@ -27,6 +32,7 @@ namespace TycoWorld.Gameplay
         public const string HungryToast = "Perut keroncongan. Cari makan di warung.";
         public const string SleepyToast = "Ngantuk berat. Pulang dan tidur di kos.";
         public const string NotSleepyToast = "Belum ngantuk.";
+        public const string PullOverToast = "Pinggirkan kendaraan dulu.";
 
         [SerializeField] KampungData data;
         [SerializeField] ItemCatalog catalog;
@@ -51,7 +57,10 @@ namespace TycoWorld.Gameplay
         DayCycleDirector dayCycle;
         float lastHours = -1f, manualHours = WakeHours, cullTimer, fadeTimer;
         Action fadeAction;
-        bool fadeActionDone, warnedHungry, warnedSleepy, holdsSprintLock, holdsModalLock;
+        bool fadeActionDone, warnedHungry, warnedSleepy, holdsSprintLock, holdsModalLock, clockFromDayCycle, savedOnQuit;
+        int ticks, shopOpenedTick = -1;
+        Motorbike heldBike;
+        readonly HoldBrakeIntentSource holdBrake = new HoldBrakeIntentSource();
         readonly object modalOwner = new object();
 
         public KampungData Data => data;
@@ -124,18 +133,29 @@ namespace TycoWorld.Gameplay
             if (Application.isPlaying) Tick(Time.deltaTime);
         }
 
-        void OnApplicationQuit() => SaveNow();
+        void OnApplicationQuit()
+        {
+            SaveNow();
+            savedOnQuit = true;
+        }
 
         void OnDisable()
         {
-            if (IsReady) SaveNow();
+            // On quit the save above already holds the right hour; the day cycle may be torn down by now.
+            if (IsReady && !savedOnQuit) SaveNow();
         }
 
-        void OnDestroy()
+        void OnDestroy() => Shutdown();
+
+        /// <summary>Ends every system, frees the player's locks and the material copies (OnDestroy; tests call it directly).</summary>
+        public void Shutdown()
         {
+            HoldBike(null);
             ReleaseLocks();
             foreach (var s in systems) s.End();
+            systems.Clear();
             if (palette != null) palette.Dispose();
+            palette = null;
         }
 
         public void Initialize()
@@ -175,6 +195,7 @@ namespace TycoWorld.Gameplay
                 TryBegin();
                 return;
             }
+            ticks++;
             AdvanceClock(dt);
             TickNeeds();
             TickFade(dt);
@@ -206,7 +227,8 @@ namespace TycoWorld.Gameplay
             bool continuing = store.HasSave;
             var saved = store.Load();
             State.Load(saved);
-            if (dayCycle != null && dayCycle.IsInitialized) dayCycle.Clock.SetTime(saved.hours);
+            clockFromDayCycle = dayCycle != null && dayCycle.IsInitialized;
+            if (clockFromDayCycle) dayCycle.Clock.SetTime(saved.hours);
             else manualHours = saved.hours;
             lastHours = Hours;
             BuildShops();
@@ -289,9 +311,19 @@ namespace TycoWorld.Gameplay
 
         // ---------- sleep and fainting ----------
 
+        /// <summary>Reasons not to sleep right now (a system returns one, e.g. warga still hunting you); null or empty allows it.</summary>
+        public readonly List<Func<string>> SleepBlockers = new List<Func<string>>();
+
         public void Sleep()
         {
             if (IsFading) return;
+            foreach (var blocker in SleepBlockers)
+            {
+                string why = blocker();
+                if (string.IsNullOrEmpty(why)) continue;
+                Toast(why);
+                return;
+            }
             float h = Hours;
             bool night = h >= 19f || h < 5f;
             if (!night && State.Needs.Energi > 80f)
@@ -320,6 +352,7 @@ namespace TycoWorld.Gameplay
 
         public void Faint()
         {
+            if (IsFading) return;
             StartFade(() =>
             {
                 CloseShop();
@@ -433,6 +466,7 @@ namespace TycoWorld.Gameplay
                 if (item != null) items.Add(item);
             }
             Shop.Open(stall.Site, items, State);
+            shopOpenedTick = ticks;
             AcquireModal();
         }
 
@@ -443,8 +477,20 @@ namespace TycoWorld.Gameplay
             ReleaseModalIfIdle();
         }
 
+        /// <summary>A system may refuse a paid service that would do nothing (no vehicle to repaint); the text says why.</summary>
+        public Func<ItemDefinition, string> RefuseService;
+
         void Buy(ItemDefinition item)
         {
+            if (item != null && item.category == ItemCategory.Service && RefuseService != null)
+            {
+                string why = RefuseService(item);
+                if (!string.IsNullOrEmpty(why))
+                {
+                    Shop.SetMessage(why, false);
+                    return;
+                }
+            }
             var result = State.Buy(item);
             switch (result)
             {
@@ -453,6 +499,7 @@ namespace TycoWorld.Gameplay
                 case PurchaseResult.Worn: Shop.SetMessage(item.displayName + " dibeli dan langsung dipakai.", true); break;
                 case PurchaseResult.AlreadyOwned: Shop.SetMessage(item.displayName + " sudah punya. Sekarang dipakai.", true); break;
                 case PurchaseResult.DataActive: Shop.SetMessage("Paket data aktif sampai tengah malam. Cek aplikasi Kerjaan di HP.", true); break;
+                case PurchaseResult.StillActive: Shop.SetMessage("Paket datamu masih aktif sampai tengah malam.", false); break;
                 case PurchaseResult.Serviced: Shop.SetMessage(ServiceMessage(), true); break;
                 case PurchaseResult.NotEnoughMoney: Shop.SetMessage("Uangnya kurang.", false); break;
             }
@@ -472,20 +519,43 @@ namespace TycoWorld.Gameplay
         public void TogglePhone()
         {
             if (Phone == null || (Shop != null && Shop.IsOpen) || IsFading) return;
-            if (Phone.IsOpen) ClosePhone();
-            else
+            if (Phone.IsOpen)
             {
-                Phone.Open();
-                AcquireModal();
-                RenderPhone();
+                ClosePhone();
+                return;
             }
+            // Someone else holds the player (the pause menu): no phone over it.
+            if (Player != null && !holdsModalLock && !Player.Locks.Allows(PlayerAbility.Look)) return;
+            var bike = RiddenBike;
+            if (bike != null && Mathf.Abs(bike.Speed) > 1f)
+            {
+                Toast(PullOverToast);
+                return;
+            }
+            Phone.Open();
+            AcquireModal();
+            HoldBike(bike);
+            RenderPhone();
         }
 
         public void ClosePhone()
         {
             if (Phone == null || !Phone.IsOpen) return;
             Phone.Close();
+            HoldBike(null);
             ReleaseModalIfIdle();
+        }
+
+        Motorbike RiddenBike => Player != null && Player.IsSeated && Player.CurrentSeat != null ? Player.CurrentSeat.GetComponentInParent<Motorbike>() : null;
+
+        /// <summary>While the phone is up on a bike the brake holds it (the bike reads its own keys, not the player's locks).</summary>
+        void HoldBike(Motorbike bike)
+        {
+            if (heldBike != null && heldBike.IntentSourceOverride == holdBrake) heldBike.SetIntentSource(null);
+            heldBike = null;
+            if (bike == null || bike.IntentSourceOverride != null) return;
+            bike.SetIntentSource(holdBrake);
+            heldBike = bike;
         }
 
         /// <summary>Jobs shown in the phone's Kerjaan tab (the mission system fills it).</summary>
@@ -552,8 +622,17 @@ namespace TycoWorld.Gameplay
         {
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
-            if (keyboard.tabKey.wasPressedThisFrame) TogglePhone();
-            else if (keyboard.eKey.wasPressedThisFrame && Shop != null && Shop.IsOpen) CloseShop();
+            HandleKeys(keyboard.tabKey.wasPressedThisFrame, keyboard.eKey.wasPressedThisFrame);
+        }
+
+        /// <summary>
+        /// Tab toggles the phone; E closes the shop, except on the tick the shop opened (that E press was the one that
+        /// opened it through the player's Interactor). Public for tests, which drive it without a keyboard.
+        /// </summary>
+        public void HandleKeys(bool tab, bool e)
+        {
+            if (tab) TogglePhone();
+            else if (e && Shop != null && Shop.IsOpen && ticks != shopOpenedTick) CloseShop();
         }
 
         public void Toast(string text)
@@ -564,8 +643,11 @@ namespace TycoWorld.Gameplay
         public void SaveNow()
         {
             if (!IsReady) return;
-            new SaveStore(SaveBackend).Save(State.ToSave(Hours));
+            new SaveStore(SaveBackend).Save(State.ToSave(SaveHours));
         }
+
+        /// <summary>The clock to save: the day cycle's, or the last hour it showed when it is already gone (teardown).</summary>
+        float SaveHours => clockFromDayCycle && (dayCycle == null || !dayCycle.IsInitialized) && lastHours >= 0f ? lastHours : Hours;
 
         void ReplaceKosDoor()
         {

@@ -12,7 +12,8 @@ namespace TycoWorld.Gameplay
     /// </summary>
     public sealed class MissionSystem : IKampungSystem
     {
-        public const float PakRtFrom = 20f, PakRtUntil = 2f;
+        /// <summary>Pak RT keeps the hours of the Ronda Malam job he offers.</summary>
+        public const float PakRtFrom = 21f, PakRtUntil = 2f;
         public const string PakRtPrompt = "[E] Ngobrol dengan Pak RT";
 
         readonly List<Mission> missions = new List<Mission>();
@@ -249,7 +250,8 @@ namespace TycoWorld.Gameplay
                 var look = PersonLook.From(0xA7A7UL);
                 look.Hijab = false;
                 look.Shirt = new Color32(60, 70, 50, 255);
-                pakRt = context.Person("PakRT", post.position, Vector3.forward, look, () => PakRtPrompt, TalkToPakRt);
+                pakRt = context.Person("PakRT", context.OnGround(post.position + new Vector3(1.6f, 0f, 1.6f)), Vector3.forward, look, () => PakRtPrompt, TalkToPakRt);
+                Physics.SyncTransforms();
             }
             if (!pakRt.activeSelf) pakRt.SetActive(true);
             var at = context.OnGround(post.position + new Vector3(1.6f, 0f, 1.6f));
@@ -267,6 +269,11 @@ namespace TycoWorld.Gameplay
             if (Active != null)
             {
                 director.Toast("Pak RT: \"Selesaikan dulu urusanmu, nanti bantu ronda.\"");
+                return;
+            }
+            if (!IsAvailable(ronda))
+            {
+                director.Toast("Pak RT: \"Ronda mulai jam sembilan. Nanti ke sini lagi, ya.\"");
                 return;
             }
             director.Toast("Pak RT: \"Malam ini kurang orang. Bantu ronda keliling, ya? Nanti ada uang rokok.\"");

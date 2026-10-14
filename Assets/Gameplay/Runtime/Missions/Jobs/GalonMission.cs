@@ -14,7 +14,7 @@ namespace TycoWorld.Gameplay
         ShopSite shop;
         Spot door;
         GameObject customer;
-        bool delivered, locked;
+        bool delivered, locked, carrying;
         FirstPersonPlayer lockedPlayer;
 
         public override string Id => "galon";
@@ -26,10 +26,12 @@ namespace TycoWorld.Gameplay
         public ShopSite Shop => shop;
         public Spot Door => door;
         public GameObject Customer => customer;
+        /// <summary>The galon is in the player's arms (mission state: never in the saved bag).</summary>
+        public bool Carrying => carrying;
 
         protected override bool Build(MissionContext c)
         {
-            delivered = false;
+            delivered = carrying = false;
             shop = c.NearestShop(c.PlayerPosition, s => s.type == ShopType.Warung || s.type == ShopType.Minimarket, ShopRange);
             if (shop == null) return false;
             door = c.Door(shop.counter, DoorMin, DoorMax);
@@ -38,7 +40,7 @@ namespace TycoWorld.Gameplay
             var at = c.InFrontOf(door);
             var face = Quaternion.Euler(0f, door.yaw, 0f) * Vector3.forward;
             customer = Own(c.Person("Pemesan", at, face, PersonLook.From((ulong)c.Range(1, 1 << 20)), () => HandPrompt, HandOver,
-                () => c.State.Bag.Has(ItemCatalog.Galon)));
+                () => StepIndex == 1 && carrying));
             Add(new MissionStep
             {
                 Objective = "Ambil galon di " + shop.name,
@@ -47,11 +49,11 @@ namespace TycoWorld.Gameplay
             });
             Add(new MissionStep
             {
-                Objective = "Antar galon ke rumah pemesan",
+                Objective = "Antar galon ke rumah pemesan (membawa galon)",
                 Target = () => at,
                 Enter = () =>
                 {
-                    c.State.Bag.Add(ItemCatalog.Galon);
+                    carrying = true;
                     Lock(c, true);
                     c.Toast("Galon diangkat. Berat! Tidak bisa lari.");
                 },
@@ -62,7 +64,8 @@ namespace TycoWorld.Gameplay
 
         void HandOver()
         {
-            if (!Context.State.Bag.Remove(ItemCatalog.Galon)) return;
+            if (!carrying) return;
+            carrying = false;
             delivered = true;
             Lock(Context, false);
             Context.Toast("Pemesan: \"Makasih, a. Pas banget galonnya habis.\"");
@@ -85,12 +88,11 @@ namespace TycoWorld.Gameplay
             }
         }
 
-        protected override void OnFailed()
+        protected override void OnCleanup()
         {
-            // The galon goes back to the warung.
-            if (!delivered) Context.State.Bag.Remove(ItemCatalog.Galon);
+            // A failed job: the galon goes back to the warung.
+            carrying = false;
+            Lock(Context, false);
         }
-
-        protected override void OnCleanup() => Lock(Context, false);
     }
 }

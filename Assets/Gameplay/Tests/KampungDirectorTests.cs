@@ -61,6 +61,35 @@ namespace TycoWorld.Gameplay.Tests
         }
 
         [Test]
+        public void E_OpensTheShop_AndTheSamePress_DoesNotCloseIt_TheNextOneDoes()
+        {
+            var counter = fx.Director.Stalls[0].Counter;
+            Assert.IsTrue(counter.Interact(fx.Context));
+            fx.Director.HandleKeys(false, true);
+            Assert.IsTrue(fx.Director.Shop.IsOpen, "the opening press is not also a closing press");
+            fx.Director.Tick(1f / 60f);
+            fx.Director.HandleKeys(false, true);
+            Assert.IsFalse(fx.Director.Shop.IsOpen);
+            Assert.IsTrue(fx.Player.Locks.Allows(PlayerAbility.All));
+            Assert.AreEqual(110, ((DefaultExecutionOrder)typeof(KampungDirector).GetCustomAttributes(typeof(DefaultExecutionOrder), true)[0]).order,
+                "ticks after the player, whose Interactor is locked while the shop is open");
+        }
+
+        [Test]
+        public void Tab_DoesNotOpenThePhone_OverThePauseMenu()
+        {
+            var pause = new object();
+            fx.Player.Locks.Acquire(pause, PlayerAbility.All);
+            fx.Director.HandleKeys(true, false);
+            Assert.IsFalse(fx.Director.Phone.IsOpen);
+            fx.Player.Locks.Release(pause);
+            fx.Director.HandleKeys(true, false);
+            Assert.IsTrue(fx.Director.Phone.IsOpen);
+            fx.Director.HandleKeys(true, false);
+            Assert.IsFalse(fx.Director.Phone.IsOpen);
+        }
+
+        [Test]
         public void SleepingAtNight_WakesNextMorning_WithTheAllowance()
         {
             fx.Director.JumpClock(22f);

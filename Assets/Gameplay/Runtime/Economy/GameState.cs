@@ -13,7 +13,9 @@ namespace TycoWorld.Gameplay
         Serviced,
         AlreadyOwned,
         NotEnoughMoney,
-        Unknown
+        Unknown,
+        /// <summary>The data package bought earlier today still runs; nothing charged.</summary>
+        StillActive
     }
 
     /// <summary>
@@ -56,6 +58,8 @@ namespace TycoWorld.Gameplay
                 Wear(item.id);
                 return PurchaseResult.AlreadyOwned;
             }
+            // Data is for the day: a second package the same day would buy nothing.
+            if (item.category == ItemCategory.Data && HasData) return PurchaseResult.StillActive;
             if (!Wallet.TrySpend(item.price)) return PurchaseResult.NotEnoughMoney;
             PurchaseResult result;
             if (item.wearable)
@@ -154,7 +158,8 @@ namespace TycoWorld.Gameplay
                 if (!string.IsNullOrEmpty(id)) wardrobe.Add(id);
             Wearing = wardrobe.Contains(data.wearing) ? data.wearing : "";
             Day = Math.Max(1, data.day);
-            LastAllowanceDay = Day;
+            // Older saves have no allowance day: count today's as paid.
+            LastAllowanceDay = data.lastAllowanceDay > 0 ? Math.Min(data.lastAllowanceDay, Day) : Day;
             DataUntilDay = data.dataUntilDay;
             missionsDone.Clear();
             foreach (var id in data.missionsDone)
@@ -164,6 +169,6 @@ namespace TycoWorld.Gameplay
         }
 
         public SaveData ToSave(float hours) =>
-            SaveData.FromState(Wallet, Needs, Bag, wardrobe, Wearing, Day, hours, DataUntilDay, missionsDone, Sleeps);
+            SaveData.FromState(Wallet, Needs, Bag, wardrobe, Wearing, Day, hours, DataUntilDay, missionsDone, Sleeps, LastAllowanceDay);
     }
 }

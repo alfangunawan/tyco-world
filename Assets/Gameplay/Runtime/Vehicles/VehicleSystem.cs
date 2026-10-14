@@ -24,6 +24,12 @@ namespace TycoWorld.Gameplay
         public const float RepaintRadius = 15f;
         /// <summary>Stepping further than this from where the break-in started gives it up (so a seen thief can still run).</summary>
         public const float HotwireDrift = 0.6f;
+        /// <summary>A taken vehicle holds its parking spot until it is this far from it (no copy spawns inside it).</summary>
+        public const float SpotRelease = 6f;
+        /// <summary>A spot this close to any active vehicle is occupied and gets no new one.</summary>
+        public const float SpotClearance = 2.5f;
+        public const string NothingToPaintText = "Tidak ada kendaraan yang perlu dicat di sini.";
+        public const string HuntedSleepText = "Warga masih mencarimu. Tidak bisa tidur sekarang.";
         public const string GaveUpToast = "Batal membobol kunci.";
         /// <summary>A riderless vehicle standing still this long stops ticking (its Motorbike component sleeps).</summary>
         public const float SleepAfter = 1.5f;
@@ -42,7 +48,7 @@ namespace TycoWorld.Gameplay
         WorldVehicle hotwiring;
         float hotwireTime;
         Vector3 hotwireFrom;
-        bool hotwireLocked, caughtPending;
+        bool hotwireLocked, caughtPending, attemptSeen;
         FirstPersonPlayer lockedPlayer;
 
         public int Order => 20;
@@ -62,6 +68,8 @@ namespace TycoWorld.Gameplay
             carTuning = VehicleFactory.CarTuning(prefabBike != null ? prefabBike.Tuning : null);
             owner.Serviced += OnServiced;
             owner.ServiceText = ServiceText;
+            owner.RefuseService = RefuseService;
+            owner.SleepBlockers.Add(SleepBlocker);
             owner.MarkerSources.Add(Markers);
             spawnTimer = 0f;
         }
@@ -74,6 +82,8 @@ namespace TycoWorld.Gameplay
             {
                 director.Serviced -= OnServiced;
                 director.ServiceText = null;
+                director.RefuseService = null;
+                director.SleepBlockers.Remove(SleepBlocker);
                 director.MarkerSources.Remove(Markers);
             }
             if (root != null) DestroyNow(root.gameObject);
@@ -158,6 +168,8 @@ namespace TycoWorld.Gameplay
             // Far away: parked ones go; a stolen one left far behind is found by its owner.
             foreach (var v in vehicles)
             {
+                // A taken vehicle that has left its spot frees it.
+                if (v.Active && v.Moved && v.Spot >= 0 && MissionContext.Flat(v.Position, spots[v.Spot].position) > SpotRelease) ReleaseSpot(v);
                 if (!v.Active || v.Body.IsMounted || v == hotwiring) continue;
                 float d = MissionContext.Flat(v.Position, viewer);
                 if (v.Moved ? d > ReturnBeyond : d > RangeOf(v.Kind) + Hysteresis) Despawn(v);
@@ -168,7 +180,7 @@ namespace TycoWorld.Gameplay
                 var kind = spots[i].kind;
                 if (kind != SpotKind.ParkingBike && kind != SpotKind.ParkingCar) continue;
                 if (bySpot.ContainsKey(i)) continue;
-                if (MissionContext.Flat(spots[i].position, viewer) <= RangeOf(KindOf(kind))) candidates.Add(i);
+                if (MissionContext.Flat(spots[i].position, viewer) <= RangeOf(KindOf(kind)) && !Occupied(spots[i].position)) candidates.Add(i);
             }
             candidates.Sort((a, b) => MissionContext.Flat(spots[a].position, viewer).CompareTo(MissionContext.Flat(spots[b].position, viewer)));
             int bikes = Count(VehicleKind.Bike), cars = Count(VehicleKind.Car);
@@ -205,6 +217,20 @@ namespace TycoWorld.Gameplay
         {
             v.Idle = 0f;
             v.Body.enabled = true;
+        }
+
+        /// <summary>Some active vehicle (a taken one parked back here, say) already stands on the spot.</summary>
+        bool Occupied(Vector3 spot)
+        {
+            foreach (var v in vehicles)
+                if (v.Active && MissionContext.Flat(v.Position, spot) < SpotClearance) return true;
+            return false;
+        }
+
+        void ReleaseSpot(WorldVehicle v)
+        {
+            if (v.Spot >= 0 && bySpot.TryGetValue(v.Spot, out var holder) && holder == v) bySpot.Remove(v.Spot);
+            v.Spot = -1;
         }
 
         static VehicleKind KindOf(SpotKind kind) => kind == SpotKind.ParkingCar ? VehicleKind.Car : VehicleKind.Bike;
@@ -256,8 +282,7 @@ namespace TycoWorld.Gameplay
 
         void Despawn(WorldVehicle v)
         {
-            if (v.Spot >= 0) bySpot.Remove(v.Spot);
-            v.Spot = -1;
+            ReleaseSpot(v);
             v.Unlocked = v.Moved = v.Hot = false;
             v.Root.SetActive(false);
         }
@@ -279,6 +304,7 @@ namespace TycoWorld.Gameplay
             hotwiring = v;
             hotwireTime = 0f;
             witnessTimer = 0f;
+            attemptSeen = false;
             hotwireFrom = PlayerPosition;
             lockedPlayer = director.Player;
             // Hands busy (no E, no torch); the legs are free, and moving off gives up.
@@ -314,19 +340,21 @@ namespace TycoWorld.Gameplay
             if (director.Hud != null) director.Hud.SetProgress("Membobol kunci " + hotwiring.Noun + "...", HotwireProgress);
             if (hotwireTime < Duration(hotwiring)) return;
             var v = hotwiring;
+            // Done, not given up: detach it first so CancelHotwire only frees the hands and the HUD.
+            hotwiring = null;
             CancelHotwire();
             v.Unlocked = true;
             v.Moved = true;
-            // Its spot is free for another parked vehicle; this one now lives where the player leaves it.
-            if (v.Spot >= 0) bySpot.Remove(v.Spot);
-            v.Spot = -1;
+            // It keeps its spot until it has left it (UpdateSpawns frees it), so no copy spawns underneath.
             Wake(v);
             v.Body.Mount(director.Player);
-            director.Toast(v.Hot ? "Kunci jebol. Kabur!" : "Kunci jebol. Tidak ada yang lihat... sepertinya.");
+            director.Toast(attemptSeen ? "Kunci jebol. Kabur!" : "Kunci jebol. Tidak ada yang lihat... sepertinya.");
         }
 
         void CancelHotwire()
         {
+            // A lock left half-broken: the vehicle stays parked and is no one's stolen vehicle.
+            if (hotwiring != null && !hotwiring.Moved) hotwiring.Hot = false;
             hotwiring = null;
             hotwireTime = 0f;
             if (hotwireLocked && lockedPlayer != null) lockedPlayer.Locks.Release(stealLock);
@@ -341,13 +369,14 @@ namespace TycoWorld.Gameplay
             return director.State.IsHooded ? r * HoodedFactor : r;
         }
 
-        /// <summary>Warga who can see the theft raise the alarm (once per vehicle): heat, shouting, a chase.</summary>
+        /// <summary>Warga who can see the theft raise the alarm (once per attempt): heat, shouting, a chase.</summary>
         void Report(WorldVehicle v)
         {
             var crowd = People;
-            if (crowd == null || v.Hot) return;
+            if (crowd == null || attemptSeen) return;
             var witnesses = crowd.Witnesses(v.Position, SeeRadius(v.Kind == VehicleKind.Car), v.Root.transform);
             if (witnesses.Count == 0) return;
+            attemptSeen = true;
             v.Hot = true;
             Heat.Crime(v.Kind == VehicleKind.Car ? 2 : 1);
             crowd.Alarm(v.Position, witnesses, Mathf.Max(0, Heat.Level - crowd.ChaserCount));
@@ -443,6 +472,11 @@ namespace TycoWorld.Gameplay
                 return best;
             }
         }
+
+        string RefuseService(ItemDefinition item) =>
+            item != null && item.id == ItemCatalog.CatUlang && ServiceTarget == null && !Heat.IsHot ? NothingToPaintText : null;
+
+        string SleepBlocker() => Heat.IsHot || (People != null && People.ChaserCount > 0) ? HuntedSleepText : null;
 
         string ServiceText()
         {

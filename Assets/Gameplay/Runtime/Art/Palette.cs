@@ -25,8 +25,11 @@ namespace TycoWorld.Gameplay
             {
                 var shader = Shader.Find("Universal Render Pipeline/Lit");
                 this.template = new Material(shader != null ? shader : Shader.Find("Standard")) { hideFlags = HideFlags.DontSave };
+                ownsTemplate = true;
             }
         }
+
+        readonly bool ownsTemplate;
 
         public Material Get(Color32 colour)
         {
@@ -58,6 +61,7 @@ namespace TycoWorld.Gameplay
             foreach (var m in glowing.Values) Release(m);
             cache.Clear();
             glowing.Clear();
+            if (ownsTemplate) Release(template);
         }
 
         static void Release(Material m)

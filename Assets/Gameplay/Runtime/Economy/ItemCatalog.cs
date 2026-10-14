@@ -51,13 +51,14 @@ namespace TycoWorld.Gameplay
         {
             switch (type)
             {
-                case ShopType.Warung: return new[] { "air-mineral", "teh-kemasan", "kopi-sachet", "roti", "mi-instan", "gorengan", Galon };
+                case ShopType.Warung: return new[] { "air-mineral", "teh-kemasan", "kopi-sachet", "roti", "mi-instan", "gorengan" };
                 case ShopType.WarungMakan: return new[] { "nasi-telur", "nasi-goreng", "mi-ayam", "es-teh", "kopi-hitam" };
                 case ShopType.Distro: return new[] { "kaos-polos", "kemeja-flanel", Jaket, Hoodie, "sarung" };
                 case ShopType.Konter: return new[] { PaketData };
                 case ShopType.Apotek: return new[] { "vitamin-c", "jamu-anget", "minyak-kayu-putih", "air-mineral" };
                 case ShopType.Bengkel: return new[] { CatUlang };
-                default: return new[] { "air-mineral", "teh-kemasan", "kopi-kaleng", "roti", "nasi-kepal", "mi-instan" };
+                // The 24-hour minimarket also sells data, so night jobs can be taken after the konter closes.
+                default: return new[] { "air-mineral", "teh-kemasan", "kopi-kaleng", "roti", "nasi-kepal", "mi-instan", PaketData };
             }
         }
 

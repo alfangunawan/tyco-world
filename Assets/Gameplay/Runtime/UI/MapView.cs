@@ -100,11 +100,18 @@ namespace TycoWorld.Gameplay
             p.Fill();
         }
 
+        /// <summary>The line's bounding box overlaps the view square: a long straight road passing by is drawn even when both ends are off screen.</summary>
         bool Near(Vector2[] points, float reach)
         {
+            float minX = float.PositiveInfinity, minY = float.PositiveInfinity, maxX = float.NegativeInfinity, maxY = float.NegativeInfinity;
             foreach (var q in points)
-                if (Mathf.Abs(q.x - centre.x) < reach && Mathf.Abs(q.y - centre.y) < reach) return true;
-            return false;
+            {
+                minX = Mathf.Min(minX, q.x);
+                maxX = Mathf.Max(maxX, q.x);
+                minY = Mathf.Min(minY, q.y);
+                maxY = Mathf.Max(maxY, q.y);
+            }
+            return maxX > centre.x - reach && minX < centre.x + reach && maxY > centre.y - reach && minY < centre.y + reach;
         }
 
         static void Dot(Painter2D p, Vector2 at, float size, Color color)

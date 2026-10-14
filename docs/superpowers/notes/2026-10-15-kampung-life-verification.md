@@ -4,7 +4,7 @@ Spec: `docs/superpowers/specs/2026-10-15-kampung-life-design.md` (§9 mencatat k
 
 ## Tes otomatis
 
-- `McpTestRunner.Run("TycoWorld")`: **1075 lulus, 0 gagal** (997 dari PR #7, ditambah 78 tes Gameplay). Sebelum mesh low-poly dan optimasi: 1071/0.
+- `McpTestRunner.Run("TycoWorld")`: **1089 lulus, 0 gagal** (997 dari PR #7, ditambah 92 tes Gameplay) setelah perbaikan review. Sebelumnya: 1071/0 (sebelum mesh low-poly) dan 1075/0 (sebelum review).
 - Generate setelah semua perubahan: 32 s, hash 280 chunk **IDENTIK** dengan akhir PR #7. Re-bake `KampungData` lewat Gameplay Setup tidak mengubah asset (deterministik).
 - Isi tes Gameplay:
   - **Model murni:** Rupiah, dompet, tas, kebutuhan, jam buka, simpan/muat dan versi tak dikenal, panas (naik, tertahan saat terlihat, turun satu bintang per 25 s), langkah dan jendela jam misi, pilihan jalur di node, dan jadwal kepadatan.
@@ -95,6 +95,48 @@ Hasil:
 - **FPS** 92–98% dari kondisi tanpa gameplay.
 - **Malam:** ada dua lampu titik tambahan, yaitu lampu minimarket yang buka.
 - **Catatan pengukuran:** FPS saat editor tidak fokus cukup berisik. Contohnya high 21 tercatat 105% di sweep 1 dan 89% di sweep 2, dengan frame terburuk sampai ±120 ms di langkah "none". Sebaliknya, angka batch stabil antar-sweep (selisih ≤ 15).
+
+## Review akhir (subagent, model paling mampu)
+
+Hasil review: 1 Critical, 4 Important, 11 Minor. Semua sudah diperbaiki dan dipaku tes, kecuali yang disebut di akhir bagian ini.
+
+**Critical**
+- **C1 — E membuka sekaligus menutup toko di frame yang sama.** E adalah tombol Interact pemain sekaligus tombol tutup toko milik director. Perbaikan:
+  - Director sekarang `[DefaultExecutionOrder(110)]`, jadi berjalan setelah pemain, sama seperti motor.
+  - E di tick yang sama dengan tick saat toko dibuka diabaikan.
+  - `HandleKeys` dibuat publik supaya jalur keyboard bisa dites.
+
+**Important**
+- **I1 — Salinan kendaraan muncul di dalam kendaraan curian.** Kendaraan curian sekarang tetap memegang titik parkirnya sampai berjarak lebih dari 6 m dari titik itu. Titik yang masih ditempati kendaraan aktif (dalam 2,5 m) tidak diberi kendaraan baru.
+- **I2 — Percobaan yang ketahuan lalu dibatalkan menyembunyikan percobaan berikutnya.** Status "sudah dilaporkan" sekarang dicatat per percobaan, dan flag `Hot` dihapus kalau pembobolan batal sebelum kendaraan diambil.
+- **I3 — Pak RT keluar pukul 20.00, padahal ronda baru bisa diambil pukul 21.00.** Jamnya sekarang sama dengan ronda (21.00–02.00). Kalau tawarannya tidak bisa dimulai, Pak RT menjawab dengan teks.
+- **I4 — Galon misi disimpan di tas yang ikut save.** Galon sekarang menjadi status misi (`Carrying`) dan tidak pernah masuk tas. Pemesan hanya menerima di langkah 2. Warung tidak lagi menjual galon.
+
+**Minor**
+- Hari uang jajan terakhir ikut disimpan (`lastAllowanceDay`).
+- HP:
+  - tidak bisa dibuka saat kendaraan melaju ("Pinggirkan kendaraan dulu.");
+  - kalau dibuka di atas motor yang diam, rem ditahan lewat `HoldBrakeIntentSource`;
+  - tidak bisa dibuka di atas menu jeda.
+- Kerjaan yang sedang berjalan tetap bisa dibatalkan walau paket data habis. Minimarket 24 jam juga menjual paket data.
+- Pembelian yang tidak berguna ditolak dan tidak memotong uang:
+  - Cat ulang tanpa kendaraan curian di dekat bengkel dan tanpa panas;
+  - paket data kedua di hari yang sama.
+- Fisika dan peta:
+  - `Physics.SyncTransforms` dipanggil setelah pejalan kaki digerakkan;
+  - Pak RT dibuat langsung di posisinya;
+  - jalan panjang yang melintas di peta tetap digambar.
+- Simpan dan tidur:
+  - save saat keluar tidak ditimpa jam 06.30;
+  - tidak bisa tidur selama warga masih mencari;
+  - `Faint` dijaga dari fade yang sedang berjalan.
+- Fixture tes sekarang menjalankan `Director.Shutdown()`, sehingga `End()` semua sistem ikut dites. `Palette` menghapus template cadangan yang ia buat sendiri.
+
+Smoke test Play setelah perbaikan:
+- E di tick saat toko dibuka: toko tetap terbuka.
+- E di tick berikutnya: toko tertutup dan semua kunci lepas.
+- Tab membuka dan menutup HP.
+- Console tanpa error.
 
 ## Catatan
 

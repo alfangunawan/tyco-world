@@ -227,8 +227,14 @@ namespace TycoWorld.Gameplay
         {
             if (!state.HasData)
             {
-                body.Add(Dim("Butuh paket data. Beli Paket data harian di konter pulsa."));
-                return;
+                body.Add(Dim("Butuh paket data. Beli Paket data harian di konter pulsa atau minimarket."));
+                // A job already running can still be cancelled.
+                var running = new List<JobListing>();
+                if (jobs != null)
+                    foreach (var job in jobs)
+                        if (job.Active) running.Add(job);
+                if (running.Count == 0) return;
+                jobs = running;
             }
             if (jobs == null || jobs.Count == 0)
             {

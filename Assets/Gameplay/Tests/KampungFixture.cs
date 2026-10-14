@@ -99,7 +99,12 @@ namespace TycoWorld.Gameplay.Tests
 
         public void Dispose()
         {
-            if (Director != null) Object.DestroyImmediate(Director.gameObject);
+            if (Director != null)
+            {
+                // Edit mode never calls OnDestroy: run the same teardown so every system ends and locks are freed.
+                Director.Shutdown();
+                Object.DestroyImmediate(Director.gameObject);
+            }
             Fx.Dispose();
         }
     }

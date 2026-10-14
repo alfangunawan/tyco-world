@@ -101,7 +101,9 @@ Dicatat supaya spec tetap jujur terhadap kode. Semua angka ada sebagai konstanta
   - Alarm mobil menggandakan jarak saksi (36 m). Hoodie mengalikan jarak saksi 0,7.
   - Mencuri motor menambah 1 bintang, mobil 2 bintang. Satu bintang turun tiap 25 s tidak terlihat.
 - **Misi (`MissionSystem`):**
-  - Ronda Malam juga ditawarkan Pak RT, yang berdiri di pos ronda terdekat dari kos pukul 20.00–02.00. Ini NPC pemberi misi yang disebut di §2.
+  - Ronda Malam juga ditawarkan Pak RT, yang berdiri di pos ronda terdekat dari kos pukul 21.00–02.00, sama dengan jam ronda. Ini NPC pemberi misi yang disebut di §2.
+  - Galon pada Antar Galon adalah status misi, bukan barang di tas, jadi tidak ikut tersimpan dan tidak tercampur dengan barang milik pemain. Warung tidak menjual galon.
+  - Paket data juga dijual di minimarket 24 jam. Kerjaan yang sedang berjalan tetap bisa dibatalkan tanpa data.
   - Pilar beacon dimulai 3,2 m di atas tanah, supaya orang yang berdiri di titik tujuan tidak tertutup.
   - Pekerjaan gagal kalau layar memudar (tidur, pingsan, tertangkap), waktu habis, atau dibatalkan dari HP.
 - **Anggaran perf:**
