@@ -22,6 +22,17 @@ namespace TycoWorld.WorldGen.Authoring
         public const string WallsName = "Walls";
         public const int SubWall = 0, SubConcrete = 1, SubFence = 2, SubMetal = 3, SubmeshCount = 4;
         const float JointCapDegrees = 10f, RailSize = 0.04f, GateFrame = 0.06f, GateBottom = 0.1f, LeafThickness = 0.05f, GateColliderThickness = 0.06f;
+        /// <summary>An opening whose wall-line span is shorter than this share of its width sits on the inside of a bend that folds it away; the wall runs on instead.</summary>
+        const float MinOpeningShare = 0.6f;
+
+        /// <summary>Straight-line length of the opening's span on the wall line (after the offset folds the inside of a bend away).</summary>
+        static float SpanChord(WallRun run, WallOpening o, float centre)
+        {
+            var along = new List<float>();
+            var span = Polyline2D.Offset(Polyline2D.Slice(run.Chain.Points, run.Chain.Cum, o.S - o.Width * 0.5f, o.S + o.Width * 0.5f, along),
+                along, run.Side * centre, new List<float>());
+            return Vector2.Distance(span[0], span[span.Count - 1]);
+        }
 
         public static FrontageMeshResult Build(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize)
         {
@@ -34,7 +45,9 @@ namespace TycoWorld.WorldGen.Authoring
         {
             float lineOffset = FrontagePlanner.LineOffset(run.Chain, run.Profile, e, f);
             float centre = lineOffset + f.wallThickness * 0.5f;
-            var openings = new List<WallOpening>(run.Openings);
+            var openings = new List<WallOpening>();
+            foreach (var o in run.Openings)
+                if (SpanChord(run, o, centre) >= MinOpeningShare * o.Width) openings.Add(o);
             openings.Sort((a, b) => a.S.CompareTo(b.S));
             float cursor = run.S0;
             foreach (var o in openings)
@@ -109,11 +122,12 @@ namespace TycoWorld.WorldGen.Authoring
             float L = cum[n - 1];
             if (L < 1e-3f) return;
             Vector2 SegDir(int j) { var d = line[j + 1] - line[j]; return d.sqrMagnitude < 1e-8f ? Vector2.zero : d.normalized; }
-            // Ends.
+            // Ends; an end within one pilaster width of a standing pilaster (a shared lot boundary, a gate post) reuses it.
+            float endGap = f.pilasterSize + 0.05f;
             int first = 0; while (first + 1 < n && SegDir(first) == Vector2.zero) first++;
-            if (first + 1 < n) Pilaster(line[0], SegDir(first), total, f, chunkSize, r, 0.05f);
+            if (first + 1 < n) Pilaster(line[0], SegDir(first), total, f, chunkSize, r, endGap);
             int last = n - 2; while (last > 0 && SegDir(last) == Vector2.zero) last--;
-            if (last >= 0 && SegDir(last) != Vector2.zero) Pilaster(line[n - 1], SegDir(last), total, f, chunkSize, r, 0.05f);
+            if (last >= 0 && SegDir(last) != Vector2.zero) Pilaster(line[n - 1], SegDir(last), total, f, chunkSize, r, endGap);
             // Interior vertices on turns.
             float minTurn = f.pilasterMinTurnDegrees;
             for (int j = 1; j + 1 < n; j++)
@@ -166,16 +180,15 @@ namespace TycoWorld.WorldGen.Authoring
             FrontageMeshResult r)
         {
             var chain = run.Chain;
-            var c = chain.PointAt(o.S, out _);
+            var c = chain.PointAt(o.S, out var tangent);
             // Same slice + mitred offset as the wall pieces, so the leaf meets their ends exactly even across a bend.
             var along = new List<float>();
             var span = Polyline2D.Offset(Polyline2D.Slice(chain.Points, chain.Cum, o.S - o.Width * 0.5f, o.S + o.Width * 0.5f, along),
                 along, run.Side * centre, new List<float>());
             Vector2 g0 = span[0], g1 = span[span.Count - 1];
-            Vector2 chord = g1 - g0;
-            if (chord.sqrMagnitude < 1e-8f) return;
-            var chordDir = chord.normalized;
-            var outward = Polyline2D.LeftNormal(chordDir) * run.Side;
+            if ((g1 - g0).sqrMagnitude < 1e-8f) return;
+            // The slab crosses the gutter square to the road at the opening centre.
+            var outward = Polyline2D.LeftNormal(tangent) * run.Side;
             var chunk = WorldMeshPipeline.ChunkOf((g0 + g1) * 0.5f, chunkSize);
             var m = MeshIn(r.Render, chunk, SubmeshCount);
             var col = MeshIn(r.Collider, chunk, 1);
