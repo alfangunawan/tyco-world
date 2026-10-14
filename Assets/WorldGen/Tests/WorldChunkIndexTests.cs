@@ -64,10 +64,12 @@ namespace TycoWorld.WorldGen.Tests
         [Test]
         public void Build_IndexesEveryContainerTheGeneratorCreates()
         {
-            var structures = new[] { FeatureGroups.Roads, FeatureGroups.Buildings, FeatureGroups.Areas, FeatureGroups.Water, FeatureGroups.Frontage };
-            var props = new[] { WorldMeshPipeline.TreesGroup, WorldMeshPipeline.LampsGroup, FeatureGroups.RoadEdges };
+            var structures = new[] { FeatureGroups.Roads, FeatureGroups.Buildings, FeatureGroups.Areas, FeatureGroups.Water };
+            var props = new[] { WorldMeshPipeline.TreesGroup, WorldMeshPipeline.LampsGroup };
+            var details = new[] { FeatureGroups.Frontage, FeatureGroups.RoadEdges };
             var paths = new List<string>(structures);
             paths.AddRange(props);
+            paths.AddRange(details);
             for (int i = 0; i < paths.Count; i++)
                 fx.Cube(paths[i] + "/" + WorldMeshPipeline.ChunkName(new Vector2Int(i, 0)), new Vector3(i * 100f, 0f, 0f));
 
@@ -79,7 +81,8 @@ namespace TycoWorld.WorldGen.Tests
                 var chunk = new Vector2Int(i, 0);
                 var group = groups.Find(g => g.Chunk == chunk);
                 Assert.IsNotNull(group, paths[i]);
-                Assert.AreEqual(i < structures.Length ? CullCategory.Structure : CullCategory.Prop, group.Category, paths[i]);
+                var expected = i < structures.Length ? CullCategory.Structure : i < structures.Length + props.Length ? CullCategory.Prop : CullCategory.Detail;
+                Assert.AreEqual(expected, group.Category, paths[i]);
             }
         }
 

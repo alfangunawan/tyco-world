@@ -13,6 +13,8 @@ namespace TycoWorld.GameSettings
         public const float FogFactor = 2.3f;
         public const float PropRatio = 0.6f;
         public const float PropMinimum = 80f;
+        public const float DetailRatio = 0.4f;
+        public const float DetailMinimum = 80f;
 
         public static float FarClip(float viewDistance) => viewDistance * FarClipFactor;
 
@@ -20,5 +22,8 @@ namespace TycoWorld.GameSettings
 
         /// <summary>Trees and lamp posts disappear (and lamp lights are budgeted) within this distance.</summary>
         public static float PropDistance(float viewDistance) => Mathf.Max(PropMinimum, viewDistance * PropRatio);
+
+        /// <summary>Property-line walls and road edges disappear within this distance (spec frontage-polish §2.5).</summary>
+        public static float DetailDistance(float viewDistance) => Mathf.Max(DetailMinimum, viewDistance * DetailRatio);
     }
 }

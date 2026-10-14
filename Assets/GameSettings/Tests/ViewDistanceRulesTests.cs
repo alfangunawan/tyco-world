@@ -21,6 +21,13 @@ namespace TycoWorld.GameSettings.Tests
         public void PropDistance_Is60PercentWith80Minimum(float view, float expected) =>
             Assert.AreEqual(expected, ViewDistanceRules.PropDistance(view), 1e-3f);
 
+        [TestCase(100f, 80f)]
+        [TestCase(300f, 120f)]
+        [TestCase(500f, 200f)]
+        [TestCase(800f, 320f)]
+        public void DetailDistance_Is40PercentWith80Minimum(float view, float expected) =>
+            Assert.AreEqual(expected, ViewDistanceRules.DetailDistance(view), 1e-3f);
+
         [Test]
         public void SliderRange_MatchesTheSpec()
         {

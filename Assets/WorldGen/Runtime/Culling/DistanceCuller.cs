@@ -5,7 +5,8 @@ using UnityEngine;
 namespace TycoWorld.WorldGen
 {
     /// <summary>
-    /// Hides the renderers of whole chunk groups beyond the view distance (props beyond the prop distance), every 0.25 s
+    /// Hides the renderers of whole chunk groups beyond the view distance (props beyond the prop distance, details beyond the
+    /// detail distance), every 0.25 s
     /// or at once after a jump over 50 m, with 10 m hysteresis. Colliders stay. Infinite distances (default) cull nothing
     /// (spec #4 §5.1).
     /// </summary>
@@ -20,6 +21,7 @@ namespace TycoWorld.WorldGen
 
         float viewDistance = float.PositiveInfinity;
         float propDistance = float.PositiveInfinity;
+        float detailDistance = float.PositiveInfinity;
         List<ChunkGroup> groups;
         GeneratedRoot root;
         float timer, searchTimer;
@@ -44,6 +46,17 @@ namespace TycoWorld.WorldGen
             {
                 if (value == propDistance) return;
                 propDistance = value;
+                dirty = true;
+            }
+        }
+
+        public float DetailDistance
+        {
+            get => detailDistance;
+            set
+            {
+                if (value == detailDistance) return;
+                detailDistance = value;
                 dirty = true;
             }
         }
@@ -103,7 +116,7 @@ namespace TycoWorld.WorldGen
             int hidden = 0;
             foreach (var g in groups)
             {
-                float limit = g.Category == CullCategory.Prop ? propDistance : viewDistance;
+                float limit = g.Category == CullCategory.Prop ? propDistance : g.Category == CullCategory.Detail ? detailDistance : viewDistance;
                 float distance = g.DistanceTo(viewer);
                 bool show = g.Visible ? distance <= limit + HysteresisMeters : distance <= limit - HysteresisMeters;
                 g.SetVisible(show);
