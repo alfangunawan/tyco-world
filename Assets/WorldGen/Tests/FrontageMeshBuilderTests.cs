@@ -264,6 +264,16 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void WallAllAroundALoop_ClosesAtTheSeam()
+        {
+            var chain = Chain(new Vector2(0f, 0f), new Vector2(40f, 0f), new Vector2(40f, 40f), new Vector2(0f, 40f), new Vector2(0f, 0f));
+            Assert.IsTrue(chain.Closed);
+            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 0f, chain.Length));
+            Assert.AreEqual(0, LooseEnds(r), "a ring of wall with no loose end at the seam");
+            Assert.IsFalse(AnyBlockersCross(r));
+        }
+
+        [Test]
         public void ProfileChange_JoinsTheTwoWallLinesWithAReturn()
         {
             var chain = Straight();

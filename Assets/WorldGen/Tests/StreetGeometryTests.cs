@@ -165,6 +165,24 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Offset_InsideANearUTurn_StaysNearTheRoad()
+        {
+            // 175° over three short segments: the legs' inner offset lines meet ~80 m away; the collapse must not go there.
+            var pts = new List<Vector2> { V(0, 0), V(10, 0) };
+            float heading = 0f;
+            foreach (float turn in new[] { 60f, 60f, 55f })
+            {
+                heading += turn * Mathf.Deg2Rad;
+                pts.Add(pts[pts.Count - 1] + V(Mathf.Cos(heading), Mathf.Sin(heading)) * (turn == 55f ? 10f : 1f));
+            }
+            var along = new List<float>();
+            var line = Polyline2D.Offset(pts, Polyline2D.Cumulative(pts), 4.5f, along);
+            foreach (var p in line)
+                Assert.LessOrEqual(Polyline2D.DistanceTo(pts, p), 4.5f * RoadMeshBuilder.MiterLimit + 0.01f, "offset point " + p);
+            AssertRunsForward(pts, line, along, "near U-turn");
+        }
+
+        [Test]
         public void Project_FindsArcLengthAndDistance()
         {
             var pts = new List<Vector2> { V(0, 0), V(10, 0), V(10, 10) };

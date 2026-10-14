@@ -104,7 +104,7 @@ namespace TycoWorld.WorldGen.Authoring
             source.Add(n - 2);
             result.Add(pts[n - 1] + normals[n - 2] * offset);
             along.Add(s[n - 1]);
-            CollapseReversed(result, source, dirs);
+            CollapseReversed(result, source, dirs, pts, Mathf.Abs(offset));
             CollapseCrossings(result, along, Mathf.Abs(offset));
             return result;
         }
@@ -130,7 +130,7 @@ namespace TycoWorld.WorldGen.Authoring
         /// neighbours up to the nearest forward segments on both sides collapse onto the point where those two segments' lines
         /// meet; at an open end the stretch collapses onto the first forward segment's end.
         /// </summary>
-        static void CollapseReversed(List<Vector2> r, List<int> source, Vector2[] dirs)
+        static void CollapseReversed(List<Vector2> r, List<int> source, Vector2[] dirs, IReadOnlyList<Vector2> centre, float offset)
         {
             int segments = r.Count - 1;
             for (int guard = 0; guard < segments + 1; guard++)
@@ -165,7 +165,11 @@ namespace TycoWorld.WorldGen.Authoring
                         bool qOk = Vector2.Dot(r[q + 1] - x, dirs[source[q]]) > FoldEpsilon;
                         if (pOk && qOk)
                         {
-                            Fill(r, p + 1, q, x);
+                            // Nearly antiparallel neighbours (a U-turn over short segments) meet far off the road; a real
+                            // fold point stays within a miter of the centreline vertices it replaces.
+                            Fill(r, p + 1, q, NearAnyVertex(x, centre, source[p] + 1, source[q], offset * RoadMeshBuilder.MiterLimit + 0.01f)
+                                ? x
+                                : 0.5f * (r[p + 1] + r[q]));
                             break;
                         }
                         if (!pOk) { do p--; while (p >= 0 && !Forward(r, source, dirs, p)); }
@@ -207,6 +211,13 @@ namespace TycoWorld.WorldGen.Authoring
                 Fill(r, k + 1, hit, cross);
                 k = hit - 1;
             }
+        }
+
+        static bool NearAnyVertex(Vector2 x, IReadOnlyList<Vector2> centre, int from, int to, float reach)
+        {
+            for (int i = Mathf.Max(0, from); i <= to && i < centre.Count; i++)
+                if ((centre[i] - x).sqrMagnitude <= reach * reach) return true;
+            return false;
         }
 
         static void Fill(List<Vector2> r, int from, int to, Vector2 p)

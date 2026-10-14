@@ -249,12 +249,15 @@ namespace TycoWorld.WorldGen.Authoring
             if (first + 1 < n) Pilaster(line[0], SegDir(first), total, f, chunkSize, r, endGap);
             int last = n - 2; while (last > 0 && SegDir(last) == Vector2.zero) last--;
             if (last >= 0 && SegDir(last) != Vector2.zero) Pilaster(line[n - 1], SegDir(last), total, f, chunkSize, r, endGap);
-            // Interior vertices on turns.
+            // Interior vertices on turns; a collapsed inside corner is a run of equal points, judged by the real segments around it.
             float minTurn = f.pilasterMinTurnDegrees;
             for (int j = 1; j + 1 < n; j++)
             {
-                var din = SegDir(j - 1); var dout = SegDir(j);
-                if (din == Vector2.zero || dout == Vector2.zero) continue;
+                if (SegDir(j - 1) == Vector2.zero) continue;
+                int next = j;
+                while (next + 1 < n && SegDir(next) == Vector2.zero) next++;
+                if (next + 1 >= n) break;
+                var din = SegDir(j - 1); var dout = SegDir(next);
                 if (Vector2.Angle(din, dout) >= minTurn) Pilaster(line[j], dout, total, f, chunkSize, r, f.pilasterMinGap);
             }
             // Arc-spaced intermediates.

@@ -41,6 +41,23 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Ribbon_OnALoopWayWithASharpSeam_BevelsIt()
+        {
+            // A thin triangle starting at its sharp (171°) corner: too sharp to miter, so the seam needs a bevel triangle.
+            var m = Ribbon(4f, false, new Vector2(0, 0), new Vector2(20, 0), new Vector2(19, 3), new Vector2(0, 0));
+            Vector2 n0 = new Vector2(0f, 1f), n1 = Vector2.Perpendicular(new Vector2(-19f, -3f).normalized);
+            var outside = -(n0 + n1).normalized * 0.1f;
+            bool covered = false;
+            for (int i = 0; i + 2 < m.Indices(0).Count; i += 3)
+            {
+                var idx = m.Indices(0);
+                Vector3 a = m.Vertices[idx[i]], b = m.Vertices[idx[i + 1]], c = m.Vertices[idx[i + 2]];
+                if (Polygon2D.ContainsPoint(new List<Vector2> { new Vector2(a.x, a.z), new Vector2(b.x, b.z), new Vector2(c.x, c.z) }, outside)) covered = true;
+            }
+            Assert.IsTrue(covered, "the outside of the seam at " + outside + " is asphalt");
+        }
+
+        [Test]
         public void AddQuad_FlipsToDesiredNormal()
         {
             var m = new MeshData(1);

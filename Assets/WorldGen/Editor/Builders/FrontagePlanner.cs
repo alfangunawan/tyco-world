@@ -16,6 +16,11 @@ namespace TycoWorld.WorldGen.Authoring
         public FrontageKind Kind;
         /// <summary>The building behind a Lot; null for every other kind.</summary>
         public StreetBuilding Building;
+        /// <summary>
+        /// On a loop, the interval on the other side of the seam that continues this one (same kind, building and profile):
+        /// the two are one lot, so they share one wall look and get one opening (spec frontage-polish §2.1).
+        /// </summary>
+        public FrontageInterval SeamPartner;
         public float Length => S1 - S0;
     }
 
@@ -79,11 +84,34 @@ namespace TycoWorld.WorldGen.Authoring
                         start = i;
                     }
                     MergeShort(list, f.minInterval);
+                    PairAcrossSeam(chain, list);
                     foreach (var x in list)
                         if (x.Kind != FrontageKind.Blocked && x.Length > 1e-3f) result.Add(x);
                 }
             }
             return result;
+        }
+
+        static void PairAcrossSeam(RoadChain chain, List<FrontageInterval> list)
+        {
+            if (!chain.Closed || list.Count < 2) return;
+            var first = list[0];
+            var last = list[list.Count - 1];
+            if (first.S0 > 1e-3f || last.S1 < chain.Length - 1e-3f || first.Kind == FrontageKind.Blocked) return;
+            if (first.Kind != last.Kind || first.Building != last.Building || first.Profile != last.Profile) return;
+            first.SeamPartner = last;
+            last.SeamPartner = first;
+        }
+
+        /// <summary>Where a lot starts: across a loop seam, the start of the partner that runs into the seam.</summary>
+        static float LotStart(FrontageInterval x) => x.SeamPartner != null && x.S0 < x.SeamPartner.S0 ? x.SeamPartner.S0 : x.S0;
+
+        /// <summary>Of two seam partners only the longer (the later one on a tie) carries the lot's opening.</summary>
+        static bool CarriesOpening(FrontageInterval x)
+        {
+            var other = x.SeamPartner;
+            if (other == null) return true;
+            return x.Length > other.Length + 1e-4f || (Mathf.Abs(x.Length - other.Length) <= 1e-4f && x.S0 > other.S0);
         }
 
         /// <summary>Classification of the property-line sample at arc length s (spec street-frontage §7, rules in order).</summary>
@@ -188,12 +216,12 @@ namespace TycoWorld.WorldGen.Authoring
                         style = f.PickResidential(rng.NextDouble());
                         break;
                     case FrontageKind.Vacant:
-                        rng = SplitMix64.For(x.Chain.Key, "wall:" + x.Side.ToString(inv) + ":" + Mathf.RoundToInt(x.S0 * 10f).ToString(inv));
+                        rng = SplitMix64.For(x.Chain.Key, "wall:" + x.Side.ToString(inv) + ":" + Mathf.RoundToInt(LotStart(x) * 10f).ToString(inv));
                         style = f.PickResidential(rng.NextDouble());
                         break;
                     case FrontageKind.Campus:
                     case FrontageKind.Cemetery:
-                        rng = SplitMix64.For(x.Chain.Key, "wall:" + x.Side.ToString(inv) + ":" + Mathf.RoundToInt(x.S0 * 10f).ToString(inv));
+                        rng = SplitMix64.For(x.Chain.Key, "wall:" + x.Side.ToString(inv) + ":" + Mathf.RoundToInt(LotStart(x) * 10f).ToString(inv));
                         style = f.Style(x.Kind == FrontageKind.Campus ? WallStyle.Campus : WallStyle.Cemetery);
                         break;
                     default:
@@ -206,7 +234,7 @@ namespace TycoWorld.WorldGen.Authoring
                     Height = rng.Range(style.minHeight, style.maxHeight),
                     Band = style.firstBand + rng.RangeInclusive(0, Mathf.Max(0, style.bandCount - 1))
                 };
-                if (x.Kind == FrontageKind.Lot) AddOpening(run, x, f);
+                if (x.Kind == FrontageKind.Lot && CarriesOpening(x)) AddOpening(run, x, f);
                 runs.Add(run);
             }
             return runs;

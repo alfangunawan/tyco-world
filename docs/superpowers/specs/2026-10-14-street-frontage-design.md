@@ -250,6 +250,8 @@ Dasar tepi berada di bawah jalan terendah, jadi di simpang aspal selalu tergamba
 
 ## 7. Frontage
 
+> Diperhalus oleh `docs/superpowers/specs/2026-10-14-frontage-polish-design.md`: garis tembok tunggal per sisi chain, gerbang menjauhi tikungan dan tanpa potongan tembok pendek, loop dan pulau bundaran, tembok sambungan profil.
+
 ### Property line
 - Hanya untuk sisi chain dengan profil **Trotoar** atau **Selokan**.
 - Sisi dengan profil **Tanpa** (footway dan sejenisnya, driveway, parking_aisle) tidak punya frontage.
@@ -413,6 +415,8 @@ Shader: URP Simple Lit, sama dengan spec #1 §9.
 - Nama properti alpha clip dan cull di URP 17.6 Simple Lit (`_AlphaClip`, `_Cutoff`, `_Cull`, keyword `_ALPHATEST_ON`) diverifikasi di dokumentasi sebelum dipakai.
 
 ## 11. Output
+
+> Culling: `Frontage` dan `RoadEdges` kini kategori Detail (max(80, 0.4 × view distance)); lihat `docs/superpowers/specs/2026-10-14-frontage-polish-design.md` §2.6.
 
 ### Hierarki `World_Generated.unity` (tambahan)
 

@@ -93,6 +93,42 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void HouseAcrossALoopSeam_GetsOneOpeningAndOneWallLook()
+        {
+            // A 40 m block drawn from its corner: the seam moves to the middle of the south side, right in front of a house.
+            var plan = Plan(new StreetFixture(settings, osm =>
+            {
+                osm.Way(3401, new[] { V(-400, 300), V(-360, 300), V(-360, 340), V(-400, 340), V(-400, 300) }, false, ("highway", "residential"));
+                osm.Rect(9001, -385f, 306.7f, 10f, 8f, ("building", "house"));
+            }));
+            // The house also faces the west and east sides of the block; only its south frontage straddles the seam.
+            var lots = Of(plan, 3401, 1).Where(x => x.Kind == FrontageKind.Lot && x.Building.Id == 9001 && (x.S0 < 1e-3f || x.S1 > x.Chain.Length - 1e-3f)).ToList();
+            Assert.AreEqual(2, lots.Count, "the seam splits the house's south frontage");
+            Assert.AreSame(lots[0], lots[1].SeamPartner);
+            var runs = FrontagePlanner.Walls(lots, settings.frontage);
+            Assert.AreEqual(1, runs.Sum(r => r.Openings.Count), "one house, one opening");
+            Assert.AreEqual(runs[0].Style, runs[1].Style);
+            Assert.AreEqual(runs[0].Height, runs[1].Height);
+            Assert.AreEqual(runs[0].Band, runs[1].Band);
+        }
+
+        [Test]
+        public void VacantStretchAcrossALoopSeam_KeepsOneWallLook()
+        {
+            var plan = Plan(new StreetFixture(settings, osm =>
+                osm.Way(3402, new[] { V(-400, 400), V(-360, 400), V(-360, 440), V(-400, 440), V(-400, 400) }, false, ("highway", "residential"))));
+            var side = Of(plan, 3402, -1);
+            var first = side.First(x => x.S0 < 1e-3f);
+            var last = side.Last(x => x.S1 > first.Chain.Length - 1e-3f);
+            Assert.AreEqual(FrontageKind.Vacant, first.Kind);
+            Assert.AreEqual(FrontageKind.Vacant, last.Kind);
+            var runs = FrontagePlanner.Walls(new[] { first, last }, settings.frontage);
+            Assert.AreEqual(runs[0].Style, runs[1].Style);
+            Assert.AreEqual(runs[0].Height, runs[1].Height);
+            Assert.AreEqual(runs[0].Band, runs[1].Band);
+        }
+
+        [Test]
         public void FlushHouse_GetsNoWall()
         {
             var plan = Plan(new StreetFixture(settings));
