@@ -91,5 +91,13 @@ namespace TycoWorld.WorldGen.Tests
             float total = Area(meshes[1], RoadMarkingBuilder.Submesh) + Area(meshes[2], RoadMarkingBuilder.Submesh);
             Assert.AreEqual(12 * 3f * 0.12f, total, 1e-3f, "the dash over the way boundary (42..45) is split, not lost or doubled");
         }
+
+        [Test, Timeout(20000)]
+        public void ZeroDashPeriod_ReturnsWithoutDashes()
+        {
+            s.roadEdges.dashLength = 0f;
+            s.roadEdges.dashGap = 0f;
+            Assert.AreEqual(0, Mark(out _, Road(1, "primary", 8f, V(0, 0), V(100, 0))));
+        }
     }
 }

@@ -153,7 +153,7 @@ namespace TycoWorld.WorldGen.Authoring
         {
             var profiles = chain.Profiles(side);
             int n = profiles.Length;
-            float step = s.sampleStep;
+            float step = s.SafeSampleStep;
             var keep = new bool[n];
             for (int i = 0; i < n; i++)
                 keep[i] = profiles[i] != EdgeProfile.None && Keep(chain, side, chain.SampleS(i, step), s.Width(profiles[i]), net, ctx, s, near);

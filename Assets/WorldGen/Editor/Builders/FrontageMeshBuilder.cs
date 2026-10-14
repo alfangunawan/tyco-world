@@ -106,7 +106,7 @@ namespace TycoWorld.WorldGen.Authoring
                 if (Vector2.Angle(din, dout) >= minTurn) Pilaster(line[j], dout, total, f, chunkSize, r, f.pilasterMinGap);
             }
             // Arc-spaced intermediates.
-            int count = Mathf.FloorToInt(L / f.pilasterSpacing);
+            int count = f.pilasterSpacing > 0.05f ? Mathf.FloorToInt(L / f.pilasterSpacing) : 0;
             int seg = 0;
             for (int k = 1; k <= count; k++)
             {

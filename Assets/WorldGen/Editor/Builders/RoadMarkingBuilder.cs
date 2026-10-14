@@ -16,6 +16,7 @@ namespace TycoWorld.WorldGen.Authoring
         public static int Build(RoadNetwork net, RoadEdgeSettings s, IReadOnlyDictionary<long, MeshData> roadMeshes)
         {
             int dashes = 0;
+            if (s.dashLength <= 0f || s.dashLength + s.dashGap < 0.05f) return 0;
             var near = new Dictionary<RoadChain, float>();
             var along = new List<float>();
             var lineAlong = new List<float>();

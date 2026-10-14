@@ -130,5 +130,15 @@ namespace TycoWorld.WorldGen.Tests
                 foreach (var p in h.Spec.Footprint.Outer) Assert.IsTrue(bounds.Contains(p), "house " + h.Id);
             Assert.IsTrue(houses.Any(h => h.Centroid.y > bounds.yMax - 30f), "the south side of the edge road still fills");
         }
+
+        [Test, Timeout(60000)]
+        public void ZeroWidthAndGap_StillTerminates()
+        {
+            settings.infill.minWidth = 0f;
+            settings.infill.maxWidth = 0f;
+            settings.infill.minGap = 0f;
+            settings.infill.maxGap = 0f;
+            Assert.DoesNotThrow(() => Plan(new StreetFixture(settings)));
+        }
     }
 }

@@ -191,7 +191,7 @@ namespace TycoWorld.WorldGen.Authoring
             if (chain == null) return EdgeProfile.None;
             chain.PointAt(s, out var t);
             int side = Vector2.Dot(sideDirection, Polyline2D.LeftNormal(t)) >= 0f ? 1 : -1;
-            return chain.ProfileAt(side, s, settings.sampleStep);
+            return chain.ProfileAt(side, s, settings.SafeSampleStep);
         }
 
         public float MaxEdgeWidth(long roadId)
@@ -252,7 +252,7 @@ namespace TycoWorld.WorldGen.Authoring
 
         EdgeProfile[] ComputeProfiles(RoadChain chain, int side, IReadOnlyList<Polygon> campus)
         {
-            float step = settings.sampleStep;
+            float step = settings.SafeSampleStep;
             int n = Mathf.Max(1, Mathf.CeilToInt(chain.Length / step - 1e-4f) + 1);
             var result = new EdgeProfile[n];
             float probe = chain.HalfWidth + settings.sidewalkWidth * 0.5f;

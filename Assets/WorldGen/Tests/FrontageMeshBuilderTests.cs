@@ -196,5 +196,13 @@ namespace TycoWorld.WorldGen.Tests
                     if (Vector2.Distance(q, g0) < 2.6f)
                         Assert.GreaterOrEqual(Polyline2D.DistanceTo(chain.Points, q), lineOffset - 0.01f, "blocker end " + q);
         }
+
+        [Test, Timeout(20000)]
+        public void ZeroPilasterSpacing_StillBuilds()
+        {
+            settings.frontage.pilasterSpacing = 0f;
+            var r = Build(Run(Straight(), WallStyle.Plaster, 1.8f, 0, 2f, 18f));
+            Assert.AreEqual(2, r.Pilasters, "only the two ends");
+        }
     }
 }

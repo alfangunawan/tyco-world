@@ -21,6 +21,7 @@ namespace TycoWorld.WorldGen.Authoring
     public static class InfillPlanner
     {
         public const string SkipBlocked = "infill:blocked", SkipCap = "infill:cap";
+        const float MinStep = 0.05f;
 
         /// <summary>Stable negative id from the chain key, side and start of the house along the chain.</summary>
         public static long InfillId(long chainKey, int side, float s)
@@ -50,7 +51,8 @@ namespace TycoWorld.WorldGen.Authoring
             var inv = CultureInfo.InvariantCulture;
             var rng = SplitMix64.For(x.Chain.Key, "infill:" + x.Side.ToString(inv) + ":" + Mathf.RoundToInt(x.S0 * 10f).ToString(inv));
             float cursor = x.S0;
-            while (x.S1 - cursor >= inf.minWidth)
+            float minWidth = Mathf.Max(inf.minWidth, MinStep);
+            while (x.S1 - cursor >= minWidth)
             {
                 // Every roll happens for every slot, accepted or not, so one blocked house never shifts its neighbours.
                 float remaining = x.S1 - cursor;
@@ -79,7 +81,7 @@ namespace TycoWorld.WorldGen.Authoring
                         ctx.AddBuilding(new StreetBuilding { Id = house.Id, Footprint = house.Spec.Footprint, Centroid = house.Centroid, IsInfill = true });
                     }
                 }
-                cursor += width + gap;
+                cursor += Mathf.Max(width + gap, MinStep);
             }
         }
 

@@ -221,5 +221,14 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual(net.Chains[0].Id, net.Chains[1].Id);
             Assert.AreNotEqual(net.Chains[0].Key, net.Chains[1].Key);
         }
+
+        [Test, Timeout(20000)]
+        public void ZeroSampleStep_StillBuildsTheProfiles()
+        {
+            s.roadEdges.sampleStep = 0f;
+            var net = Net(null, Road(1, "residential", 5f, V(0, 0), V(50, 0)));
+            Assert.AreEqual(1, net.Chains.Count);
+            Assert.Greater(net.Chains[0].Profiles(1).Length, 0);
+        }
     }
 }

@@ -62,14 +62,14 @@ namespace TycoWorld.WorldGen.Authoring
                     var kinds = new FrontageKind[n];
                     var owners = new StreetBuilding[n];
                     for (int i = 0; i < n; i++)
-                        kinds[i] = Classify(chain, side, chain.SampleS(i, e.sampleStep), profiles[i], net, ctx, e, f, near, out owners[i]);
+                        kinds[i] = Classify(chain, side, chain.SampleS(i, e.SafeSampleStep), profiles[i], net, ctx, e, f, near, out owners[i]);
                     var list = new List<FrontageInterval>();
                     int start = 0;
                     for (int i = 1; i <= n; i++)
                     {
                         if (i < n && kinds[i] == kinds[start] && owners[i] == owners[start] && profiles[i] == profiles[start]) continue;
-                        float s0 = start == 0 ? 0f : 0.5f * (chain.SampleS(start - 1, e.sampleStep) + chain.SampleS(start, e.sampleStep));
-                        float s1 = i == n ? chain.Length : 0.5f * (chain.SampleS(i - 1, e.sampleStep) + chain.SampleS(i, e.sampleStep));
+                        float s0 = start == 0 ? 0f : 0.5f * (chain.SampleS(start - 1, e.SafeSampleStep) + chain.SampleS(start, e.SafeSampleStep));
+                        float s1 = i == n ? chain.Length : 0.5f * (chain.SampleS(i - 1, e.SafeSampleStep) + chain.SampleS(i, e.SafeSampleStep));
                         list.Add(new FrontageInterval
                         {
                             Chain = chain, Side = side, Profile = profiles[start], S0 = s0, S1 = s1, Kind = kinds[start], Building = owners[start]

@@ -22,6 +22,8 @@ namespace TycoWorld.WorldGen.Authoring
         public float campusSidewalkDistance = 10f;
         public float minProfileRun = 8f;
         public float sampleStep = 0.5f;
+        /// <summary>sampleStep clamped to a sane minimum so a zero or negative setting cannot hang or overflow the sampling loops.</summary>
+        public float SafeSampleStep => Mathf.Max(sampleStep, 0.05f);
         public float mouthMargin = 0.3f;
         public float minRunLength = 0.5f;
 
