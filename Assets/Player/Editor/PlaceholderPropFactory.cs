@@ -118,24 +118,40 @@ namespace TycoWorld.Player.Authoring
         /// <summary>Saves non-asset meshes under Prefabs/Meshes, writes the prefab, destroys the scene object.</summary>
         public static GameObject SaveAsPrefab(GameObject go, string path)
         {
-            AssetFolders.Ensure(PlayerPaths.MeshesFolder);
+            SaveMeshes(go, PlayerPaths.MeshesFolder);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        /// <summary>
+        /// Saves every non-asset mesh under <paramref name="folder"/> as "&lt;mesh name&gt;.asset" (an existing asset is
+        /// updated in place) and points the filters at the saved meshes; a mesh shared by several filters is saved once.
+        /// </summary>
+        public static void SaveMeshes(GameObject go, string folder)
+        {
+            AssetFolders.Ensure(folder);
+            var saved = new Dictionary<UnityEngine.Mesh, UnityEngine.Mesh>();
             foreach (var filter in go.GetComponentsInChildren<MeshFilter>(true))
             {
                 var mesh = filter.sharedMesh;
                 if (mesh == null || AssetDatabase.Contains(mesh)) continue;
-                string meshPath = PlayerPaths.MeshesFolder + "/" + mesh.name + ".asset";
-                var existing = AssetDatabase.LoadAssetAtPath<UnityEngine.Mesh>(meshPath);
-                if (existing == null) AssetDatabase.CreateAsset(mesh, meshPath);
-                else
+                if (!saved.TryGetValue(mesh, out var asset))
                 {
-                    EditorUtility.CopySerialized(mesh, existing);
-                    filter.sharedMesh = existing;
-                    Object.DestroyImmediate(mesh);
+                    string meshPath = folder + "/" + mesh.name + ".asset";
+                    asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Mesh>(meshPath);
+                    if (asset == null)
+                    {
+                        AssetDatabase.CreateAsset(mesh, meshPath);
+                        asset = mesh;
+                    }
+                    else EditorUtility.CopySerialized(mesh, asset);
+                    saved[mesh] = asset;
                 }
+                filter.sharedMesh = asset;
             }
-            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
-            Object.DestroyImmediate(go);
-            return prefab;
+            foreach (var pair in saved)
+                if (pair.Key != pair.Value) Object.DestroyImmediate(pair.Key);
         }
 
         static void AddMesh(GameObject go, string meshName, MeshData data, params Material[] materials)
@@ -163,7 +179,7 @@ namespace TycoWorld.Player.Authoring
         }
 
         /// <summary>Cylinder whose axis is local X (a wheel seen from the side).</summary>
-        static void AddWheel(MeshData m, int sub, Vector3 center, float radius, float width, int sides)
+        public static void AddWheel(MeshData m, int sub, Vector3 center, float radius, float width, int sides)
         {
             var half = Vector3.right * (width * 0.5f);
             for (int i = 0; i < sides; i++)
