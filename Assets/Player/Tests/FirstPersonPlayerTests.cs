@@ -260,5 +260,102 @@ namespace TycoWorld.Player.Tests
             Assert.IsFalse(rig.Player.InvertY);
             Assert.IsTrue(rig.Player.EscapeUnlocksCursor);
         }
-    }
+    
+
+        Transform NewSeat(Vector3 local, float yaw)
+        {
+            var seat = fx.Track(new GameObject("Seat")).transform;
+            seat.SetPositionAndRotation(PhysicsFixture.Origin + local, Quaternion.Euler(0f, yaw, 0f));
+            return seat;
+        }
+
+        static void AssertNear(Vector3 expected, Vector3 actual) => Assert.Less(Vector3.Distance(expected, actual), 1e-3f, actual.ToString("F3"));
+
+        [Test]
+        public void Seat_FollowsTheSeat_WithTheBodyOff()
+        {
+            var rig = FloorRig();
+            var seat = NewSeat(new Vector3(3f, 0.85f, 2f), 90f);
+            rig.Player.Seat(seat);
+            Assert.IsTrue(rig.Player.IsSeated);
+            Assert.AreSame(seat, rig.Player.CurrentSeat);
+            Assert.IsFalse(rig.Root.GetComponent<CharacterController>().enabled);
+            seat.SetPositionAndRotation(seat.position + new Vector3(5f, 0f, 0f), Quaternion.Euler(0f, 120f, 0f));
+            rig.Player.Tick(1f / 60f);
+            AssertNear(seat.position, rig.Root.transform.position);
+            Assert.AreEqual(120f, rig.Player.Yaw, 1e-3f);
+        }
+
+        [Test]
+        public void Seated_IgnoresMoveAndLook_AndLeavesTheCameraAlone()
+        {
+            var rig = FloorRig();
+            var seat = NewSeat(new Vector3(0f, 0.85f, 0f), 0f);
+            rig.Player.Seat(seat);
+            var cameraPose = PhysicsFixture.Origin + new Vector3(0f, 3f, -4f);
+            rig.View.position = cameraPose;
+            rig.Intents.Hold(new PlayerIntent { Move = Vector2.up, LookDegrees = new Vector2(90f, 30f) }, 1f);
+            rig.Run(0.5f);
+            AssertNear(cameraPose, rig.View.position);
+            AssertNear(seat.position, rig.Root.transform.position);
+            Assert.AreEqual(0, rig.Player.StepCount);
+        }
+
+        [Test]
+        public void Seated_BelowTheWorld_DoesNotRespawn()
+        {
+            var rig = FloorRig();
+            int fell = 0;
+            rig.Player.FellOutOfWorld += () => fell++;
+            rig.Player.Seat(NewSeat(new Vector3(0f, -1100f, 0f), 0f));
+            rig.Run(0.1f);
+            Assert.AreEqual(0, fell);
+        }
+
+        [Test]
+        public void Unseat_RestoresControlAndTheCameraRig()
+        {
+            var rig = FloorRig();
+            rig.Player.Seat(NewSeat(new Vector3(0f, 0.85f, 0f), 0f));
+            rig.View.localPosition = new Vector3(1f, 2f, -3f);
+            rig.View.localRotation = Quaternion.Euler(10f, 20f, 0f);
+            int events = 0;
+            rig.Player.Unseated += () => events++;
+            rig.Player.Unseat(PhysicsFixture.Origin + new Vector3(2f, 0f, 0f), 45f);
+            Assert.IsFalse(rig.Player.IsSeated);
+            Assert.IsTrue(rig.Root.GetComponent<CharacterController>().enabled);
+            Assert.AreEqual(Vector3.zero, rig.View.localPosition);
+            Assert.AreEqual(Quaternion.identity, rig.View.localRotation);
+            Assert.AreEqual(45f, rig.Player.Yaw, 1e-3f);
+            AssertNear(PhysicsFixture.Origin + new Vector3(2f, 0f, 0f), rig.Root.transform.position);
+            Assert.AreEqual(1, events);
+            rig.Player.Unseat(PhysicsFixture.Origin, 0f);
+            Assert.AreEqual(1, events, "Unseat tanpa duduk tidak memicu event");
+        }
+
+        [Test]
+        public void Teleport_WhileSeated_UnseatsAndRaisesTheEvent()
+        {
+            var rig = FloorRig();
+            rig.Player.Seat(NewSeat(new Vector3(0f, 0.85f, 0f), 0f));
+            int events = 0;
+            rig.Player.Unseated += () => events++;
+            rig.Player.Teleport(PhysicsFixture.Origin + new Vector3(4f, 0f, 0f), 0f);
+            Assert.IsFalse(rig.Player.IsSeated);
+            Assert.AreEqual(1, events);
+            rig.Player.Teleport(PhysicsFixture.Origin, 0f);
+            Assert.AreEqual(1, events, "teleport biasa tidak memicu event");
+        }
+
+        [Test]
+        public void LockChanges_WhileSeated_KeepTheBodyOff()
+        {
+            var rig = FloorRig();
+            rig.Player.Seat(NewSeat(new Vector3(0f, 0.85f, 0f), 0f));
+            var owner = new object();
+            rig.Player.Locks.Acquire(owner, PlayerAbility.Flashlight);
+            rig.Player.Locks.Release(owner);
+            Assert.IsFalse(rig.Root.GetComponent<CharacterController>().enabled);
+        }
+}
 }

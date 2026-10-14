@@ -49,6 +49,12 @@ namespace TycoWorld.Player
             if (sound != null) sound.Play(clickClip, 0.8f, spot.enabled ? 1.05f : 0.95f);
         }
 
+        /// <summary>Switches the beam off without the click (getting on a vehicle).</summary>
+        public void TurnOff()
+        {
+            if (spot != null) spot.enabled = false;
+        }
+
         public void Tick(FirstPersonPlayer player, float dt)
         {
             if (player.Intent.Flashlight) Toggle();
