@@ -1,0 +1,31 @@
+{
+    "name": "TycoWorld.Gameplay.Tests",
+    "rootNamespace": "TycoWorld.Gameplay.Tests",
+    "references": [
+        "TycoWorld.Gameplay",
+        "TycoWorld.Gameplay.Editor",
+        "TycoWorld.WorldGen",
+        "TycoWorld.WorldGen.Editor",
+        "TycoWorld.WorldGen.Tests",
+        "TycoWorld.Player",
+        "TycoWorld.Player.Editor",
+        "TycoWorld.Player.Tests",
+        "TycoWorld.Vehicles",
+        "TycoWorld.Vehicles.Editor",
+        "TycoWorld.Vehicles.Tests",
+        "TycoWorld.DayCycle",
+        "TycoWorld.DayCycle.Editor",
+        "Unity.InputSystem",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

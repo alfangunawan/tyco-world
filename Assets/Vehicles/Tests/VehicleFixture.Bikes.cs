@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace TycoWorld.Vehicles.Tests
 {
-    internal sealed partial class VehicleFixture
+    public sealed partial class VehicleFixture
     {
         /// <summary>An initialized first-person player on the Ignore Raycast layer, at Origin + local.</summary>
         public FirstPersonPlayer CreatePlayer(Vector3 local, float yaw = 0f)
