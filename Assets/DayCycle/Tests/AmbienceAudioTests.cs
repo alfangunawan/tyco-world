@@ -93,5 +93,25 @@ namespace TycoWorld.DayCycle.Tests
 
         [Test]
         public void Apply_BeforeInitialize_DoesNothing() => Assert.DoesNotThrow(() => ambience.Apply(1f, 1f, 1f));
+
+        [Test]
+        public void Level_ScalesEveryLayer()
+        {
+            ambience.Initialize(profile);
+            ambience.Level = 0.5f;
+            ambience.Apply(1f, 1f, 1f);
+            Assert.AreEqual(profile.dayVolume * 0.5f, ambience.Day.volume, 1e-5f);
+            Assert.AreEqual(profile.nightVolume * 0.5f, ambience.Night.volume, 1e-5f);
+            Assert.AreEqual(profile.droneVolume * 0.5f, ambience.Drone.volume, 1e-5f);
+        }
+
+        [Test]
+        public void Level_IsClampedTo01()
+        {
+            ambience.Level = 3f;
+            Assert.AreEqual(1f, ambience.Level);
+            ambience.Level = -1f;
+            Assert.AreEqual(0f, ambience.Level);
+        }
     }
 }

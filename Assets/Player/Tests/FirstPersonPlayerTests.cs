@@ -239,5 +239,26 @@ namespace TycoWorld.Player.Tests
             Assert.IsTrue(rig.Player.Ground.Hit);
             Assert.AreEqual(TycoWorld.WorldGen.SurfaceType.Concrete, rig.Player.Ground.Surface);
         }
+
+        [Test]
+        public void LookSettings_DoNotTouchScriptedLook()
+        {
+            var rig = FloorRig();
+            rig.Player.LookSensitivity = 3f;
+            rig.Player.InvertY = true;
+            rig.Intents.Press(new PlayerIntent { LookDegrees = new Vector2(30f, 10f) });
+            rig.Player.Tick(1f / 60f);
+            Assert.AreEqual(30f, rig.Player.Yaw, 1e-3f);
+            Assert.AreEqual(10f, rig.Player.Pitch, 1e-3f);
+        }
+
+        [Test]
+        public void SettingsKnobs_DefaultToTheOldBehaviour()
+        {
+            var rig = FloorRig();
+            Assert.AreEqual(1f, rig.Player.LookSensitivity);
+            Assert.IsFalse(rig.Player.InvertY);
+            Assert.IsTrue(rig.Player.EscapeUnlocksCursor);
+        }
     }
 }

@@ -10,6 +10,14 @@ namespace TycoWorld.DayCycle
         public const string DroneName = "Ambience_Drone";
 
         DayCycleProfile profile;
+        float level = 1f;
+
+        /// <summary>Settings multiplier (0–1) on top of the day cycle's layer volumes (spec #4 §5.5).</summary>
+        public float Level
+        {
+            get => level;
+            set => level = Mathf.Clamp01(value);
+        }
 
         public AudioSource Day { get; private set; }
         public AudioSource Night { get; private set; }
@@ -26,9 +34,9 @@ namespace TycoWorld.DayCycle
         public void Apply(float dayWeight, float nightWeight, float droneWeight)
         {
             if (profile == null) return;
-            Set(Day, dayWeight * profile.dayVolume);
-            Set(Night, nightWeight * profile.nightVolume);
-            Set(Drone, droneWeight * profile.droneVolume);
+            Set(Day, dayWeight * profile.dayVolume * level);
+            Set(Night, nightWeight * profile.nightVolume * level);
+            Set(Drone, droneWeight * profile.droneVolume * level);
         }
 
         AudioSource Layer(string layerName, AudioClip clip)

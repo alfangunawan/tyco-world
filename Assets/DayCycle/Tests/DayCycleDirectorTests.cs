@@ -246,5 +246,40 @@ namespace TycoWorld.DayCycle.Tests
             fx.Director.Tick(0.1f);
             Assert.IsFalse(lamp.Light.enabled);
         }
+
+        [Test]
+        public void MinFogDensity_ThickensThinDayFog()
+        {
+            fx.Director.Initialize(12f);
+            fx.Director.MinFogDensity = 0.0077f;
+            fx.Director.Tick(0.016f);
+            Assert.AreEqual(0.0077f, RenderSettings.fogDensity, 1e-6f);
+        }
+
+        [Test]
+        public void MinFogDensity_NeverThinsHorrorFog()
+        {
+            fx.Director.Initialize(22f);
+            fx.Director.MinFogDensity = 0.0077f;
+            fx.Director.Tick(0.016f);
+            Assert.AreEqual(0.032f, RenderSettings.fogDensity, 1e-4f);
+        }
+
+        [Test]
+        public void LampBudget_IsMeasuredFromTheViewer()
+        {
+            var rootGo = fx.Track(new GameObject("World_Generated_Test"));
+            var root = rootGo.AddComponent<GeneratedRoot>();
+            var near = LampFixture.Create(rootGo.transform, LampFixture.PositionWithRole(LampRole.Normal, fx.Profile));
+            var far = LampFixture.Create(rootGo.transform, near.transform.position + new Vector3(0f, 0f, 30f));
+            fx.Director.FindWorldRoot = () => root;
+            fx.Director.FindViewer = () => near.transform.position;
+            fx.Director.Initialize(22f);
+            fx.Director.Lamps.LightBudget = 1;
+            fx.Director.Tick(0.016f);
+            Assert.IsTrue(near.Light.enabled);
+            Assert.IsFalse(far.Light.enabled);
+            Assert.AreEqual(1, fx.Director.Lamps.LightsOn);
+        }
     }
 }

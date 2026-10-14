@@ -25,5 +25,12 @@ namespace TycoWorld.Player.Tests
             Assert.AreEqual(Vector2.zero, intent.Move);
             Assert.IsFalse(intent.Jump || intent.Interact || intent.Flashlight || intent.CrouchToggle || intent.Sprint);
         }
+
+        [Test]
+        public void ApplyLookSettings_ScalesAndInvertsVertical()
+        {
+            Assert.AreEqual(new Vector2(3f, 1.5f), PlayerInputReader.ApplyLookSettings(new Vector2(2f, 1f), 1.5f, false));
+            Assert.AreEqual(new Vector2(2f, -1f), PlayerInputReader.ApplyLookSettings(new Vector2(2f, 1f), 1f, true));
+        }
     }
 }

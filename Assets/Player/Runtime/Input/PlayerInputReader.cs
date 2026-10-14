@@ -48,5 +48,9 @@ namespace TycoWorld.Player
 
         public static Vector2 LookFromPointer(Vector2 pixels, float degreesPerPixel, bool cursorLocked) =>
             cursorLocked ? pixels * degreesPerPixel : Vector2.zero;
+
+        /// <summary>Applies the settings page's sensitivity multiplier and vertical inversion to a look delta in degrees (spec #4 §4).</summary>
+        public static Vector2 ApplyLookSettings(Vector2 degrees, float sensitivity, bool invertY) =>
+            new Vector2(degrees.x * sensitivity, (invertY ? -degrees.y : degrees.y) * sensitivity);
     }
 }

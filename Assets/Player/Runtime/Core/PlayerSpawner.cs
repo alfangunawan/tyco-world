@@ -87,7 +87,8 @@ namespace TycoWorld.Player
             player.Locks.Release(this);
             player.Hud.CrosshairVisible = true;
             player.Hud.ShowMessage(spawnPoint.ArrivalMessage);
-            player.LockCursor();
+            // Another owner (the pause menu) may still hold Look; then the cursor stays free for its UI.
+            if (player.Locks.Allows(PlayerAbility.Look)) player.LockCursor();
             State = SpawnState.Spawned;
             return true;
         }

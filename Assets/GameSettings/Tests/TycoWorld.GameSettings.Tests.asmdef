@@ -1,0 +1,30 @@
+{
+    "name": "TycoWorld.GameSettings.Tests",
+    "rootNamespace": "TycoWorld.GameSettings.Tests",
+    "references": [
+        "TycoWorld.GameSettings",
+        "TycoWorld.GameSettings.Editor",
+        "TycoWorld.DayCycle",
+        "TycoWorld.DayCycle.Editor",
+        "TycoWorld.Player",
+        "TycoWorld.Player.Editor",
+        "TycoWorld.Player.Tests",
+        "TycoWorld.WorldGen",
+        "TycoWorld.WorldGen.Editor",
+        "Unity.InputSystem",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.GPUDriven.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
