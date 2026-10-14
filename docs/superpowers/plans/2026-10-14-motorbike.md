@@ -65,6 +65,7 @@
 - Spec §4 menulis titik tatap kamera orang ketiga "1,2 m di atas kursi". Plan ini memakai **1,2 m di atas akar motor (tanah)**. Dengan kamera di 1,9 m, titik tatap di atas kursi (±2,05 m) membuat kamera menengadah, sedangkan 1,2 m dari tanah memberi sudut pandang ±8,8° menunduk seperti yang dimaksud.
 - `HudModel.SetVehicle` mendapat parameter keempat `canExit`, dan hint "[E] Turun" menjadi bagian panel kendaraan. Alasannya, `Interactor` mengosongkan prompt HUD setiap frame selama Interact terkunci, jadi prompt biasa tidak bisa dipakai.
 - Lampu depan otomatis mati saat turun (mesin mati).
+- Intensitas lampu depan **60**, bukan 4 seperti spec awal. Nilainya dinaikkan di gelombang perbaikan akhir setelah cek Play malam, karena 4 nyaris tidak terlihat di URP proyek ini (spec §4 sudah diperbarui).
 
 ## Review Focus
 

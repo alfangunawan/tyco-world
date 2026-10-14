@@ -55,6 +55,8 @@ namespace TycoWorld.Vehicles.Tests
             Assert.AreEqual(1.4f, tuning.dismountMaxSpeed, 1e-5f);
             Assert.AreEqual(4.5f, tuning.chaseDistance, 1e-5f);
             Assert.AreEqual(30f, tuning.headlightRange);
+            Assert.AreEqual(60f, tuning.headlightAngle);
+            Assert.AreEqual(60f, tuning.headlightIntensity, "dinaikkan dari 4 setelah cek Play malam");
             Assert.AreEqual(0.8f, tuning.idlePitch, 1e-5f);
             Assert.AreEqual(2f, tuning.maxPitch);
         }

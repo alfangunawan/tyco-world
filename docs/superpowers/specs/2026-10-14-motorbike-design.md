@@ -121,7 +121,7 @@ Di halaman Kos Raflesia 3 sudah ada motor placeholder (`Motor_Placeholder`): sat
 | Turun | ≤ 1,4 m/s (5 km/j); titik 1,1 m ke kiri lalu ke kanan; cek kapsul pemain (radius 0,35, tinggi 1,8) |
 | Kamera orang ketiga | jarak 4,5 m, tinggi 1,9 m, titik tatap 1,2 m di atas kursi; orbit yaw ±120°, pitch -10..35°; kembali ke belakang setelah 1,5 s tanpa mouse saat > 2 m/s; ikut arah motor dengan penghalusan 5/s; sphere cast radius 0,25 untuk tarik-maju |
 | Kamera orang pertama | 0,75 m di atas kursi, 0,1 m ke belakang; toleh yaw ±100°, pitch -60..60°; roll = ½ sudut miring |
-| Lampu depan | Spot, jangkauan 30 m, sudut 60°, intensitas 4, tanpa bayangan; default mati |
+| Lampu depan | Spot, jangkauan 30 m, sudut 60°, intensitas 60, tanpa bayangan; default mati. Intensitas dinaikkan dari 4 setelah cek Play malam, karena 4 nyaris tidak terlihat di URP proyek ini |
 | Mesin | pitch 0,8 (langsam) → 2,0 (maks) + 0,1 saat gas; volume 0,6 → 0,9; audio 3D, min 3 m, maks 40 m |
 | Klakson | cooldown 0,4 s |
 

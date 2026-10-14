@@ -59,7 +59,7 @@ MonoBehaviour:
   rollFactor: 0.5
   headlightRange: 30
   headlightAngle: 60
-  headlightIntensity: 4
+  headlightIntensity: 60
   idlePitch: 0.8
   maxPitch: 2
   throttlePitch: 0.1

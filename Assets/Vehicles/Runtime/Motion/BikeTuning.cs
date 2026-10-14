@@ -71,7 +71,7 @@ namespace TycoWorld.Vehicles
         [Header("Headlight")]
         public float headlightRange = 30f;
         public float headlightAngle = 60f;
-        public float headlightIntensity = 4f;
+        public float headlightIntensity = 60f;
 
         [Header("Engine sound")]
         public float idlePitch = 0.8f;
