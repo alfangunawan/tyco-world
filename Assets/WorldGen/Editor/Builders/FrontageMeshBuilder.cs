@@ -38,7 +38,50 @@ namespace TycoWorld.WorldGen.Authoring
         {
             var result = new FrontageMeshResult();
             foreach (var run in runs) AddRun(run, e, f, chunkSize, result);
+            AddProfileReturns(runs, e, f, chunkSize, result);
             return result;
+        }
+
+        /// <summary>
+        /// Where one side of a chain changes edge profile, the property line jumps (sidewalk 1.9 m vs gutter 1.2 m past the
+        /// asphalt). Two walls that meet there get a short return wall across the jump (spec frontage-polish §2.4).
+        /// </summary>
+        static void AddProfileReturns(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r)
+        {
+            var bySide = new Dictionary<(int chain, int side), List<WallRun>>();
+            foreach (var run in runs)
+            {
+                var key = (run.Chain.Index, run.Side);
+                if (!bySide.TryGetValue(key, out var list)) bySide[key] = list = new List<WallRun>();
+                list.Add(run);
+            }
+            var keys = new List<(int chain, int side)>(bySide.Keys);
+            keys.Sort();
+            foreach (var key in keys)
+            {
+                var list = bySide[key];
+                list.Sort((a, b) => a.S0.CompareTo(b.S0));
+                for (int i = 0; i + 1 < list.Count; i++)
+                {
+                    WallRun a = list[i], b = list[i + 1];
+                    if (Mathf.Abs(a.S1 - b.S0) > 1e-3f) continue;
+                    float ca = FrontagePlanner.LineOffset(a.Chain, a.Profile, e, f) + f.wallThickness * 0.5f;
+                    float cb = FrontagePlanner.LineOffset(b.Chain, b.Profile, e, f) + f.wallThickness * 0.5f;
+                    if (Mathf.Abs(ca - cb) < 0.05f) continue;
+                    var end = LineEnd(a, Mathf.Max(a.S0, a.S1 - 0.5f), a.S1, ca, false);
+                    var start = LineEnd(b, b.S0, Mathf.Min(b.S1, b.S0 + 0.5f), cb, true);
+                    if (Vector2.Distance(end, start) < 0.05f) continue;
+                    RenderLine(a, new List<Vector2> { end, start }, f, chunkSize, r);
+                }
+            }
+        }
+
+        /// <summary>First or last point of the wall line over [s0, s1]; equal to the matching end of any longer slice ending there.</summary>
+        static Vector2 LineEnd(WallRun run, float s0, float s1, float centre, bool first)
+        {
+            var along = new List<float>();
+            var line = Polyline2D.Offset(Polyline2D.Slice(run.Chain.Points, run.Chain.Cum, s0, s1, along), along, run.Side * centre, new List<float>());
+            return first ? line[0] : line[line.Count - 1];
         }
 
         static void AddRun(WallRun run, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r)
@@ -63,14 +106,19 @@ namespace TycoWorld.WorldGen.Authoring
         {
             if (s1 - s0 < 0.05f) return;
             var chain = run.Chain;
+            var along = new List<float>();
+            var center = Polyline2D.Slice(chain.Points, chain.Cum, s0, s1, along);
+            RenderLine(run, Polyline2D.Offset(center, along, run.Side * centre, new List<float>()), f, chunkSize, r);
+        }
+
+        /// <summary>Wall boxes, coping, fence band, collider, blockers and pilasters along one wall-centre polyline in the run's look.</summary>
+        static void RenderLine(WallRun run, List<Vector2> line, FrontageSettings f, float chunkSize, FrontageMeshResult r)
+        {
             float copingTop = run.Height + f.copingHeight;
             float fence = run.Style.fenceHeight;
             float total = copingTop + fence;
             var band = BoxUv.AtlasBand(run.Band, f.atlasBands, f.atlasBandMeters, f.atlasTileMeters);
             string style = run.Style.style.ToString();
-            var along = new List<float>();
-            var center = Polyline2D.Slice(chain.Points, chain.Cum, s0, s1, along);
-            var line = Polyline2D.Offset(center, along, run.Side * centre, new List<float>());
             for (int j = 0; j + 1 < line.Count; j++)
             {
                 Vector2 a = line[j], b = line[j + 1];

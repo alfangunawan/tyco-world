@@ -218,6 +218,33 @@ namespace TycoWorld.WorldGen.Tests
                         Assert.GreaterOrEqual(Polyline2D.DistanceTo(chain.Points, q), lineOffset - 0.01f, "blocker end " + q);
         }
 
+        [Test]
+        public void ProfileChange_JoinsTheTwoWallLinesWithAReturn()
+        {
+            var chain = Straight();
+            var sidewalk = Run(chain, WallStyle.Plaster, 1.8f, 0, 2f, 10f);
+            sidewalk.Profile = EdgeProfile.Sidewalk;
+            var gutter = Run(chain, WallStyle.Plaster, 1.8f, 0, 10f, 18f);
+            var r = Build(sidewalk, gutter);
+            var f = settings.frontage;
+            float half = f.wallThickness * 0.5f;
+            var a = new Vector2(10f, -(FrontagePlanner.LineOffset(chain, EdgeProfile.Sidewalk, settings.roadEdges, f) + half));
+            var b = new Vector2(10f, -(FrontagePlanner.LineOffset(chain, EdgeProfile.Gutter, settings.roadEdges, f) + half));
+            Assert.Greater(Vector2.Distance(a, b), 0.6f, "the property line jogs 0.7 m");
+            Assert.IsTrue(r.Blockers.Any(s => (Vector2.Distance(s.A, a) < 0.01f && Vector2.Distance(s.B, b) < 0.01f) ||
+                                             (Vector2.Distance(s.A, b) < 0.01f && Vector2.Distance(s.B, a) < 0.01f)), "a return wall closes the jog");
+            var mid = 0.5f * (a + b);
+            Assert.IsTrue(r.Collider.Values.Any(m => m.Vertices.Any(v => Mathf.Abs(v.x - mid.x) < 0.2f && Mathf.Abs(v.z - mid.y) < 0.5f)), "and blocks the player");
+        }
+
+        [Test]
+        public void SameProfileNeighbours_NeedNoReturn()
+        {
+            var chain = Straight();
+            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 2f, 10f), Run(chain, WallStyle.Plaster, 1.8f, 0, 10f, 18f));
+            Assert.IsFalse(r.Blockers.Any(s => Mathf.Abs(s.A.x - s.B.x) < 1e-3f), "no blocker runs across the road direction");
+        }
+
         [Test, Timeout(20000)]
         public void ZeroPilasterSpacing_StillBuilds()
         {
