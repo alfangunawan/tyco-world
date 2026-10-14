@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using TycoWorld.DayCycle;
+using TycoWorld.Vehicles;
 using UnityEngine;
 
 namespace TycoWorld.GameSettings
 {
     /// <summary>
-    /// The "Efek" volume (spec #4 §5.5): scales every AudioSource except the ambience layers from its original volume.
+    /// The "Efek" volume (spec #4 §5.5): scales every AudioSource except the ambience layers and motorbike sources (MotorbikeAudio.Level) from its original volume.
     /// PlayOneShot multiplies by the source volume, so footsteps and interaction sounds follow without code changes.
     /// </summary>
     public sealed class EffectsVolume
@@ -18,6 +19,8 @@ namespace TycoWorld.GameSettings
             foreach (var source in sources)
             {
                 if (source == null || source.GetComponentInParent<AmbienceAudio>(true) != null) continue;
+                // The bike rewrites its engine volume every frame and scales one-shots by MotorbikeAudio.Level.
+                if (source.GetComponentInParent<MotorbikeAudio>(true) != null) continue;
                 if (!originals.TryGetValue(source, out float original))
                 {
                     original = source.volume;

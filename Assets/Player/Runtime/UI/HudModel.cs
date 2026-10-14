@@ -22,6 +22,19 @@ namespace TycoWorld.Player
         public bool CrosshairVisible { get; set; } = true;
         public string Clock { get; private set; } = "";
         public bool ClockVisible { get; private set; }
+        public bool VehicleVisible { get; private set; }
+        public int VehicleSpeedKmh { get; private set; }
+        public bool VehicleHeadlight { get; private set; }
+        public bool VehicleCanExit { get; private set; }
+
+        /// <summary>Riding HUD (spec #5 §6): rounded speed in km/j, headlight state and the "[E] Turun" hint.</summary>
+        public void SetVehicle(bool visible, float speedKmh, bool headlightOn, bool canExit)
+        {
+            VehicleVisible = visible;
+            VehicleSpeedKmh = visible ? Mathf.RoundToInt(Mathf.Abs(speedKmh)) : 0;
+            VehicleHeadlight = visible && headlightOn;
+            VehicleCanExit = visible && canExit;
+        }
 
         public void SetPrompt(string prompt) => Prompt = prompt ?? "";
 

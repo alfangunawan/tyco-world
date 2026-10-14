@@ -26,8 +26,12 @@ namespace TycoWorld.Player
         PlayerInputReader reader;
         Vector2 yawPitch;
         float bobWeight;
+        Transform seat;
 
         public event Action FellOutOfWorld;
+
+        /// <summary>Raised after the player left a vehicle seat (Unseat, or Teleport/respawn while seated).</summary>
+        public event Action Unseated;
 
         public PlayerTuning Tuning => tuning;
         public Transform CameraPivot => cameraPivot;
@@ -59,6 +63,10 @@ namespace TycoWorld.Player
 
         /// <summary>False while the pause menu owns Esc (spec #4 §6); true keeps Esc = release the cursor.</summary>
         public bool EscapeUnlocksCursor { get; set; } = true;
+
+        /// <summary>True while sitting on a vehicle seat (spec #5 §3).</summary>
+        public bool IsSeated => seat != null;
+        public Transform CurrentSeat => seat;
 
         public void Configure(PlayerTuning playerTuning, Transform pivot, Transform view)
         {
@@ -127,11 +135,19 @@ namespace TycoWorld.Player
         {
             if (!IsInitialized) Initialize();
             if (dt <= 0f) return;
+            // The seat was destroyed under us (vehicle torn down while ridden): get off where we are, which clears the
+            // seat, gives the camera rig back, raises Unseated and restores the body per the locks.
+            if (!ReferenceEquals(seat, null) && seat == null) Teleport(transform.position, Yaw);
             var source = ActiveSource;
             var raw = source != null ? source.Read(dt) : default;
             if (reader != null && ReferenceEquals(source, reader))
                 raw.LookDegrees = PlayerInputReader.ApplyLookSettings(raw.LookDegrees, LookSensitivity, InvertY);
             Intent = Filter(raw);
+            if (IsSeated)
+            {
+                TickSeated(dt);
+                return;
+            }
 
             yawPitch = LookModel.Apply(yawPitch, Intent.LookDegrees, tuning.look.pitchLimit);
             transform.rotation = Quaternion.Euler(0f, yawPitch.x, 0f);
@@ -182,10 +198,33 @@ namespace TycoWorld.Player
             if (transform.position.y < tuning.respawnBelowY) FellOutOfWorld?.Invoke();
         }
 
-        /// <summary>The only way to move the player instantly (autoSyncTransforms is off).</summary>
+        /// <summary>
+        /// Sits on a vehicle seat: the body follows the seat, and movement, look and the camera rig are left to the
+        /// vehicle until Unseat or Teleport (spec #5 §3). The vehicle holds the Move lock.
+        /// </summary>
+        public void Seat(Transform seatTransform)
+        {
+            if (!IsInitialized) Initialize();
+            if (seatTransform == null) return;
+            seat = seatTransform;
+            body.enabled = false;
+            movement.ResetMotion();
+            IsSprinting = false;
+            FollowSeat();
+        }
+
+        /// <summary>Gets off at <paramref name="feet"/> facing <paramref name="yawDegrees"/>; does nothing when not seated.</summary>
+        public void Unseat(Vector3 feet, float yawDegrees)
+        {
+            if (!IsSeated) return;
+            Teleport(feet, yawDegrees);
+        }
+
+        /// <summary>The only way to move the player instantly (autoSyncTransforms is off). A seated player gets off first.</summary>
         public void Teleport(Vector3 feet, float yawDegrees)
         {
             if (!IsInitialized) Initialize();
+            bool wasSeated = ClearSeat();
             body.enabled = false;
             transform.SetPositionAndRotation(feet, Quaternion.Euler(0f, yawDegrees, 0f));
             yawPitch = new Vector2(Mathf.Repeat(yawDegrees, 360f), 0f);
@@ -193,6 +232,7 @@ namespace TycoWorld.Player
             movement.ResetMotion();
             Physics.SyncTransforms();
             body.enabled = Locks.Allows(PlayerAbility.Move);
+            if (wasSeated) Unseated?.Invoke();
         }
 
         public void LockCursor()
@@ -248,10 +288,48 @@ namespace TycoWorld.Player
 
         void OnLocksChanged()
         {
-            bool canMove = Locks.Allows(PlayerAbility.Move);
+            bool canMove = Locks.Allows(PlayerAbility.Move) && !IsSeated;
             if (body.enabled == canMove) return;
             body.enabled = canMove;
             movement.ResetMotion();
+        }
+
+        void TickSeated(float dt)
+        {
+            FollowSeat();
+            StepsThisFrame = 0;
+            JumpedThisFrame = false;
+            LandedThisFrame = false;
+            LandingImpact = 0f;
+            IsSprinting = false;
+            IsGrounded = false;
+            Ground = default;
+            Stamina.Tick(false, dt);
+            Hud.Tick(dt, Stamina.Normalized);
+            foreach (var module in modules) module.Tick(this, dt);
+        }
+
+        void FollowSeat()
+        {
+            float yaw = seat.eulerAngles.y;
+            transform.SetPositionAndRotation(seat.position, Quaternion.Euler(0f, yaw, 0f));
+            yawPitch = new Vector2(Mathf.Repeat(yaw, 360f), 0f);
+        }
+
+        /// <summary>
+        /// Leaves the seat and gives the camera rig back to the player; true when the player was seated. By reference, so a
+        /// seat that was destroyed while still held is cleared too.
+        /// </summary>
+        bool ClearSeat()
+        {
+            if (ReferenceEquals(seat, null)) return false;
+            seat = null;
+            if (cameraView != null)
+            {
+                cameraView.localPosition = Vector3.zero;
+                cameraView.localRotation = Quaternion.identity;
+            }
+            return true;
         }
 
         bool HasHeadroomToStand()

@@ -5,6 +5,7 @@
         "TycoWorld.WorldGen",
         "TycoWorld.Player",
         "TycoWorld.DayCycle",
+        "TycoWorld.Vehicles",
         "Unity.InputSystem",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime"
