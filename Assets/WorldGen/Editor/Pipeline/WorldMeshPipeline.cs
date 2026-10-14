@@ -78,16 +78,29 @@ namespace TycoWorld.WorldGen.Authoring
                 ChunkSize = settings.chunkSize > 0f ? settings.chunkSize : 100f,
                 Ground = GroundBuilder.Build(world.LocalBounds)
             };
+            var clock = System.Diagnostics.Stopwatch.StartNew();
+            void Lap(string name)
+            {
+                report.Stage(name, clock.Elapsed.TotalMilliseconds);
+                clock.Restart();
+            }
             var network = new RoadNetwork(world.Roads, CampusShapes(world), settings.roadEdges);
             AddRoads(world, built, network, settings, report);
             AddBuildings(world, settings, built, report);
             AddAreas(world, built, report);
             AddWater(world, settings, built, report);
+            Lap("meshes.base");
             var street = StreetContext.From(world, settings);
+            Lap("meshes.street");
             AddEdges(built, network, street, settings, report);
-            var houses = InfillPlanner.Plan(FrontagePlanner.Plan(network, street, settings), network, street, settings, report);
+            Lap("meshes.edges");
+            var plan = FrontagePlanner.Plan(network, street, settings);
+            Lap("meshes.frontage1");
+            var houses = InfillPlanner.Plan(plan, network, street, settings, report);
             AddInfill(built, houses, settings, report);
+            Lap("meshes.infill");
             var walls = AddFrontage(built, FrontagePlanner.Plan(network, street, settings), settings, report);
+            Lap("meshes.frontage2");
             foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
             var placer = new PropPlacer(world.Buildings, world.Roads, network, settings.roadEdges);

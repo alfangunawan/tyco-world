@@ -31,10 +31,17 @@ namespace TycoWorld.WorldGen.Authoring
             Band ? new Vector2(along / TileMeters, VMin + Mathf.Clamp01(y / BandMeters) * (VMax - VMin)) : new Vector2(along, across);
     }
 
+    [System.Flags]
+    public enum BoxEnds { None = 0, Start = 1, End = 2, Both = 3 }
+
     /// <summary>Axis-aligned-to-a-segment boxes for walls, coping, posts and colliders. No bottom face.</summary>
     public static class SolidBox
     {
-        public static void Add(MeshData m, int sub, Vector2 a, Vector2 b, float y0, float y1, float thickness, BoxUv uv, bool capEnds = true)
+        public static void Add(MeshData m, int sub, Vector2 a, Vector2 b, float y0, float y1, float thickness, BoxUv uv, bool capEnds = true) =>
+            Add(m, sub, a, b, y0, y1, thickness, uv, capEnds ? BoxEnds.Both : BoxEnds.None, true);
+
+        /// <summary>Which end faces (at a and at b) and whether the top face are emitted; omit what another box hides.</summary>
+        public static void Add(MeshData m, int sub, Vector2 a, Vector2 b, float y0, float y1, float thickness, BoxUv uv, BoxEnds ends, bool top)
         {
             Vector2 d = b - a;
             float length = d.magnitude;
@@ -48,13 +55,15 @@ namespace TycoWorld.WorldGen.Authoring
                 uv.Side(0f, y0), uv.Side(length, y0), uv.Side(length, y1), uv.Side(0f, y1), left);
             m.AddQuad(sub, Xz.At(ar, y0), Xz.At(br, y0), Xz.At(br, y1), Xz.At(ar, y1),
                 uv.Side(0f, y0), uv.Side(length, y0), uv.Side(length, y1), uv.Side(0f, y1), -left);
-            m.AddQuad(sub, Xz.At(ar, y1), Xz.At(br, y1), Xz.At(bl, y1), Xz.At(al, y1),
-                uv.Top(0f, 0f, y1), uv.Top(length, 0f, y1), uv.Top(length, thickness, y1), uv.Top(0f, thickness, y1), Vector3.up);
-            if (!capEnds) return;
-            m.AddQuad(sub, Xz.At(ar, y0), Xz.At(al, y0), Xz.At(al, y1), Xz.At(ar, y1),
-                uv.Side(0f, y0), uv.Side(thickness, y0), uv.Side(thickness, y1), uv.Side(0f, y1), -forward);
-            m.AddQuad(sub, Xz.At(bl, y0), Xz.At(br, y0), Xz.At(br, y1), Xz.At(bl, y1),
-                uv.Side(0f, y0), uv.Side(thickness, y0), uv.Side(thickness, y1), uv.Side(0f, y1), forward);
+            if (top)
+                m.AddQuad(sub, Xz.At(ar, y1), Xz.At(br, y1), Xz.At(bl, y1), Xz.At(al, y1),
+                    uv.Top(0f, 0f, y1), uv.Top(length, 0f, y1), uv.Top(length, thickness, y1), uv.Top(0f, thickness, y1), Vector3.up);
+            if ((ends & BoxEnds.Start) != 0)
+                m.AddQuad(sub, Xz.At(ar, y0), Xz.At(al, y0), Xz.At(al, y1), Xz.At(ar, y1),
+                    uv.Side(0f, y0), uv.Side(thickness, y0), uv.Side(thickness, y1), uv.Side(0f, y1), -forward);
+            if ((ends & BoxEnds.End) != 0)
+                m.AddQuad(sub, Xz.At(bl, y0), Xz.At(br, y0), Xz.At(br, y1), Xz.At(bl, y1),
+                    uv.Side(0f, y0), uv.Side(thickness, y0), uv.Side(thickness, y1), uv.Side(0f, y1), forward);
         }
 
         /// <summary>Square post of side <paramref name="size"/> centred on c, its faces aligned with dir.</summary>

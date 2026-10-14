@@ -144,6 +144,21 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void SolidBox_WithoutTop_OrWithOneEnd_DropsExactlyThoseFaces()
+        {
+            var noTop = new MeshData(1);
+            SolidBox.Add(noTop, 0, V(0, 0), V(2, 0), 0f, 1f, 0.2f, BoxUv.Meters, BoxEnds.Both, false);
+            Assert.AreEqual(8, noTop.TriangleCount);
+            Assert.AreEqual(1f, noTop.Vertices.Max(v => v.y), 1e-5f);
+            var startOnly = new MeshData(1);
+            SolidBox.Add(startOnly, 0, V(0, 0), V(2, 0), 0f, 1f, 0.2f, BoxUv.Meters, BoxEnds.Start, true);
+            Assert.AreEqual(8, startOnly.TriangleCount);
+            var none = new MeshData(1);
+            SolidBox.Add(none, 0, V(0, 0), V(2, 0), 0f, 1f, 0.2f, BoxUv.Meters, BoxEnds.None, false);
+            Assert.AreEqual(4, none.TriangleCount);
+        }
+
+        [Test]
         public void AtlasBand_MapsIntoTheInsetBand()
         {
             var uv = BoxUv.AtlasBand(2, 8, 2f, 4f);

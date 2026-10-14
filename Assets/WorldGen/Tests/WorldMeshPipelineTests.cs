@@ -130,6 +130,16 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Build_RecordsTheStreetSubStages()
+        {
+            var report = new GenerationReport();
+            BuildStreet(report);
+            var names = report.StageMillis.Select(kv => kv.Key).ToList();
+            foreach (var n in new[] { "meshes.street", "meshes.edges", "meshes.frontage1", "meshes.infill", "meshes.frontage2" })
+                CollectionAssert.Contains(names, n);
+        }
+
+        [Test]
         public void Street_WallsAreChunkObjectsWithSeparateColliders()
         {
             var report = new GenerationReport();

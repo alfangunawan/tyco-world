@@ -74,7 +74,10 @@ namespace TycoWorld.WorldGen.Authoring
                         var material = sub < feature.Materials.Length ? feature.Materials[sub] : null;
                         materials[k] = Resolve(material, settings, report, feature.Group + "/" + feature.Category);
                     }
-                    go.AddComponent<MeshRenderer>().sharedMaterials = materials;
+                    var renderer = go.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterials = materials;
+                    // Kerb strips are at most ~0.2 m tall: their shadows are invisible but cost shadow-pass batches.
+                    if (feature.Kind == FeatureKind.RoadEdge) renderer.shadowCastingMode = ShadowCastingMode.Off;
                     if (feature.AddCollider) go.AddComponent<MeshCollider>().sharedMesh = asset.Collider != null ? asset.Collider : asset.Mesh;
                 }
 

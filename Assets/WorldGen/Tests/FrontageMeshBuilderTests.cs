@@ -204,5 +204,23 @@ namespace TycoWorld.WorldGen.Tests
             var r = Build(Run(Straight(), WallStyle.Plaster, 1.8f, 0, 2f, 18f));
             Assert.AreEqual(2, r.Pilasters, "only the two ends");
         }
+
+        [Test]
+        public void GentleBend_RendersNoHiddenFacesButKeepsClosedColliders()
+        {
+            var pts = new List<Vector2> { Vector2.zero };
+            float heading = 0f;
+            for (int i = 0; i < 10; i++)
+            {
+                heading += 2f * Mathf.Deg2Rad;
+                pts.Add(pts[pts.Count - 1] + new Vector2(Mathf.Cos(heading), Mathf.Sin(heading)));
+            }
+            var chain = Chain(pts.ToArray());
+            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 0f, chain.Length));
+            var wall = r.Render.Values.Single().Indices(FrontageMeshBuilder.SubWall).Count / 3;
+            Assert.AreEqual(2 * (2 * 10 + 2), wall, "two side quads per segment plus the two piece-end faces, no top");
+            int collider = r.Collider.Values.Single().Indices(0).Count / 3;
+            Assert.GreaterOrEqual(collider, 10 * 10, "collider boxes keep all five faces");
+        }
     }
 }

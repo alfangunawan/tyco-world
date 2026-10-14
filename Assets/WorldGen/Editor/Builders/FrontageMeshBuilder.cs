@@ -21,7 +21,7 @@ namespace TycoWorld.WorldGen.Authoring
     {
         public const string WallsName = "Walls";
         public const int SubWall = 0, SubConcrete = 1, SubFence = 2, SubMetal = 3, SubmeshCount = 4;
-        const float RailSize = 0.04f, GateFrame = 0.06f, GateBottom = 0.1f, LeafThickness = 0.05f, GateColliderThickness = 0.06f;
+        const float JointCapDegrees = 10f, RailSize = 0.04f, GateFrame = 0.06f, GateBottom = 0.1f, LeafThickness = 0.05f, GateColliderThickness = 0.06f;
 
         public static FrontageMeshResult Build(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize)
         {
@@ -63,15 +63,17 @@ namespace TycoWorld.WorldGen.Authoring
                 Vector2 a = line[j], b = line[j + 1];
                 float length = Vector2.Distance(a, b);
                 if (length < 1e-3f) continue;
+                var ends = EndsFor(line, j);
                 var chunk = WorldMeshPipeline.ChunkOf((a + b) * 0.5f, chunkSize);
                 var m = MeshIn(r.Render, chunk, SubmeshCount);
                 var col = MeshIn(r.Collider, chunk, 1);
-                SolidBox.Add(m, SubWall, a, b, 0f, run.Height, f.wallThickness, band);
-                SolidBox.Add(m, SubConcrete, a, b, run.Height, copingTop, f.wallThickness + 2f * f.copingOverhang, BoxUv.Meters);
+                // Render only: the wall top is hidden under the coping and gentle interior joints need no end faces (colliders stay closed solids).
+                SolidBox.Add(m, SubWall, a, b, 0f, run.Height, f.wallThickness, band, ends, false);
+                SolidBox.Add(m, SubConcrete, a, b, run.Height, copingTop, f.wallThickness + 2f * f.copingOverhang, BoxUv.Meters, ends, true);
                 if (fence > 0f)
                 {
                     FenceBand(m, a, b, copingTop, fence - RailSize);
-                    SolidBox.Add(m, SubMetal, a, b, total - RailSize, total, RailSize, BoxUv.Meters);
+                    SolidBox.Add(m, SubMetal, a, b, total - RailSize, total, RailSize, BoxUv.Meters, ends, true);
                 }
                 SolidBox.Add(col, 0, a, b, 0f, total, f.wallThickness, BoxUv.Meters);
                 r.Blockers.Add(new WallSegment(a, b));
@@ -80,6 +82,21 @@ namespace TycoWorld.WorldGen.Authoring
                 r.MetersByStyle[style] = meters + length;
             }
             AddPilasters(line, total, f, chunkSize, r);
+        }
+
+        /// <summary>Piece ends keep their end faces; an interior joint keeps them only on a real turn, where the wedge between two boxes would otherwise show their inside.</summary>
+        static BoxEnds EndsFor(List<Vector2> line, int j)
+        {
+            var ends = BoxEnds.None;
+            if (j == 0 || TurnAt(line, j) >= JointCapDegrees) ends |= BoxEnds.Start;
+            if (j + 2 >= line.Count || TurnAt(line, j + 1) >= JointCapDegrees) ends |= BoxEnds.End;
+            return ends;
+        }
+
+        static float TurnAt(List<Vector2> line, int i)
+        {
+            Vector2 din = line[i] - line[i - 1], dout = line[i + 1] - line[i];
+            return din.sqrMagnitude < 1e-8f || dout.sqrMagnitude < 1e-8f ? 180f : Vector2.Angle(din, dout);
         }
 
         /// <summary>Ends always (unless one already stands within 5 cm), interior vertices on turns, then arc-spaced intermediates; non-end ones keep pilasterMinGap.</summary>
