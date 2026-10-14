@@ -3799,8 +3799,10 @@ namespace TycoWorld.Vehicles.Authoring
     {
         public const int SampleRate = AmbienceSynth.SampleRate;
         const float Peak = 0.8f;
+        const double BurstWidth = 0.15;
+        const double BurstMean = BurstWidth * 0.5;
 
-        /// <summary>Single-cylinder idle at 55 Hz (decaying firing pulses, two harmonics, a little noise) as a seamless loop.</summary>
+        /// <summary>Single-cylinder idle at 55 Hz (smooth firing bursts, two harmonics, a little noise) as a seamless loop.</summary>
         public static float[] EngineLoop(float seconds = 1f)
         {
             var rng = new Random(4021);
@@ -3811,8 +3813,8 @@ namespace TycoWorld.Vehicles.Authoring
             {
                 double t = (double)i / SampleRate;
                 double phase = t * f - Math.Floor(t * f);
-                raw[i] = (float)(0.7 * Math.Exp(-phase * 7.0) + 0.25 * Math.Sin(2.0 * Math.PI * f * t)
-                                 + 0.15 * Math.Sin(4.0 * Math.PI * f * t) + 0.08 * (rng.NextDouble() * 2.0 - 1.0));
+                raw[i] = (float)(0.7 * Burst(phase) + 0.25 * Math.Sin(2.0 * Math.PI * f * t)
+                                 + 0.15 * Math.Sin(4.0 * Math.PI * f * t) + 0.04 * (rng.NextDouble() * 2.0 - 1.0));
             }
             var loop = AmbienceSynth.Loop(raw, fade);
             RemoveDc(loop);
@@ -3820,7 +3822,7 @@ namespace TycoWorld.Vehicles.Authoring
             return loop;
         }
 
-        /// <summary>Firing pulses that speed up from 18 to 55 Hz, fade in quickly and fade out at the end.</summary>
+        /// <summary>Zero-mean firing bursts that speed up from 18 to 55 Hz, fade in quickly and fade out to silence at the end.</summary>
         public static float[] Starter(float seconds = 0.9f)
         {
             var rng = new Random(733);
@@ -3832,9 +3834,8 @@ namespace TycoWorld.Vehicles.Authoring
                 cycles += (18.0 + 37.0 * k) / SampleRate;
                 double phase = cycles - Math.Floor(cycles);
                 double envelope = Math.Min(1.0, k * 4.0) * (k > 0.85 ? (1.0 - k) / 0.15 : 1.0);
-                samples[i] = (float)(envelope * (0.8 * Math.Exp(-phase * 6.0) + 0.1 * (rng.NextDouble() * 2.0 - 1.0)));
+                samples[i] = (float)(envelope * (0.8 * (Burst(phase) - BurstMean) + 0.1 * (rng.NextDouble() * 2.0 - 1.0)));
             }
-            RemoveDc(samples);
             AmbienceSynth.Normalize(samples, Peak);
             return samples;
         }
@@ -3865,6 +3866,9 @@ namespace TycoWorld.Vehicles.Authoring
             AmbienceSynth.Normalize(samples, Peak);
             return samples;
         }
+
+        /// <summary>Raised-cosine firing burst over the first 15 % of a cycle, zero elsewhere: continuous, so the loop has no clicks.</summary>
+        static double Burst(double phase) => phase < BurstWidth ? 0.5 * (1.0 - Math.Cos(2.0 * Math.PI * phase / BurstWidth)) : 0.0;
 
         static void AddBeep(float[] samples, int start, int length)
         {
