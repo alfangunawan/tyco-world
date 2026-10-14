@@ -11,6 +11,9 @@ namespace TycoWorld.WorldGen.Authoring
         public readonly SortedDictionary<string, float> MetersByStyle = new SortedDictionary<string, float>(System.StringComparer.Ordinal);
         public float WallMeters;
         public int Gates, Doors, Slabs, Pilasters;
+        /// <summary>Placed pilaster centres in placement order.</summary>
+        public readonly List<Vector2> PilasterPositions = new List<Vector2>();
+        internal readonly SpatialGrid<int> PilasterGrid = new SpatialGrid<int>(2f);
     }
 
     /// <summary>Walls, coping, pilasters, fence bands, gates and gutter slabs as per-chunk meshes (spec street-frontage §7).</summary>
@@ -23,12 +26,11 @@ namespace TycoWorld.WorldGen.Authoring
         public static FrontageMeshResult Build(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize)
         {
             var result = new FrontageMeshResult();
-            var pilasters = new HashSet<long>();
-            foreach (var run in runs) AddRun(run, e, f, chunkSize, result, pilasters);
+            foreach (var run in runs) AddRun(run, e, f, chunkSize, result);
             return result;
         }
 
-        static void AddRun(WallRun run, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r, HashSet<long> pilasters)
+        static void AddRun(WallRun run, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r)
         {
             float lineOffset = FrontagePlanner.LineOffset(run.Chain, run.Profile, e, f);
             float centre = lineOffset + f.wallThickness * 0.5f;
@@ -37,15 +39,14 @@ namespace TycoWorld.WorldGen.Authoring
             float cursor = run.S0;
             foreach (var o in openings)
             {
-                AddPiece(run, cursor, o.S - o.Width * 0.5f, centre, f, chunkSize, r, pilasters);
+                AddPiece(run, cursor, o.S - o.Width * 0.5f, centre, f, chunkSize, r);
                 AddOpening(run, o, centre, lineOffset, e, f, chunkSize, r);
                 cursor = o.S + o.Width * 0.5f;
             }
-            AddPiece(run, cursor, run.S1, centre, f, chunkSize, r, pilasters);
+            AddPiece(run, cursor, run.S1, centre, f, chunkSize, r);
         }
 
-        static void AddPiece(WallRun run, float s0, float s1, float centre, FrontageSettings f, float chunkSize, FrontageMeshResult r,
-            HashSet<long> pilasters)
+        static void AddPiece(WallRun run, float s0, float s1, float centre, FrontageSettings f, float chunkSize, FrontageMeshResult r)
         {
             if (s1 - s0 < 0.05f) return;
             var chain = run.Chain;
@@ -77,24 +78,54 @@ namespace TycoWorld.WorldGen.Authoring
                 r.WallMeters += length;
                 r.MetersByStyle.TryGetValue(style, out float meters);
                 r.MetersByStyle[style] = meters + length;
-                Vector2 dir = (b - a) / length;
-                int inner = Mathf.FloorToInt(length / f.pilasterSpacing);
-                for (int k = 1; k <= inner; k++) Pilaster(a + dir * (k * length / (inner + 1)), dir, total, f, chunkSize, r, pilasters);
             }
-            for (int j = 0; j < line.Count; j++)
+            AddPilasters(line, total, f, chunkSize, r);
+        }
+
+        /// <summary>Ends always (unless one already stands within 5 cm), interior vertices on turns, then arc-spaced intermediates; non-end ones keep pilasterMinGap.</summary>
+        static void AddPilasters(List<Vector2> line, float total, FrontageSettings f, float chunkSize, FrontageMeshResult r)
+        {
+            int n = line.Count;
+            if (n < 2) return;
+            var cum = new float[n];
+            for (int j = 1; j < n; j++) cum[j] = cum[j - 1] + Vector2.Distance(line[j - 1], line[j]);
+            float L = cum[n - 1];
+            if (L < 1e-3f) return;
+            Vector2 SegDir(int j) { var d = line[j + 1] - line[j]; return d.sqrMagnitude < 1e-8f ? Vector2.zero : d.normalized; }
+            // Ends.
+            int first = 0; while (first + 1 < n && SegDir(first) == Vector2.zero) first++;
+            if (first + 1 < n) Pilaster(line[0], SegDir(first), total, f, chunkSize, r, 0.05f);
+            int last = n - 2; while (last > 0 && SegDir(last) == Vector2.zero) last--;
+            if (last >= 0 && SegDir(last) != Vector2.zero) Pilaster(line[n - 1], SegDir(last), total, f, chunkSize, r, 0.05f);
+            // Interior vertices on turns.
+            float minTurn = f.pilasterMinTurnDegrees;
+            for (int j = 1; j + 1 < n; j++)
             {
-                int k = j + 1 < line.Count ? j + 1 : j - 1;
-                if (k < 0) continue;
-                var dir = line[k] - line[j];
-                if (dir.sqrMagnitude < 1e-8f) continue;
-                Pilaster(line[j], dir.normalized, total, f, chunkSize, r, pilasters);
+                var din = SegDir(j - 1); var dout = SegDir(j);
+                if (din == Vector2.zero || dout == Vector2.zero) continue;
+                if (Vector2.Angle(din, dout) >= minTurn) Pilaster(line[j], dout, total, f, chunkSize, r, f.pilasterMinGap);
+            }
+            // Arc-spaced intermediates.
+            int count = Mathf.FloorToInt(L / f.pilasterSpacing);
+            int seg = 0;
+            for (int k = 1; k <= count; k++)
+            {
+                float s = k * L / (count + 1);
+                while (seg + 2 < n && cum[seg + 1] < s) seg++;
+                var d = SegDir(seg);
+                if (d == Vector2.zero) continue;
+                float t = Mathf.Clamp(s - cum[seg], 0f, cum[seg + 1] - cum[seg]);
+                Pilaster(line[seg] + d * t, d, total, f, chunkSize, r, f.pilasterMinGap);
             }
         }
 
-        static void Pilaster(Vector2 p, Vector2 dir, float total, FrontageSettings f, float chunkSize, FrontageMeshResult r, HashSet<long> pilasters)
+        static void Pilaster(Vector2 p, Vector2 dir, float total, FrontageSettings f, float chunkSize, FrontageMeshResult r, float minDistance)
         {
-            long key = ((long)Mathf.RoundToInt(p.x * 20f) << 32) ^ (uint)Mathf.RoundToInt(p.y * 20f);
-            if (!pilasters.Add(key)) return;
+            var near = new HashSet<int>();
+            r.PilasterGrid.Query(new Rect(p.x - minDistance, p.y - minDistance, minDistance * 2f, minDistance * 2f), near);
+            foreach (int idx in near) if (Vector2.Distance(r.PilasterPositions[idx], p) < minDistance) return;
+            r.PilasterGrid.Insert(new Rect(p.x, p.y, 0f, 0f), r.PilasterPositions.Count);
+            r.PilasterPositions.Add(p);
             var chunk = WorldMeshPipeline.ChunkOf(p, chunkSize);
             float top = total + f.pilasterExtra;
             SolidBox.AddPost(MeshIn(r.Render, chunk, SubmeshCount), SubConcrete, p, dir, f.pilasterSize, 0f, top, BoxUv.Meters);

@@ -105,6 +105,8 @@ namespace TycoWorld.WorldGen.Authoring
         public float pilasterSize = 0.25f;
         public float pilasterSpacing = 3f;
         public float pilasterExtra = 0.1f;
+        public float pilasterMinGap = 1f;
+        public float pilasterMinTurnDegrees = 20f;
         public float gateWidth = 2f;
         public float doorWidth = 0.9f;
         public float gateHeight = 1.6f;

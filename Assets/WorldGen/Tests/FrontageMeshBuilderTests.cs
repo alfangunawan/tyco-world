@@ -119,5 +119,55 @@ namespace TycoWorld.WorldGen.Tests
             int tris = r.Render.Values.Sum(m => m.TriangleCount);
             Assert.Less(tris / 16f, 40f);
         }
+
+        RoadChain Chain(params Vector2[] pts)
+        {
+            var rule = settings.roadRules.Single(r => r.highway == "residential");
+            var road = new RoadFeature { Id = 2, Highway = "residential", Rule = rule, Width = 5f, Y = 0.08f, Tags = TestOsm.Tags(("highway", "residential")) };
+            road.Pieces.Add(new LinePiece(new List<Vector2>(pts), false, false));
+            return new RoadNetwork(new[] { road }, new Polygon[0], settings.roadEdges).Chains[0];
+        }
+
+        [Test]
+        public void GentleBend_DoesNotStackPilasters()
+        {
+            // 40 m arc, a vertex every 1 m turning 1.5 deg each: no interior vertex reaches the 20 deg threshold.
+            var pts = new List<Vector2> { Vector2.zero };
+            float heading = 0f;
+            for (int i = 0; i < 40; i++)
+            {
+                heading += 1.5f * Mathf.Deg2Rad;
+                pts.Add(pts[pts.Count - 1] + new Vector2(Mathf.Cos(heading), Mathf.Sin(heading)));
+            }
+            var chain = Chain(pts.ToArray());
+            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 0f, chain.Length));
+            var p = r.PilasterPositions;
+            for (int i = 0; i < p.Count; i++)
+                for (int j = i + 1; j < p.Count; j++)
+                    Assert.GreaterOrEqual(Vector2.Distance(p[i], p[j]), settings.frontage.pilasterMinGap - 1e-3f, i + " vs " + j);
+            Assert.Less(r.Pilasters, 25, "about one per 1 m segment would be ~41");
+            Assert.GreaterOrEqual(r.Pilasters, 12, "the arc still gets a pilaster about every 3 m (spacing along the whole piece)");
+        }
+
+        [Test]
+        public void SharpCorner_KeepsItsPilaster()
+        {
+            var chain = Chain(new Vector2(0f, 0f), new Vector2(20f, 0f), new Vector2(20f, -20f));
+            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 2f, 38f));
+            // East then south is a right turn, so the wall on the right (-1) side is on the inside of the 90 deg corner: a pilaster must stand on the offset corner vertex.
+            var along = new List<float>();
+            var line = Polyline2D.Offset(Polyline2D.Slice(chain.Points, chain.Cum, 2f, 38f, along), along, -(FrontagePlanner.LineOffset(chain, EdgeProfile.Gutter, settings.roadEdges, settings.frontage) + settings.frontage.wallThickness * 0.5f), new List<float>());
+            var corner = line[1];
+            Assert.IsTrue(r.PilasterPositions.Any(q => Vector2.Distance(q, corner) < 0.3f));
+        }
+
+        [Test]
+        public void Door_KeepsBothPosts()
+        {
+            var r = Build(Run(Straight(), WallStyle.Plaster, 1.8f, 0, 2f, 18f, new WallOpening { S = 10f, Width = 0.9f, IsGate = false }));
+            Assert.IsTrue(r.PilasterPositions.Any(q => Mathf.Abs(q.x - 9.55f) < 0.01f));
+            Assert.IsTrue(r.PilasterPositions.Any(q => Mathf.Abs(q.x - 10.45f) < 0.01f));
+            Assert.AreEqual(1, r.Doors);
+        }
     }
 }

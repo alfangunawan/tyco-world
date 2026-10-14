@@ -177,6 +177,8 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual(0.25f, f.pilasterSize, 1e-6f);
             Assert.AreEqual(3f, f.pilasterSpacing);
             Assert.AreEqual(0.1f, f.pilasterExtra, 1e-6f);
+            Assert.AreEqual(1f, f.pilasterMinGap);
+            Assert.AreEqual(20f, f.pilasterMinTurnDegrees);
             Assert.AreEqual(2f, f.gateWidth);
             Assert.AreEqual(0.9f, f.doorWidth, 1e-6f);
             Assert.AreEqual(1.6f, f.gateHeight, 1e-6f);
