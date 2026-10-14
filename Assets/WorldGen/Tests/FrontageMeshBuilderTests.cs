@@ -169,5 +169,32 @@ namespace TycoWorld.WorldGen.Tests
             Assert.IsTrue(r.PilasterPositions.Any(q => Mathf.Abs(q.x - 10.45f) < 0.01f));
             Assert.AreEqual(1, r.Doors);
         }
+
+        [TestCase(1f)]
+        [TestCase(-1f)]
+        public void GateAtABend_MeetsItsWallPiecesAndStaysBehindTheLine(float turn)
+        {
+            float a = 30f * Mathf.Deg2Rad;
+            var chain = Chain(new Vector2(0f, 0f), new Vector2(20f, 0f), new Vector2(20f + 20f * Mathf.Cos(a), turn * 20f * Mathf.Sin(a)));
+            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 2f, chain.Length - 2f, Gate(20f)));
+            var f = settings.frontage;
+            float lineOffset = FrontagePlanner.LineOffset(chain, EdgeProfile.Gutter, settings.roadEdges, f);
+            var along = new List<float>();
+            var span = Polyline2D.Offset(Polyline2D.Slice(chain.Points, chain.Cum, 19f, 21f, along), along, -(lineOffset + f.wallThickness * 0.5f), new List<float>());
+            Vector2 g0 = span[0], g1 = span[span.Count - 1];
+            Assert.IsTrue(r.PilasterPositions.Any(q => Vector2.Distance(q, g0) < 0.01f), "wall piece ends at the gate start");
+            // On the inside of a bend the offset span folds to a few cm; the pilaster dedupe (5 cm) then keeps only one of the two.
+            if (Vector2.Distance(g0, g1) > 0.05f)
+                Assert.IsTrue(r.PilasterPositions.Any(q => Vector2.Distance(q, g1) < 0.01f), "wall piece ends at the gate end");
+            Assert.IsTrue(r.Blockers.Any(b => Vector2.Distance(b.A, g0) < 0.01f), "leaf starts on the wall end");
+            Assert.IsTrue(r.Blockers.Any(b => Vector2.Distance(b.B, g1) < 0.01f), "leaf ends on the wall end");
+            foreach (var m in r.Render.Values)
+                foreach (var v in Verts(m, FrontageMeshBuilder.SubMetal))
+                    Assert.GreaterOrEqual(Polyline2D.DistanceTo(chain.Points, new Vector2(v.x, v.z)), lineOffset - 0.01f, "leaf render vertex " + v);
+            foreach (var bl in r.Blockers)
+                foreach (var q in new[] { bl.A, bl.B })
+                    if (Vector2.Distance(q, g0) < 2.6f)
+                        Assert.GreaterOrEqual(Polyline2D.DistanceTo(chain.Points, q), lineOffset - 0.01f, "blocker end " + q);
+        }
     }
 }

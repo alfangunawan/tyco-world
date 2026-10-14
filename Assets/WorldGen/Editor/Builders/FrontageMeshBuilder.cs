@@ -149,21 +149,33 @@ namespace TycoWorld.WorldGen.Authoring
             FrontageMeshResult r)
         {
             var chain = run.Chain;
-            var c = chain.PointAt(o.S, out var t);
-            var outward = Polyline2D.LeftNormal(t) * run.Side;
-            var mid = c + outward * centre;
-            Vector2 g0 = mid - t * (o.Width * 0.5f), g1 = mid + t * (o.Width * 0.5f);
-            var chunk = WorldMeshPipeline.ChunkOf(mid, chunkSize);
+            var c = chain.PointAt(o.S, out _);
+            // Same slice + mitred offset as the wall pieces, so the leaf meets their ends exactly even across a bend.
+            var along = new List<float>();
+            var span = Polyline2D.Offset(Polyline2D.Slice(chain.Points, chain.Cum, o.S - o.Width * 0.5f, o.S + o.Width * 0.5f, along),
+                along, run.Side * centre, new List<float>());
+            Vector2 g0 = span[0], g1 = span[span.Count - 1];
+            Vector2 chord = g1 - g0;
+            if (chord.sqrMagnitude < 1e-8f) return;
+            var chordDir = chord.normalized;
+            var outward = Polyline2D.LeftNormal(chordDir) * run.Side;
+            var chunk = WorldMeshPipeline.ChunkOf((g0 + g1) * 0.5f, chunkSize);
             var m = MeshIn(r.Render, chunk, SubmeshCount);
             var col = MeshIn(r.Collider, chunk, 1);
             float top = f.gateHeight;
-            SolidBox.Add(m, SubMetal, g0, g1, GateBottom, GateBottom + GateFrame, LeafThickness, BoxUv.Meters);
-            SolidBox.Add(m, SubMetal, g0, g1, top - GateFrame, top, LeafThickness, BoxUv.Meters);
-            SolidBox.AddPost(m, SubMetal, g0 + t * (GateFrame * 0.5f), t, GateFrame, GateBottom, top, BoxUv.Meters);
-            SolidBox.AddPost(m, SubMetal, g1 - t * (GateFrame * 0.5f), t, GateFrame, GateBottom, top, BoxUv.Meters);
-            FenceBand(m, g0, g1, GateBottom + GateFrame, top - GateBottom - 2f * GateFrame);
-            SolidBox.Add(col, 0, g0, g1, 0f, top, GateColliderThickness, BoxUv.Meters);
-            r.Blockers.Add(new WallSegment(g0, g1));
+            for (int j = 0; j + 1 < span.Count; j++)
+            {
+                Vector2 a = span[j], b = span[j + 1];
+                if (Vector2.Distance(a, b) < 1e-3f) continue;
+                SolidBox.Add(m, SubMetal, a, b, GateBottom, GateBottom + GateFrame, LeafThickness, BoxUv.Meters);
+                SolidBox.Add(m, SubMetal, a, b, top - GateFrame, top, LeafThickness, BoxUv.Meters);
+                FenceBand(m, a, b, GateBottom + GateFrame, top - GateBottom - 2f * GateFrame);
+                SolidBox.Add(col, 0, a, b, 0f, top, GateColliderThickness, BoxUv.Meters);
+                r.Blockers.Add(new WallSegment(a, b));
+            }
+            Vector2 startDir = SpanDir(span, true), endDir = SpanDir(span, false);
+            SolidBox.AddPost(m, SubMetal, g0 + startDir * (GateFrame * 0.5f), startDir, GateFrame, GateBottom, top, BoxUv.Meters);
+            SolidBox.AddPost(m, SubMetal, g1 - endDir * (GateFrame * 0.5f), endDir, GateFrame, GateBottom, top, BoxUv.Meters);
             if (o.IsGate) r.Gates++;
             else r.Doors++;
             if (run.Profile != EdgeProfile.Gutter) return;
@@ -172,6 +184,13 @@ namespace TycoWorld.WorldGen.Authoring
             SolidBox.Add(m, SubConcrete, near, far, 0f, f.slabTopY, width, BoxUv.Meters);
             SolidBox.Add(col, 0, near, far, 0f, f.slabTopY, width, BoxUv.Meters);
             r.Slabs++;
+        }
+
+        static Vector2 SpanDir(List<Vector2> span, bool first)
+        {
+            if (first) { for (int j = 0; j + 1 < span.Count; j++) if (Vector2.Distance(span[j], span[j + 1]) > 1e-3f) return (span[j + 1] - span[j]).normalized; }
+            else { for (int j = span.Count - 1; j > 0; j--) if (Vector2.Distance(span[j], span[j - 1]) > 1e-3f) return (span[j] - span[j - 1]).normalized; }
+            return (span[span.Count - 1] - span[0]).normalized;
         }
 
         static MeshData MeshIn(Dictionary<Vector2Int, MeshData> meshes, Vector2Int chunk, int submeshes)
