@@ -25,6 +25,7 @@ namespace TycoWorld.WorldGen.Authoring
         {
             AssetFolders.Ensure(WorldGenPaths.MaterialsFolder);
             AssetFolders.Ensure(WorldGenPaths.FacadeTexturesFolder);
+            AssetFolders.Ensure(WorldGenPaths.StreetTexturesFolder);
             AssetFolders.Ensure(WorldGenPaths.PrefabsFolder);
             CheckCc0Present();
             foreach (var id in Cc0Ids)
@@ -33,6 +34,11 @@ namespace TycoWorld.WorldGen.Authoring
                 Configure(Cc0Path(id, "NormalGL"), true, 512);
             }
             foreach (var path in FacadeTextureGenerator.WriteAll(WorldGenPaths.FacadeTexturesFolder))
+            {
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                Configure(path, false, 256);
+            }
+            foreach (var path in StreetTextureGenerator.WriteAll(WorldGenPaths.StreetTexturesFolder))
             {
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
                 Configure(path, false, 256);
@@ -142,6 +148,12 @@ namespace TycoWorld.WorldGen.Authoring
             Cc0("Roof_Genteng_Coklat", "RoofingTiles006", "8A6A5A", 2f);
             Cc0("Roof_Dak_A", "Concrete046", "FFFFFF", 3f);
             Cc0("Roof_Dak_B", "Concrete046", "A8A8A8", 3f);
+            Cc0("Edge_Concrete", "Concrete034", "F0F0F0", 2f);
+            Cc0("Edge_Sidewalk", "PavingStones070", "E8E8E8", 1.5f);
+            m["Edge_Gutter"] = Mat("Edge_Gutter", Tex("Concrete046", "Color"), Tex("Concrete046", "NormalGL"), Hex("3A3A36"), 2f, 0.4f);
+            m["Edge_Kerb"] = Mat("Edge_Kerb", AssetDatabase.LoadAssetAtPath<Texture2D>(WorldGenPaths.StreetTexturesFolder + "/" + StreetTextureGenerator.KerbFile),
+                null, Color.white, 1f);
+            m["Road_Marking"] = Mat("Road_Marking", null, null, Hex("DCDCD2"), 1f, 0.2f);
             m["Water"] = Mat("Water", null, null, Hex("10161A"), 1f, 0.9f);
             m["WorldGen_Fallback"] = Mat("WorldGen_Fallback", null, null, Hex("808080"), 1f);
 
@@ -197,6 +209,12 @@ namespace TycoWorld.WorldGen.Authoring
             s.fallbackMaterial = m["WorldGen_Fallback"];
             s.treePrefabs = new[] { prefabs.TreeA, prefabs.TreeB };
             s.lampPrefab = prefabs.Lamp;
+            var e = s.roadEdges;
+            e.concrete = m["Edge_Concrete"];
+            e.gutter = m["Edge_Gutter"];
+            e.sidewalk = m["Edge_Sidewalk"];
+            e.kerb = m["Edge_Kerb"];
+            e.marking = m["Road_Marking"];
             EditorUtility.SetDirty(s);
         }
     }

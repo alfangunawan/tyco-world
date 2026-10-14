@@ -280,5 +280,18 @@ namespace TycoWorld.WorldGen.Tests
             Assert.IsTrue(any.Matches(new Dictionary<string, string> { { "highway", "x" } }));
             Assert.IsFalse(any.Matches(new Dictionary<string, string> { { "building", "x" } }));
         }
+
+        static string NameOf(Material m) => m != null ? m.name : null;
+
+        [Test]
+        public void SavedAsset_HasEdgeMaterials()
+        {
+            var e = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset).roadEdges;
+            Assert.AreEqual("Edge_Concrete", NameOf(e.concrete));
+            Assert.AreEqual("Edge_Gutter", NameOf(e.gutter));
+            Assert.AreEqual("Edge_Kerb", NameOf(e.kerb));
+            Assert.AreEqual("Edge_Sidewalk", NameOf(e.sidewalk));
+            Assert.AreEqual("Road_Marking", NameOf(e.marking));
+        }
     }
 }

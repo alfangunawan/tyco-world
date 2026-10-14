@@ -120,5 +120,25 @@ namespace TycoWorld.WorldGen.Tests
                 Assert.Greater(Vector3.Dot(Vector3.Cross(b - a, c - a), (a + b + c) / 3f - center), 0f);
             }
         }
+
+        [Test]
+        public void KerbStripes_AreDarkThenLightAlongU()
+        {
+            var a = StreetTextureGenerator.KerbStripes();
+            var b = StreetTextureGenerator.KerbStripes();
+            try
+            {
+                Assert.AreEqual(StreetTextureGenerator.KerbWidth, a.width);
+                Assert.AreEqual(StreetTextureGenerator.KerbHeight, a.height);
+                CollectionAssert.AreEqual(a.GetPixels32(), b.GetPixels32());
+                Assert.Less(a.GetPixel(16, 16).grayscale, 0.3f);
+                Assert.Greater(a.GetPixel(96, 16).grayscale, 0.6f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(a);
+                Object.DestroyImmediate(b);
+            }
+        }
     }
 }
