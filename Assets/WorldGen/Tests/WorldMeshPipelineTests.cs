@@ -130,6 +130,44 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Street_WallsAreChunkObjectsWithSeparateColliders()
+        {
+            var report = new GenerationReport();
+            var walls = BuildStreet(report).Features.Where(f => f.Kind == FeatureKind.Frontage).ToList();
+            Assert.Greater(walls.Count, 0);
+            foreach (var f in walls)
+            {
+                Assert.AreEqual(FeatureGroups.Frontage, f.Group);
+                Assert.AreEqual(FrontageMeshBuilder.WallsName, f.Name);
+                Assert.IsFalse(f.HasOsmIdentity);
+                Assert.IsTrue(f.AddCollider);
+                Assert.IsNotNull(f.ColliderMesh);
+                Assert.AreEqual(SurfaceType.Default, f.Surface);
+                Assert.AreEqual(FrontageMeshBuilder.SubmeshCount, f.Materials.Length);
+            }
+            Assert.Greater(report.GetCount("WallMeters"), 0);
+            Assert.GreaterOrEqual(report.GetCount("Gates"), 1);
+            Assert.GreaterOrEqual(report.GetCount("GutterSlabs"), 1);
+            Assert.Greater(report.GetCount("WallMeters.Campus"), 150);
+        }
+
+        [Test]
+        public void LongStraightRoad_WallCollidersStayUnder100m()
+        {
+            var osm = new TestOsm();
+            osm.Way(960, new[] { new Vector2(-600f, -1000f), new Vector2(400f, -1000f) }, false, ("highway", "residential"));
+            var report = new GenerationReport();
+            var built = WorldMeshPipeline.Build(new FeatureClassifier(settings, report).Classify(osm.Data), settings, report);
+            var walls = built.Features.Where(f => f.Kind == FeatureKind.Frontage).ToList();
+            Assert.Greater(walls.Count, 0);
+            foreach (var f in walls)
+            {
+                Assert.LessOrEqual(MeshDataSplitTests.MaxEdge(f.Mesh), WorldMeshPipeline.MaxColliderEdge + 1e-3f);
+                Assert.LessOrEqual(MeshDataSplitTests.MaxEdge(f.ColliderMesh), WorldMeshPipeline.MaxColliderEdge + 1e-3f);
+            }
+        }
+
+        [Test]
         public void Street_IsDeterministic()
         {
             var first = new GenerationReport();

@@ -83,9 +83,11 @@ namespace TycoWorld.WorldGen.Authoring
             AddWater(world, settings, built, report);
             var street = StreetContext.From(world, settings);
             AddEdges(built, network, street, settings, report);
+            var walls = AddFrontage(built, FrontagePlanner.Plan(network, street, settings), settings, report);
             foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
             var placer = new PropPlacer(world.Buildings, world.Roads, network, settings.roadEdges);
+            placer.AddWalls(walls);
             int treeVariants = settings.treePrefabs != null ? settings.treePrefabs.Length : 0;
             var waterShapes = world.WaterAreas.Select(w => w.Shape).ToList();
             built.Trees = placer.PlaceTrees(world.Trees, world.Areas, settings.maxTrees, treeVariants, report, waterShapes);
@@ -250,6 +252,20 @@ namespace TycoWorld.WorldGen.Authoring
                 });
                 report.Count(name);
             }
+        }
+
+        static List<WallSegment> AddFrontage(BuiltWorld built, IReadOnlyList<FrontageInterval> plan, WorldGenSettings settings, GenerationReport report)
+        {
+            var f = settings.frontage;
+            var meshes = FrontageMeshBuilder.Build(FrontagePlanner.Walls(plan, f), settings.roadEdges, f, built.ChunkSize);
+            AddChunkFeatures(built, meshes.Render, meshes.Collider, FeatureKind.Frontage, FeatureGroups.Frontage, FrontageMeshBuilder.WallsName,
+                new[] { f.wallAtlas, settings.roadEdges.concrete, f.fence, f.gateMetal }, report);
+            report.Count("WallMeters", Mathf.RoundToInt(meshes.WallMeters));
+            foreach (var kv in meshes.MetersByStyle) report.Count("WallMeters." + kv.Key, Mathf.RoundToInt(kv.Value));
+            report.Count("Gates", meshes.Gates);
+            report.Count("Doors", meshes.Doors);
+            report.Count("GutterSlabs", meshes.Slabs);
+            return meshes.Blockers;
         }
 
         static void AddEdges(BuiltWorld built, RoadNetwork network, StreetContext street, WorldGenSettings settings, GenerationReport report)

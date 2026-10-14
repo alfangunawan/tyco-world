@@ -27,3 +27,15 @@
   - Lampu berdiri di bahu jalan / sisi luar gutter (tiang di tepi, tidak di badan jalan) di `road_10` dan `preview_10`.
   - `kos_10`: pandangan menghadap tembok dan gerbang kos, halaman beton; tidak ada tepi jalan di bingkai.
   - Jam 21: gelap gulita seperti yang diperkirakan; hanya siluet, bibir gutter samar, dan kepala lampu menyala di `road_21`/`preview_21`; `kos_21` hampir hitam seluruhnya.
+
+## Checkpoint 2 — tembok, pagar, gerbang (Task 13)
+
+- Generate: 19786 ms; WallMeters=50446 (Brick=4362, Campus=851, Cemetery=135, LowFence=16348, Plaster=28750), Gates=2109, Doors=533, GutterSlabs=2367, Walls=223 objek chunk
+- Screenshot: `shots/after-m2/{road,kos,preview,high}_{10,21}.png` (`kos0` dibatalkan)
+- Pengamatan:
+  - `road_10`: tembok plester biru dengan tiang beton di sisi kiri jalan, pagar besi hitam di atas dinding bawah di kanan, slab gutter beton menyeberangi parit di depan gerbang; tembok berhenti rapi di mulut jalan, tidak masuk badan jalan; tidak ada z-fighting terlihat.
+  - `kos_10`: gerbang besi hitam menghadap tepat ke pintu rumah hijau; halaman kos utuh (rumput dan jalur setapak terlihat melalui gerbang); tembok menyambung kiri-kanan gerbang.
+  - `preview_10`: dua sisi gang berpagar/bertembok menerus, gerbang kecil di kiri, lampu di luar tembok (tidak bertabrakan); tikungan jauh tetap tertutup tembok.
+  - `high_10`: dari ketinggian 30 m garis tembok tipis dan sulit dibedakan; tidak terlihat lot kosong yang tertutup aneh, tidak ada tembok di luar blok.
+  - Jam 21: hampir hitam seperti yang diperkirakan; hanya siluet tembok dan kepala lampu di `road_21`/`preview_21`.
+  - Tembok menutup kavling kosong: tidak terlihat jelas di titik pandang ini (tembok menempel pada kavling berumah).
