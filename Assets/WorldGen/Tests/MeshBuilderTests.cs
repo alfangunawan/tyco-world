@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using TycoWorld.WorldGen.Authoring;
 using UnityEngine;
@@ -27,6 +28,16 @@ namespace TycoWorld.WorldGen.Tests
             var m = new MeshData(1);
             RoadMeshBuilder.AddRibbon(m, 0, pts, width, 0.07f, extendStart, false);
             return m;
+        }
+
+        [Test]
+        public void Ribbon_OnALoopWay_MitersItsSeam()
+        {
+            // A closed square way starting at a corner: both ends must meet in the corner's miter, not leave a notch.
+            var m = Ribbon(5f, false, new Vector2(0, 0), new Vector2(20, 0), new Vector2(20, 20), new Vector2(0, 20), new Vector2(0, 0));
+            var corners = m.Vertices.Where(v => new Vector2(v.x, v.z).magnitude < 3.75f)
+                .Select(v => new Vector2(Mathf.Round(v.x * 1000f), Mathf.Round(v.z * 1000f))).Distinct().Count();
+            Assert.AreEqual(2, corners, "one inner and one outer corner at the seam");
         }
 
         [Test]

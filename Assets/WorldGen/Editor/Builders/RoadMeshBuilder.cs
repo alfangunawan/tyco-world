@@ -44,6 +44,23 @@ namespace TycoWorld.WorldGen.Authoring
                 endR[s] = pts[s + 1] - normal[s] * hw;
             }
 
+            // A loop way (first point = last point, no free ends) joins its last segment to its first like any other joint.
+            if (!extendStart && !extendEnd && last >= 3 && (pts[0] - pts[last]).sqrMagnitude < 1e-4f)
+            {
+                Vector2 sum = normal[segments - 1] + normal[0];
+                if (sum.sqrMagnitude > 1e-6f)
+                {
+                    Vector2 miter = sum.normalized;
+                    float cosHalf = Vector2.Dot(miter, normal[0]);
+                    if (cosHalf > 1e-4f && 1f / cosHalf <= MiterLimit)
+                    {
+                        Vector2 offset = miter * (hw / cosHalf);
+                        endL[segments - 1] = startL[0] = pts[0] + offset;
+                        endR[segments - 1] = startR[0] = pts[0] - offset;
+                    }
+                }
+            }
+
             for (int i = 1; i < last; i++)
             {
                 Vector2 n0 = normal[i - 1], n1 = normal[i];
