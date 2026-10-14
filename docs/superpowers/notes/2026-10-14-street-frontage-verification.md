@@ -39,3 +39,29 @@
   - `high_10`: dari ketinggian 30 m garis tembok tipis dan sulit dibedakan; tidak terlihat lot kosong yang tertutup aneh, tidak ada tembok di luar blok.
   - Jam 21: hampir hitam seperti yang diperkirakan; hanya siluet tembok dan kepala lampu di `road_21`/`preview_21`.
   - Tembok menutup kavling kosong: tidak terlihat jelas di titik pandang ini (tembok menempel pada kavling berumah).
+
+## After (feature/street-frontage, Task 16)
+
+- Tes: passed=957 failed=0
+- Generate: 23930 ms (< 60 s; prepare 346, classify 629, meshes 8767, assets 10885, scene 3303); Features: Area=36, Building=4915, Doors=593, EdgeMeters.Gutter=75888, EdgeMeters.Sidewalk=5277, Gates=2859, Gutter=255, GutterSlabs=3146, Infill=859, KeyBuilding=6, MarkingDashes=301, Road=763, Sidewalk=46, WallMeters=45802 (Brick=4334, Campus=851, Cemetery=135, LowFence=15402, Plaster=25079), Walls=221, WaterArea=3, WaterLine=18; Trees 1263, Lamps 894; Skipped infill:blocked=2137 infill:cap=0 (tidak ada)
+- Determinisme: generate 2x → `IDENTICAL chunks=280`
+- Raycast: worstWalkableY=0.080 (≤ 0.25); kosGutterHits=22; kosYardIntruders=0; trotoar Sukabirus chunk Chunk_-2_-3 dist=36 hitY=0.210 surface=Paving
+- Tampak atas: `shots/after/top_{0,1,2}.png` — sangat gelap (kamera ortho tanpa ambient di editor), tapi terbaca: tepi jalan menyambung di tikungan dan simpang, mulut simpang terbuka, tidak ada tembok yang melintang di badan jalan.
+- Motor di kerb Jl. Raya Bojongsoang (kerb di chunk 30 m dari titik 185,-224): motor naik kerb (pos y 0.21, melewati kerb) lalu **bumps=1**: berhenti 0.87 m di atas trotoar karena menabrak tembok properti 1 m di depannya (collider `Frontage/Chunk_1_-3/Walls`, bukan kerb). Kriteria `bumps=0` tidak terpenuhi secara harfiah; penyebabnya tembok yang menempel di belakang trotoar sempit, bukan kerb. Player keluar gerbang kos: lewat, surface=Concrete lalu Asphalt, berjalan dari z -612.6 ke -622.1, tidak tersangkut.
+- Catatan proses: Play sempat keluar sendiri di tengah pengukuran perf (road 21 belum selesai); Play dimasuki lagi, road 21/high diukur ulang. `McpPerfProbe.Place` mengunci gerak player; perlu `McpPerfProbe.Release()` sebelum tes mount.
+- Catatan: tris naik dari ~70k ke ~290-445k (tembok, tepi, infill) — tidak jadi kriteria.
+
+| Titik | Jam | fps before | fps after | batches before | batches after | lulus? |
+|---|---|---|---|---|---|---|
+| kos | 10 | 162.2 | 174.9 | 8025 | 9160 (+14.1%) | ya |
+| road | 10 | 189.5 | 185.1 (97.7%) | 5645 | 6419 (+13.7%) | ya |
+| high | 10 | 218.7 | 173.4 (79.3%) | 3782 | 5045 (+33.4%) | **TIDAK** (fps dan batches) |
+| kos | 21 | 152.8 | 158.1 | 8273 | 9414 (+13.8%) | ya |
+| road | 21 | 180.0 | 155.0 (86.1%) | 5707 | 7156 (+25.4%) | **TIDAK** (fps dan batches) |
+| high | 21 | 186.7 | 177.2 (94.9%) | 3796 | 5074 (+33.7%) | **TIDAK** (batches) |
+
+Kriteria: batches ≤ +15%, fps ≥ 90% dari before. Tiga dari enam titik gagal (high di kedua jam, road 21); angka settings tidak diubah. Untuk perbaikan: kurangi draw call dari tembok/tepi/infill (mis. gabung per chunk lebih agresif, atau cull jarak jauh untuk Frontage dan RoadEdges), lalu ukur ulang.
+
+## QA manual (user)
+- [ ] Jalan kaki dan naik motor di Jl. Sukabirus, gang dekat kos, dan Jl. Raya Bojongsoang; siang dan malam.
+- [ ] Cari z-fighting atau celah di simpang, tembok yang melintang, dan rumah infill yang aneh.

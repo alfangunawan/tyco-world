@@ -193,7 +193,7 @@ Selain dua muka di atas, ada **lidah dasar** di bawah aspal: hw − 0.05 … hw 
 ### Chain
 - Dua way dengan `highway` sama yang ujungnya bertemu di titik yang sama (≤ 0.01 m) digabung jadi satu chain, **jika** tidak ada ujung jalan atau vertex jalan lain di titik itu.
 - Penggabungan diulang sampai stabil. Id chain = id way terkecil.
-- Arah chain mengikuti way pertama. Way berikutnya dibalik bila perlu.
+- Arah chain dimulai dari unit yang ujungnya bebas (tidak harus way pertama). Way berikutnya dibalik bila perlu.
 - Aturan simpang (di bawah) tidak berlaku di antara anggota chain yang sama.
 
 ### Prioritas di simpang
@@ -214,7 +214,7 @@ Batas run (sampel dipakai ↔ dibuang) dirapikan dengan bisection 3 langkah (pre
 ### Mesh
 - Untuk tiap run yang dipakai, ambil sub-polyline garis tengah [s0, s1] dan offset dengan normal miter. Batas miter mengikuti `RoadMeshBuilder.MiterLimit`; melewati batas itu, bevel.
 - Penampang §4 diekstrusi per segmen polyline (bukan per sampel).
-- UV dalam meter: u melintang, v sepanjang jalan.
+- UV dalam meter: u = meter sepanjang jalan, v = melintang/tinggi.
 - Segmen dimasukkan ke chunk titik tengahnya. Per chunk ada paling banyak dua `MeshData`, supaya `GroundSurface` tiap objek benar:
 
   | Objek | Submesh 0 | Submesh 1 | Submesh 2 | Surface |
@@ -242,7 +242,7 @@ Dasar tepi berada di bawah jalan terendah, jadi di simpang aspal selalu tergamba
 
 ## 6. Marka
 
-- Berlaku untuk chain primary/secondary, dan tertiary dengan lebar ≥ `markingMinTertiaryWidth` = 7 m.
+- Berlaku untuk chain primary/secondary, dan tertiary dengan lebar ≥ `markingMinWidth` = 7 m.
 - Garis putus-putus tengah: lebar 0.12 m, dash 3 m, gap 5 m. Pola dihitung sepanjang chain dan dimulai di s = 2 m.
 - Dash dibuang jika ada bagiannya berjarak < hw_B + 3 m dari garis tengah jalan lain B (bukan anggota chain yang sama).
 - Tiap dash dipotong di batas way dan dimasukkan ke mesh way pemiliknya sebagai **submesh 1**, material `Road_Marking`.
@@ -311,7 +311,7 @@ Gaya dipilih deterministik dengan `SplitMix64` (seed: id bangunan lot, atau hash
 
 - Tebal tembok 0.15 m.
 - Warna plester: salah satu dari 6 band atlas (hash). Bata: salah satu dari 2 band.
-- Pilaster 0.25 × 0.25 m, setinggi tembok + 0.1 m. Dipasang tiap ≤ 3 m sepanjang run, di batas lot, di ujung run, dan di setiap tekukan polyline (menutupi sambungan box).
+- Pilaster 0.25 × 0.25 m, setinggi tembok + 0.1 m. Dipasang di ujung potongan (selalu), di vertex polyline interior hanya pada tikungan ≥ `pilasterMinTurnDegrees` = 20° (menutupi sambungan box), dan di antaranya tiap ≤ 3 m sepanjang panjang busur potongan. Pilaster yang bukan ujung menjaga jarak ≥ `pilasterMinGap` = 1 m dari pilaster lain (keputusan user di checkpoint 2).
 
 ### Gerbang dan plat selokan
 
@@ -323,7 +323,7 @@ Gaya dipilih deterministik dengan `SplitMix64` (seed: id bangunan lot, atau hash
 
 - Bukaan dipasang di proyeksi centroid bangunan ke property line, dijepit agar ada margin 0.3 m dari ujung lot.
 - Daun gerbang: rangka besi (box) + quad jeruji dua sisi, tinggi 1.6 m. Collider box tertutup.
-- Di depan setiap bukaan, jika profil sisi itu Selokan, ada **plat selokan**: box beton menutup hw + 0.30 … hw + 0.80, lebar bukaan + 0.4 m, atas di y 0.165. Plat ini ikut collider Frontage.
+- Di depan setiap bukaan, jika profil sisi itu Selokan, ada **plat selokan**: box beton membentang dari bahu (hw + 0.30) sampai property line (hw + lebar tepi + 0.4), lebar bukaan + 0.4 m, atas di y 0.165. Plat ini ikut collider Frontage.
 
 ### Mesh
 Satu `MeshData` render per chunk (`Frontage/Chunk_x_z`), dengan submesh:
@@ -343,7 +343,7 @@ Satu `MeshData` render per chunk (`Frontage/Chunk_x_z`), dengan submesh:
 - **Pembagian:** sepanjang interval, rumah diletakkan berurutan.
   - Lebar acak 6–10 m.
   - Celah 0–0.6 m.
-  - Sisa < 6 m di ujung dibagi rata ke rumah sebelumnya. Kalau tidak cukup, sisa itu dibiarkan jadi tembok.
+  - Sisa yang lebih pendek dari lebar minimum diserap oleh rumah terakhir di interval itu (rumah bisa lebih lebar dari 10 m, dan bisa < 16 m untuk interval pendek). Kalau interval tidak cukup untuk satu rumah, sisa dibiarkan jadi tembok.
 - **Setback:**
   - 35% flush (gaya ruko): muka depan 0.1 m di belakang property line, 2 lantai, `RoofOverride.Flat`.
   - Sisanya: setback acak 1.5–4 m dan `RoofOverride.Auto`.
@@ -399,7 +399,7 @@ Shader: URP Simple Lit, sama dengan spec #1 §9.
 
 | Material | Sumber | Catatan |
 |---|---|---|
-| `Edge_Concrete` | ambientCG Concrete034 | Tint F0F0F0, tile 2 m |
+| `Edge_Concrete` | ambientCG Concrete034 | Tint B4B2AA (lebih berdebu daripada F0F0F0; keputusan user di checkpoint 1), tile 2 m |
 | `Edge_Gutter` | ambientCG Concrete046 | Tint 3A3A36 (gelap, basah), smoothness 0.4 |
 | `Edge_Sidewalk` | ambientCG PavingStones070 | Tint E8E8E8, tile 1.5 m |
 | `Edge_Kerb` | Prosedural `StreetTextureGenerator.KerbStripes` | 2 blok/m (hitam, putih) + noise kotor |
@@ -464,21 +464,29 @@ Tiga kelas `[Serializable]` baru dengan field initializer: `roadEdges`, `frontag
 | `noEdgeServiceValues` | driveway, parking_aisle, drive-through |
 | `campusSidewalkDistance` | 10 |
 | `minProfileRun` | 8 |
+| `mouthMargin` | 0.3 |
+| `minRunLength` | 0.5 |
 | `sampleStep` | 0.5 |
 | `edgeBaseY` | 0.055 |
 | `gutterLipY` | 0.155 |
 | `sidewalkTopY` | 0.21 |
+| `underlap` | 0.05 |
 | `shoulderWidth` | 0.30 |
 | `gutterWidth` | 0.50 |
 | `gutterLipWidth` | 0.08 |
 | `sidewalkWidth` | 1.5 |
 | `kerbWidth` | 0.15 |
-| `markingHighways` | primary, secondary, tertiary |
-| `markingMinTertiaryWidth` | 7 |
+| `markingHighways` | primary, secondary |
+| `wideMarkingHighways` | tertiary |
+| `markingMinWidth` | 7 |
 | `markingWidth` | 0.12 |
+| `markingLift` | 0.003 |
+| `dashStart` | 2 |
 | `dashLength` | 3 |
 | `dashGap` | 5 |
 | `junctionDashClearance` | 3 |
+| `sidewalkLampOffset` | 0.45 |
+| `gutterLampOffset` | 0.15 |
 | Material | `concrete`, `gutter`, `kerb`, `sidewalk`, `marking` |
 
 ### `FrontageSettings`
@@ -489,16 +497,28 @@ Tiga kelas `[Serializable]` baru dengan field initializer: `roadEdges`, `frontag
 | `corridorDepth` | 15 |
 | `flushDistance` | 1.0 |
 | `minInterval` | 1.5 |
+| `contextProbe` | 0.5 |
 | `wallThickness` | 0.15 |
+| `copingHeight` | 0.05 |
+| `copingOverhang` | 0.02 |
 | `pilasterSize` | 0.25 |
 | `pilasterSpacing` | 3 |
+| `pilasterExtra` | 0.1 |
+| `pilasterMinGap` | 1 |
+| `pilasterMinTurnDegrees` | 20 |
 | `gateWidth` | 2.0 |
 | `doorWidth` | 0.9 |
 | `gateHeight` | 1.6 |
 | `gateMinLot` | 4.5 |
 | `doorMinLot` | 2.5 |
+| `gateEndMargin` | 0.3 |
+| `slabTopY` | 0.165 |
+| `slabExtraWidth` | 0.4 |
 | `kosExclusionRadius` | 8 |
 | `kosBuildingId` | 409467778 |
+| `atlasBands` | 8 |
+| `atlasTileMeters` | 4 |
+| `atlasBandMeters` | 2 |
 | Tabel gaya | Porsi dan tinggi sesuai §7 |
 | Material | `wallAtlas`, `fence`, `gateMetal` |
 
@@ -506,12 +526,14 @@ Tiga kelas `[Serializable]` baru dengan field initializer: `roadEdges`, `frontag
 
 | Field | Default |
 |---|---|
+| `enabled` | true |
 | `minLotLength` | 6 |
-| `widthRange` | 6–10 |
-| `depthRange` | 8–12 |
-| `gapRange` | 0–0.6 |
+| `minWidth`, `maxWidth` | 6, 10 |
+| `minDepth`, `maxDepth` | 8, 12 |
+| `minGap`, `maxGap` | 0, 0.6 |
 | `flushShare` | 0.35 |
-| `setbackRange` | 1.5–4 |
+| `flushInset` | 0.1 |
+| `minSetback`, `maxSetback` | 1.5, 4 |
 | `twoStoreyShare` | 0.4 |
 | `clearance` | 0.5 |
 | `maxInfill` | 2500 |
