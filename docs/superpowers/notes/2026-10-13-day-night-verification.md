@@ -22,6 +22,21 @@
 - **git status sebelum/sesudah Play:** identik, jadi tidak ada material, profil, atau scene yang berubah karena Play.
 - **Lingkungan:** drive C: penuh (0 byte). Akibatnya Unity gagal menyimpan `TestResults.xml` (IOException 112) di setiap run tes. Error ini tidak memengaruhi hasil tes, tapi bisa mengganggu log atau temp Unity.
 
+## Perbaikan setelah review (2026-10-14)
+
+1. **Langit tidak lagi meloncat saat matahari terbenam/terbit.** Begitu matahari di bawah horizon, `RenderSettings.sun` pindah ke bulan. Rotasi bulan sekarang di-slerp dari arah matahari ke pose scene-nya (smoothstep, elevasi 0° → −12°). Di malam yang lebih dalam, bulan kembali ke pose scene. Sebelumnya arah cahaya langit meloncat 108,5° pada 17:45 dan 71,3° pada 05:45; sekarang tiap langkah 0,6 menit game berubah < 5°.
+2. **Event horor dipicu setelah pencahayaan diterapkan** (urutan spec §3). Subscriber `HorrorStarted` sudah melihat `State.HorrorWeight = 1` dan kabut 0,032 pada frame yang sama.
+3. **Lampu jalan dikumpulkan di frame pertama dunia muncul.** Polling tiap frame (bukan tiap 0,5 s) sampai `GeneratedRoot` ditemukan, lalu berhenti. Lampu tidak lagi menyala sesaat di pagi hari saat mulai Play.
+4. **Day Cycle Setup yang dijalankan ulang tidak menimpa pilihan di scene.** Referensi director (profil, matahari, bulan, volume, skybox, ambience, pemain) dan profil Volume hanya diisi kalau kosong. Prioritas Volume serta bayangan, warna, dan intensitas matahari hanya diatur saat objeknya baru dibuat.
+
+- **Tes EditMode:** `group=. passed=550 failed=0 skipped=0` (542 lama, 5 tes director baru, dan 3 tes Setup baru).
+- **Screenshot langit dari spawn kos** (kamera sementara di posisi kamera pemain, menghadap azimut matahari, naik 12°; jam diterapkan langsung dengan `Tick(0)`):
+  - `shot_fix_1740` (menghadap barat): matahari 1,6°, langit biru tua dengan cahaya hangat di horizon barat.
+  - `shot_fix_1755`: `RenderSettings.sun` sudah bulan, tapi arahnya masih di dekat matahari (bobot pose 0,11). Langit sama dengan 17:40, hanya lebih gelap (exposure 0,48). Tidak ada loncatan.
+  - `shot_fix_1810`: bobot pose 0,53. Langit biru gelap, dan piringan bulan terlihat naik dari barat menuju pose malamnya.
+  - `shot_fix_0600` (menghadap timur): matahari 4,9°, langit biru dengan horizon timur lebih terang, dan fasad yang menghadap timur terkena cahaya hangat.
+  - Console bersih setelah Play. `git status` sebelum dan sesudah Play identik.
+
 ## Catatan tuning
 - Malam horor (19:30) sangat gelap. Kalau terlalu gelap, beberapa nilai bisa dinaikkan:
   - `ambientSkyNight` / `ambientGroundNight` dan `moonIntensity` di `DayCycleProfile.asset`;

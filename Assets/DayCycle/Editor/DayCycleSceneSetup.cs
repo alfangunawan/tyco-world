@@ -40,27 +40,9 @@ namespace TycoWorld.DayCycle.Authoring
             }
             var assets = DayCycleAssetsBuilder.BuildAll();
             SceneManager.SetActiveScene(world);
-
-            var sun = GetOrAdd<Light>(FindOrCreate(world, SunName));
-            sun.type = LightType.Directional;
-            sun.shadows = LightShadows.Soft;
-            sun.color = assets.Profile.sunNoonColor;
-            sun.intensity = assets.Profile.sunIntensity;
-            sun.enabled = false;
-
-            var day = EnsureVolume(world, DayVolumeName, 1f, assets.DayVolume);
-            var horror = EnsureVolume(world, HorrorVolumeName, 2f, assets.HorrorVolume);
-
-            var root = FindOrCreate(world, RootName);
-            var ambience = GetOrAdd<AmbienceAudio>(root);
-            var director = GetOrAdd<DayCycleDirector>(root);
-            GetOrAdd<DayCycleDebug>(root);
-            var playerGo = FindRoot(world, PlayerName);
-            var player = playerGo != null ? playerGo.GetComponent<FirstPersonPlayer>() : null;
-            director.Configure(assets.Profile, sun, moonGo.GetComponent<Light>(), day, nightGo.GetComponent<Volume>(), horror,
-                assets.Skybox, ambience, player);
-            EditorUtility.SetDirty(director);
-            RenderSettings.skybox = assets.Skybox;
+            var director = Wire(world, assets);
+            RenderSettings.skybox = director.SkyboxMaterial;
+            var player = director.Player;
             if (player == null) Debug.LogWarning(NoPlayerWarning);
             else if (!UsesSkybox(player)) Debug.LogWarning(CameraWarning);
 
@@ -71,6 +53,45 @@ namespace TycoWorld.DayCycle.Authoring
             return true;
         }
 
+        /// <summary>
+        /// Creates or completes the sun, the day and horror volumes and the DayCycle root in <paramref name="world"/>
+        /// (which must already hold Moon and Global Volume) and wires the director. A re-run keeps what is already
+        /// there: director references, volume profiles, volume priorities and sun shadows are only filled in when
+        /// missing or set when the object is first created.
+        /// </summary>
+        public static DayCycleDirector Wire(Scene world, DayCycleAssets assets)
+        {
+            var moonGo = FindRoot(world, MoonName);
+            var nightGo = FindRoot(world, NightVolumeName);
+            var sun = GetOrAdd<Light>(FindOrCreate(world, SunName), out bool newSun);
+            sun.type = LightType.Directional;
+            sun.enabled = false;
+            if (newSun)
+            {
+                sun.shadows = LightShadows.Soft;
+                sun.color = assets.Profile.sunNoonColor;
+                sun.intensity = assets.Profile.sunIntensity;
+            }
+
+            var day = EnsureVolume(world, DayVolumeName, 1f, assets.DayVolume);
+            var horror = EnsureVolume(world, HorrorVolumeName, 2f, assets.HorrorVolume);
+
+            var root = FindOrCreate(world, RootName);
+            var ambience = GetOrAdd<AmbienceAudio>(root, out _);
+            var director = GetOrAdd<DayCycleDirector>(root, out _);
+            GetOrAdd<DayCycleDebug>(root, out _);
+            var playerGo = FindRoot(world, PlayerName);
+            var player = playerGo != null ? playerGo.GetComponent<FirstPersonPlayer>() : null;
+            director.Configure(Keep(director.Profile, assets.Profile), Keep(director.Sun, sun), Keep(director.Moon, moonGo.GetComponent<Light>()),
+                Keep(director.DayVolume, day), Keep(director.NightVolume, nightGo.GetComponent<Volume>()), Keep(director.HorrorVolume, horror),
+                Keep(director.SkyboxMaterial, assets.Skybox), Keep(director.Ambience, ambience), Keep(director.Player, player));
+            EditorUtility.SetDirty(director);
+            return director;
+        }
+
+        /// <summary>The reference already in the scene, or <paramref name="fallback"/> when it is empty or missing.</summary>
+        static T Keep<T>(T current, T fallback) where T : Object => current != null ? current : fallback;
+
         static bool UsesSkybox(FirstPersonPlayer player)
         {
             var cam = player.View != null ? player.View.GetComponent<Camera>() : null;
@@ -79,11 +100,11 @@ namespace TycoWorld.DayCycle.Authoring
 
         static Volume EnsureVolume(Scene world, string name, float priority, VolumeProfile profile)
         {
-            var volume = GetOrAdd<Volume>(FindOrCreate(world, name));
+            var volume = GetOrAdd<Volume>(FindOrCreate(world, name), out bool added);
             volume.isGlobal = true;
-            volume.priority = priority;
             volume.weight = 0f;
-            volume.sharedProfile = profile;
+            if (added) volume.priority = priority;
+            if (volume.sharedProfile == null) volume.sharedProfile = profile;
             return volume;
         }
 
@@ -103,10 +124,11 @@ namespace TycoWorld.DayCycle.Authoring
             return go;
         }
 
-        static T GetOrAdd<T>(GameObject go) where T : Component
+        static T GetOrAdd<T>(GameObject go, out bool added) where T : Component
         {
             var component = go.GetComponent<T>();
-            if (component == null) component = go.AddComponent<T>();
+            added = component == null;
+            if (added) component = go.AddComponent<T>();
             return component;
         }
     }

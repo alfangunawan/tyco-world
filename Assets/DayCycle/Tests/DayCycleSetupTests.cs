@@ -6,12 +6,15 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using UnityEngine.SceneManagement;
 
 namespace TycoWorld.DayCycle.Tests
 {
     public class DayCycleSetupTests
     {
         readonly List<Object> created = new List<Object>();
+        readonly HashSet<GameObject> rootsBefore = new HashSet<GameObject>();
+        Scene scratch;
 
         T Track<T>(T obj) where T : Object
         {
@@ -21,9 +24,40 @@ namespace TycoWorld.DayCycle.Tests
 
         VolumeProfile NewProfile() => Track(ScriptableObject.CreateInstance<VolumeProfile>());
 
+        /// <summary>
+        /// The untitled scene the test runner opens for EditMode tests stands in for World.unity, with what Setup Preview
+        /// Scene leaves behind (Moon, Global Volume). Every root a test adds is destroyed in TearDown.
+        /// </summary>
+        Scene NewScratchWorld(out Light moon, out Volume night)
+        {
+            scratch = SceneManager.GetActiveScene();
+            Assert.IsTrue(string.IsNullOrEmpty(scratch.path), "Tes setup hanya boleh memakai scene untitled, bukan " + scratch.path);
+            rootsBefore.Clear();
+            rootsBefore.UnionWith(scratch.GetRootGameObjects());
+            moon = new GameObject(DayCycleSceneSetup.MoonName).AddComponent<Light>();
+            moon.type = LightType.Directional;
+            night = new GameObject(DayCycleSceneSetup.NightVolumeName).AddComponent<Volume>();
+            night.isGlobal = true;
+            night.sharedProfile = NewProfile();
+            return scratch;
+        }
+
+        DayCycleAssets NewAssets() => new DayCycleAssets
+        {
+            Profile = Track(DayCycleProfile.CreateDefault()),
+            DayVolume = NewProfile(),
+            HorrorVolume = NewProfile(),
+            Skybox = Track(DayCycleAssetsBuilder.CreateSkybox())
+        };
+
         [TearDown]
         public void TearDown()
         {
+            if (scratch.IsValid() && scratch.isLoaded)
+                foreach (var go in scratch.GetRootGameObjects())
+                    if (!rootsBefore.Contains(go)) Object.DestroyImmediate(go);
+            scratch = default;
+            rootsBefore.Clear();
             foreach (var obj in created)
             {
                 if (obj is VolumeProfile profile)
@@ -130,6 +164,80 @@ namespace TycoWorld.DayCycle.Tests
             var sky = Track(DayCycleAssetsBuilder.CreateSkybox());
             Assert.AreEqual("Skybox/Procedural", sky.shader.name);
             Assert.AreEqual(1.3f, sky.GetFloat("_Exposure"), 1e-4f);
+        }
+
+        [Test]
+        public void SceneSetup_FirstRun_WiresAndConfiguresEverything()
+        {
+            var world = NewScratchWorld(out var moon, out var night);
+            var assets = NewAssets();
+            var director = DayCycleSceneSetup.Wire(world, assets);
+            Assert.AreSame(assets.Profile, director.Profile);
+            Assert.AreSame(moon, director.Moon);
+            Assert.AreSame(night, director.NightVolume);
+            Assert.AreSame(assets.Skybox, director.SkyboxMaterial);
+            Assert.IsNotNull(director.Ambience);
+            Assert.AreEqual(DayCycleSceneSetup.SunName, director.Sun.name);
+            Assert.AreEqual(LightType.Directional, director.Sun.type);
+            Assert.AreEqual(LightShadows.Soft, director.Sun.shadows);
+            Assert.IsFalse(director.Sun.enabled);
+            Assert.AreEqual(1f, director.DayVolume.priority);
+            Assert.AreSame(assets.DayVolume, director.DayVolume.sharedProfile);
+            Assert.AreEqual(2f, director.HorrorVolume.priority);
+            Assert.AreSame(assets.HorrorVolume, director.HorrorVolume.sharedProfile);
+        }
+
+        [Test]
+        public void SceneSetup_Rerun_KeepsSceneChoices()
+        {
+            var world = NewScratchWorld(out _, out _);
+            var assets = NewAssets();
+            var director = DayCycleSceneSetup.Wire(world, assets);
+            var sun = director.Sun;
+            Volume day = director.DayVolume, horror = director.HorrorVolume;
+            var myProfile = Track(DayCycleProfile.CreateDefault());
+            var mySky = Track(DayCycleAssetsBuilder.CreateSkybox());
+            VolumeProfile myDay = NewProfile(), myHorror = NewProfile();
+            director.Configure(myProfile, sun, director.Moon, day, director.NightVolume, horror, mySky, director.Ambience, null);
+            sun.shadows = LightShadows.None;
+            day.priority = 5f;
+            day.sharedProfile = myDay;
+            horror.priority = 7f;
+            horror.sharedProfile = myHorror;
+
+            Assert.AreSame(director, DayCycleSceneSetup.Wire(world, assets));
+            Assert.AreEqual(6, world.rootCount - rootsBefore.Count);
+            Assert.AreSame(myProfile, director.Profile);
+            Assert.AreSame(mySky, director.SkyboxMaterial);
+            Assert.AreEqual(LightShadows.None, sun.shadows);
+            Assert.AreEqual(5f, day.priority);
+            Assert.AreSame(myDay, day.sharedProfile);
+            Assert.AreEqual(7f, horror.priority);
+            Assert.AreSame(myHorror, horror.sharedProfile);
+        }
+
+        [Test]
+        public void SceneSetup_Rerun_RefillsMissingReferences()
+        {
+            var world = NewScratchWorld(out var moon, out var night);
+            var assets = NewAssets();
+            var director = DayCycleSceneSetup.Wire(world, assets);
+            var sun = director.Sun;
+            Volume day = director.DayVolume, horror = director.HorrorVolume;
+            var ambience = director.Ambience;
+            director.Configure(null, null, null, null, null, null, null, null, null);
+            day.sharedProfile = null;
+
+            DayCycleSceneSetup.Wire(world, assets);
+            Assert.AreSame(assets.Profile, director.Profile);
+            Assert.AreSame(sun, director.Sun);
+            Assert.AreSame(moon, director.Moon);
+            Assert.AreSame(day, director.DayVolume);
+            Assert.AreSame(night, director.NightVolume);
+            Assert.AreSame(horror, director.HorrorVolume);
+            Assert.AreSame(assets.Skybox, director.SkyboxMaterial);
+            Assert.AreSame(ambience, director.Ambience);
+            Assert.AreSame(assets.DayVolume, day.sharedProfile);
         }
 
         [Test]
