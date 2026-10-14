@@ -46,8 +46,8 @@ dikerjakan terpisah, masing-masing dengan siklus spec → plan → implementasi 
 - Player controller, sistem cerita/quest, AI, audio, UI game, save.
 - Interior bangunan (gedung kunci hanya ditandai).
 - Parit/sungai yang punya kedalaman dan collider; terrain dengan kontur ketinggian.
-- Pagar/tembok (data OSM kosong untuk area ini).
-- Mesh simpang jalan khusus, trotoar, selokan, marka jalan.
+- Pagar/tembok dari data OSM (data kosong); tembok prosedural dibuat oleh spec street-frontage.
+- Mesh simpang khusus (trotoar, selokan, dan marka tengah kini dibuat oleh spec `2026-10-14-street-frontage-design.md`).
 - LOD, impostor, streaming dunia.
 - Generate dunia saat runtime (semuanya dilakukan di Editor).
 - Kendaraan.
@@ -250,11 +250,16 @@ Aturan tambahan:
 | Area Paving (`highway` + `area=yes`) | 0.035 |
 | Air (area) | 0.045 |
 | Air (garis) | 0.050 |
+| Dasar tepi jalan (bahu, kanal, kaki kerb) | 0.055 |
 | Jalan | 0.060 + rank × 0.005 (rank di §7.1) |
+| Bibir selokan | 0.155 |
+| Atas trotoar | 0.210 |
+| Marka | y jalan + 0.003 |
 
 Ground, jalan, area, dan air punya collider (lihat spec `2026-10-13-fps-player-design.md` §5). Permukaan yang
 lebih tinggi digambar di atas dan juga dipijak lebih dulu, jadi raycast ke bawah selalu mengenai permukaan yang
 terlihat. Setiap collider permukaan membawa `GroundSurface` (jenis permukaan dari material).
+Detail di spec street-frontage §5.
 
 ### 7.1 Jalan
 
@@ -413,6 +418,7 @@ Geometrinya:
 - Titik ditolak jika:
   - berada di dalam tapak bangunan (dengan buffer 1 m);
   - jaraknya ke garis tengah jalan < `halfWidth + 1 m`;
+  - jarak ke garis tengah jalan < hw + max(1, lebar tepi + 0.5), atau < 0.8 m dari tembok;
   - berada di dalam lubang poligon.
 - Batas global `maxTrees` = 4000. Kalau terlampaui, titik dipilih secara deterministik dan sisanya
   dibuang (jumlahnya dicatat di laporan).
@@ -421,6 +427,7 @@ Geometrinya:
 ### Lampu jalan
 - Dipasang menyusuri setiap jalan dengan jarak sesuai tabel §7.1.
 - Posisinya di offset `halfWidth + 0.6 m` tegak lurus terhadap jalan, selang-seling kiri dan kanan.
+- Offset mengikuti profil tepi: trotoar hw + 0.45, selokan hw + 0.15 (di bahu), tanpa tepi hw + 0.6; lampu menjauhi tembok 0.35 m (spec street-frontage §9).
 - Lampu menghadap ke jalan.
 - Lampu ditolak jika berada di dalam bangunan, atau dalam radius 8 m dari lampu lain
   (mencegah lampu menumpuk di simpang).
@@ -506,6 +513,9 @@ World_Generated            [GeneratedRoot]
   Roads/Chunk_ix_iz/<nama jalan atau Road_<id>>                [OsmFeature, GroundSurface, MeshCollider]
   Buildings/Chunk_ix_iz/<nama gedung atau Building_<id>>       [OsmFeature, MeshCollider]
   Areas/Chunk_ix_iz/<Area_<kategori>_<id>>                     [OsmFeature, GroundSurface, MeshCollider]
+  RoadEdges/Chunk_ix_iz/{Gutter,Sidewalk}                      [GroundSurface, MeshCollider]
+  Frontage/Chunk_ix_iz/Walls                                   [MeshCollider]
+  Buildings/Chunk_ix_iz/Infill                                 [OsmFeature, MeshCollider]
   Water/Chunk_ix_iz/<Water_<id>>                               [OsmFeature, GroundSurface, MeshCollider]
   Props/Trees/Chunk_ix_iz/...   Props/Lamps/Chunk_ix_iz/...
   KeyBuildings/<label>         [OsmFeature, KeyBuildingMarker]
@@ -552,6 +562,7 @@ Laporan ditampilkan di window, dan rinciannya ditulis ke Console.
 | Props | `treePrefabs[]`, `lampPrefab`, `maxTrees` = 4000, `lampMinSpacing` = 8 |
 | Gedung kunci | daftar `KeyBuilding` (§10) |
 | Lainnya | `fallbackMaterial` |
+| Tepi, frontage, infill | `roadEdges`, `frontage`, `infill` — lihat spec street-frontage §12 |
 
 Semua nilai default di tabel ini sama dengan yang tertulis di spec ini, dan diisi oleh `DefaultSettingsFactory`.
 
@@ -626,7 +637,7 @@ Semua nilai default di tabel ini sama dengan yang tertulis di spec ini, dan diis
 2. Generate → Console tanpa error, bangunan yang dilewati < 2%, waktu generate < 60 detik.
 3. Generate kedua kalinya → hash semua chunk identik dan tidak ada asset yatim.
 4. Raycast di edit mode:
-   - ke bawah di 20 titik acak → semuanya mengenai ground (y = 0) atau permukaan jalan/area/air (y ≤ 0,1);
+   - ke bawah di 20 titik acak → semuanya mengenai ground (y = 0) atau permukaan jalan/area/air (y ≤ 0.25, trotoar 0.21);
    - horizontal ke 6 gedung kunci → semuanya mengenai MeshCollider.
 8. Sub-proyek #2: raycast ke bawah di Jl. Sukabirus mengenai collider jalan dengan GroundSurface Asphalt; 4 dinding
    WorldEdge ada; tidak ada warning PhysX segitiga > 500 m (sisi segitiga permukaan pijak ≤ 100 m).
@@ -657,7 +668,7 @@ Semua nilai default di tabel ini sama dengan yang tertulis di spec ini, dan diis
 
 ## 18. Iterasi berikutnya (di luar spec ini)
 
-- Parit dan sungai dengan kedalaman (carving), selokan di tepi jalan, trotoar, marka jalan, mesh simpang.
+- Parit dan sungai dengan kedalaman (carving) dan mesh simpang tetap terbuka. ~~Selokan di tepi jalan, trotoar, marka jalan~~ selesai (spec street-frontage).
 - Pagar kampus dan gerbang (manual atau prefab).
 - Tekstur fasad dari foto asli Sukabirus, papan nama, spanduk, dan kabel listrik.
 - LOD/impostor jika baseline performa kurang.

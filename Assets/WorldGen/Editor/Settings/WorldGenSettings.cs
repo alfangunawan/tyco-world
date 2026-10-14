@@ -59,6 +59,11 @@ namespace TycoWorld.WorldGen.Authoring
         public float lampMinSpacing;
         public float lampOffset;
 
+        [Header("Street dressing")]
+        public RoadEdgeSettings roadEdges = new RoadEdgeSettings();
+        public FrontageSettings frontage = new FrontageSettings();
+        public InfillSettings infill = new InfillSettings();
+
         [Header("Key buildings")]
         public List<KeyBuilding> keyBuildings = new List<KeyBuilding>();
 

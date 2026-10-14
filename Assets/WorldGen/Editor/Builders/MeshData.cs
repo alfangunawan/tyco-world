@@ -73,6 +73,20 @@ namespace TycoWorld.WorldGen.Authoring
             list.Add(start); list.Add(start + 2); list.Add(start + 3);
         }
 
+        /// <summary>Appends src; its submesh s lands in this mesh's submesh submeshMap[s] (same index when the map is null).</summary>
+        public void Append(MeshData src, int[] submeshMap = null)
+        {
+            int offset = Vertices.Count;
+            Vertices.AddRange(src.Vertices);
+            Normals.AddRange(src.Normals);
+            Uvs.AddRange(src.Uvs);
+            for (int s = 0; s < src.submeshes.Length; s++)
+            {
+                var target = submeshes[submeshMap != null ? submeshMap[s] : s];
+                foreach (int i in src.submeshes[s]) target.Add(i + offset);
+            }
+        }
+
         /// <summary>
         /// Copy whose triangles all have edges no longer than <paramref name="maxEdge"/> (longest-edge bisection, UVs interpolated);
         /// returns this instance when nothing is longer. PhysX warns about (and loses query precision on) triangles over 500 m.

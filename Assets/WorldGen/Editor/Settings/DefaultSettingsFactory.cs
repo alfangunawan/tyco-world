@@ -120,6 +120,10 @@ namespace TycoWorld.WorldGen.Authoring
             s.lampMinSpacing = 8f;
             s.lampOffset = 0.6f;
 
+            s.roadEdges = new RoadEdgeSettings();
+            s.frontage = new FrontageSettings();
+            s.infill = new InfillSettings();
+
             s.keyBuildings = new List<KeyBuilding>
             {
                 new KeyBuilding(1257717375, "Telkom University Landmark Tower (TULT)"),

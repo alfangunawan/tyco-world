@@ -12,6 +12,18 @@ namespace TycoWorld.WorldGen.Authoring
         public int Variant;
     }
 
+    /// <summary>A straight piece of wall or closed gate that lamps and trees keep clear of (spec street-frontage §9).</summary>
+    public readonly struct WallSegment
+    {
+        public readonly Vector2 A, B;
+
+        public WallSegment(Vector2 a, Vector2 b)
+        {
+            A = a;
+            B = b;
+        }
+    }
+
     /// <summary>Deterministic placement of trees (OSM nodes + Poisson scatter) and street lamps.</summary>
     public sealed class PropPlacer
     {
@@ -20,42 +32,84 @@ namespace TycoWorld.WorldGen.Authoring
         public const float TreeRoadClearance = 1f;
         public const float LampBuildingBuffer = 0.3f;
         public const float LampRoadClearance = 0.2f;
+        public const float LampOwnRoadClearance = 0.05f;
+        public const float TreeEdgeClearance = 0.5f;
+        public const float LampWallClearance = 0.35f;
+        public const float TreeWallClearance = 0.8f;
 
         readonly struct RoadSegment
         {
             public readonly Vector2 A, B;
-            public readonly float HalfWidth;
+            public readonly float HalfWidth, EdgeReach;
+            public readonly long RoadId;
 
-            public RoadSegment(Vector2 a, Vector2 b, float halfWidth)
+            public RoadSegment(Vector2 a, Vector2 b, float halfWidth, float edgeReach, long roadId)
             {
                 A = a;
                 B = b;
                 HalfWidth = halfWidth;
+                EdgeReach = edgeReach;
+                RoadId = roadId;
             }
         }
 
         readonly SpatialGrid<BuildingFeature> buildingGrid = new SpatialGrid<BuildingFeature>(20f);
         readonly SpatialGrid<int> roadGrid = new SpatialGrid<int>(20f);
         readonly List<RoadSegment> segments = new List<RoadSegment>();
+        readonly SpatialGrid<int> wallGrid = new SpatialGrid<int>(20f);
+        readonly List<WallSegment> walls = new List<WallSegment>();
+        readonly IEdgeLookup edges;
+        readonly RoadEdgeSettings edgeSettings;
+        readonly float maxEdgeReach;
 
-        public PropPlacer(IReadOnlyList<BuildingFeature> buildings, IReadOnlyList<RoadFeature> roads)
+        public PropPlacer(IReadOnlyList<BuildingFeature> buildings, IReadOnlyList<RoadFeature> roads, IEdgeLookup edges = null,
+            RoadEdgeSettings edgeSettings = null)
         {
+            this.edges = edges != null && edgeSettings != null ? edges : null;
+            this.edgeSettings = edgeSettings;
             foreach (var b in buildings) buildingGrid.Insert(b.Spec.Footprint.Bounds, b);
             foreach (var road in roads)
             {
                 float hw = road.Width * 0.5f;
+                float reach = this.edges != null ? this.edges.MaxEdgeWidth(road.Id) : 0f;
+                maxEdgeReach = Mathf.Max(maxEdgeReach, reach);
                 foreach (var piece in road.Pieces)
                     for (int i = 0; i + 1 < piece.Points.Count; i++)
                     {
                         Vector2 a = piece.Points[i], b = piece.Points[i + 1];
                         var rect = Rect.MinMaxRect(Mathf.Min(a.x, b.x) - hw, Mathf.Min(a.y, b.y) - hw, Mathf.Max(a.x, b.x) + hw, Mathf.Max(a.y, b.y) + hw);
                         roadGrid.Insert(rect, segments.Count);
-                        segments.Add(new RoadSegment(a, b, hw));
+                        segments.Add(new RoadSegment(a, b, hw, reach, road.Id));
                     }
             }
         }
 
         static Rect Around(Vector2 p, float radius) => Rect.MinMaxRect(p.x - radius, p.y - radius, p.x + radius, p.y + radius);
+
+        /// <summary>Extra footprints (infill houses) that trees and lamps must avoid like OSM buildings.</summary>
+        public void AddBuildings(IEnumerable<BuildingFeature> extra)
+        {
+            foreach (var b in extra) buildingGrid.Insert(b.Spec.Footprint.Bounds, b);
+        }
+
+        public void AddWalls(IEnumerable<WallSegment> segmentsToAvoid)
+        {
+            foreach (var w in segmentsToAvoid)
+            {
+                wallGrid.Insert(Rect.MinMaxRect(Mathf.Min(w.A.x, w.B.x), Mathf.Min(w.A.y, w.B.y), Mathf.Max(w.A.x, w.B.x), Mathf.Max(w.A.y, w.B.y)), walls.Count);
+                walls.Add(w);
+            }
+        }
+
+        public bool IsNearWall(Vector2 p, float clearance)
+        {
+            if (walls.Count == 0) return false;
+            var hits = new HashSet<int>();
+            wallGrid.Query(Around(p, clearance), hits);
+            foreach (int i in hits)
+                if (Polygon2D.DistanceToSegment(p, walls[i].A, walls[i].B) < clearance) return true;
+            return false;
+        }
 
         public bool IsInsideBuilding(Vector2 p, float buffer)
         {
@@ -82,6 +136,34 @@ namespace TycoWorld.WorldGen.Authoring
             return false;
         }
 
+        /// <summary>Scatter trees keep hw + max(1, edge width + 0.5) from every road (spec street-frontage §9).</summary>
+        bool TooCloseToRoadForTree(Vector2 p)
+        {
+            var hits = new HashSet<int>();
+            roadGrid.Query(Around(p, Mathf.Max(TreeRoadClearance, maxEdgeReach + TreeEdgeClearance)), hits);
+            foreach (int i in hits)
+            {
+                var s = segments[i];
+                float clearance = Mathf.Max(TreeRoadClearance, s.EdgeReach + TreeEdgeClearance);
+                if (Polygon2D.DistanceToSegment(p, s.A, s.B) < s.HalfWidth + clearance) return true;
+            }
+            return false;
+        }
+
+        /// <summary>A lamp may stand right beside its own asphalt (on the shoulder) but keeps 0.2 m off other roads.</summary>
+        bool BlocksLamp(Vector2 p, long ownRoad)
+        {
+            var hits = new HashSet<int>();
+            roadGrid.Query(Around(p, LampRoadClearance), hits);
+            foreach (int i in hits)
+            {
+                var s = segments[i];
+                float clearance = s.RoadId == ownRoad ? LampOwnRoadClearance : LampRoadClearance;
+                if (Polygon2D.DistanceToSegment(p, s.A, s.B) < s.HalfWidth + clearance) return true;
+            }
+            return false;
+        }
+
         public List<PropPlacement> PlaceTrees(IReadOnlyList<TreeFeature> osmTrees, IReadOnlyList<AreaFeature> areas,
             int maxTrees, int variantCount, GenerationReport report, IReadOnlyList<Polygon> noTreeZones = null)
         {
@@ -102,7 +184,7 @@ namespace TycoWorld.WorldGen.Authoring
             var fromOsm = new List<PropPlacement>();
             foreach (var tree in osmTrees.OrderBy(t => t.Id))
             {
-                if (IsInsideBuilding(tree.Position, 0f) || !TryReserve(tree.Position)) continue;
+                if (IsInsideBuilding(tree.Position, 0f) || IsNearWall(tree.Position, TreeWallClearance) || !TryReserve(tree.Position)) continue;
                 fromOsm.Add(Make(tree.Position, SplitMix64.For(tree.Id, "tree"), variantCount));
             }
 
@@ -128,7 +210,8 @@ namespace TycoWorld.WorldGen.Authoring
                 var rng = SplitMix64.For(area.Id, "trees");
                 foreach (var p in PoissonDisk.Sample(area.Shape.Bounds, spacing, rng))
                 {
-                    if (!area.Shape.Contains(p) || InNoTreeZone(p) || IsInsideBuilding(p, TreeBuildingBuffer) || IsOnRoad(p, TreeRoadClearance)) continue;
+                    if (!area.Shape.Contains(p) || InNoTreeZone(p) || IsInsideBuilding(p, TreeBuildingBuffer) || TooCloseToRoadForTree(p) ||
+                        IsNearWall(p, TreeWallClearance)) continue;
                     if (!TryReserve(p)) continue;
                     scatter.Add((rng.NextULong(), Make(p, rng, variantCount)));
                 }
@@ -178,10 +261,11 @@ namespace TycoWorld.WorldGen.Authoring
                         while (next <= travelled + length)
                         {
                             Vector2 center = a + dir * (next - travelled);
-                            Vector2 position = center + left * (side * (hw + offset));
-                            Vector2 towardRoad = -left * side;
-                            if (!IsInsideBuilding(position, LampBuildingBuffer) && !IsOnRoad(position, LampRoadClearance) &&
-                                !NearOther(position, result, grid, minSpacing))
+                            Vector2 sideDir = left * side;
+                            Vector2 position = center + sideDir * (hw + LampOffset(road.Id, center, sideDir, offset));
+                            Vector2 towardRoad = -sideDir;
+                            if (!IsInsideBuilding(position, LampBuildingBuffer) && !BlocksLamp(position, road.Id) &&
+                                !IsNearWall(position, LampWallClearance) && !NearOther(position, result, grid, minSpacing))
                             {
                                 grid.Insert(new Rect(position, Vector2.zero), result.Count);
                                 result.Add(new PropPlacement
@@ -201,6 +285,16 @@ namespace TycoWorld.WorldGen.Authoring
             }
             report.LampsPlaced = result.Count;
             return result;
+        }
+
+        /// <summary>Lamp distance beyond the asphalt edge: on the sidewalk, on the gutter shoulder, or the old fixed offset.</summary>
+        float LampOffset(long roadId, Vector2 center, Vector2 sideDir, float fallback)
+        {
+            if (edges == null) return fallback;
+            var profile = edges.ProfileAt(roadId, center, sideDir);
+            if (profile == EdgeProfile.Sidewalk) return edgeSettings.sidewalkLampOffset;
+            if (profile == EdgeProfile.Gutter) return edgeSettings.gutterLampOffset;
+            return fallback;
         }
 
         static bool NearOther(Vector2 p, List<PropPlacement> placed, SpatialGrid<int> grid, float minSpacing)

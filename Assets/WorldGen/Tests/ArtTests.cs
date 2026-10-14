@@ -120,5 +120,115 @@ namespace TycoWorld.WorldGen.Tests
                 Assert.Greater(Vector3.Dot(Vector3.Cross(b - a, c - a), (a + b + c) / 3f - center), 0f);
             }
         }
+
+        [Test]
+        public void KerbStripes_AreDarkThenLightAlongU()
+        {
+            var a = StreetTextureGenerator.KerbStripes();
+            var b = StreetTextureGenerator.KerbStripes();
+            try
+            {
+                Assert.AreEqual(StreetTextureGenerator.KerbWidth, a.width);
+                Assert.AreEqual(StreetTextureGenerator.KerbHeight, a.height);
+                CollectionAssert.AreEqual(a.GetPixels32(), b.GetPixels32());
+                Assert.Less(a.GetPixel(16, 16).grayscale, 0.3f);
+                Assert.Greater(a.GetPixel(96, 16).grayscale, 0.6f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(a);
+                Object.DestroyImmediate(b);
+            }
+        }
+
+        static Texture2D Flat(float gray)
+        {
+            var t = new Texture2D(4, 4, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat };
+            var px = new Color[16];
+            for (int i = 0; i < px.Length; i++) px[i] = new Color(gray, gray, gray, 1f);
+            t.SetPixels(px);
+            t.Apply();
+            return t;
+        }
+
+        static Color AtlasPixel(Texture2D atlas, int band, int y) => atlas.GetPixel(10, band * StreetTextureGenerator.BandHeight + y);
+
+        [Test]
+        public void WallAtlas_BandsCarryTheirTint()
+        {
+            var plaster = Flat(0.5f);
+            var brick = Flat(0.5f);
+            var atlas = StreetTextureGenerator.WallAtlas(plaster, brick);
+            try
+            {
+                Assert.AreEqual(StreetTextureGenerator.AtlasWidth, atlas.width);
+                Assert.AreEqual(StreetTextureGenerator.BandHeight * StreetTextureGenerator.AtlasBands, atlas.height);
+                // y = 50 px = 0.78 m: above the 25 cm grime, below the streaks that start at 1.2 m.
+                for (int band = 0; band < 6; band++)
+                {
+                    var expected = FacadeTextureGenerator.ResidentialPalette[band];
+                    var c = AtlasPixel(atlas, band, 50);
+                    Assert.AreEqual(expected.r, c.r, 0.02f, "band " + band);
+                    Assert.AreEqual(expected.g, c.g, 0.02f, "band " + band);
+                    Assert.AreEqual(expected.b, c.b, 0.02f, "band " + band);
+                }
+                for (int i = 0; i < 2; i++)
+                {
+                    var expected = StreetTextureGenerator.BrickTints[i] * 0.5f;
+                    var c = AtlasPixel(atlas, 6 + i, 50);
+                    Assert.AreEqual(expected.r, c.r, 0.02f);
+                    Assert.AreEqual(expected.g, c.g, 0.02f);
+                }
+                Assert.Less(AtlasPixel(atlas, 0, 2).grayscale, AtlasPixel(atlas, 0, 50).grayscale, "grime at the foot");
+            }
+            finally
+            {
+                Object.DestroyImmediate(plaster);
+                Object.DestroyImmediate(brick);
+                Object.DestroyImmediate(atlas);
+            }
+        }
+
+        [Test]
+        public void WallAtlas_IsDeterministic()
+        {
+            var plaster = Flat(0.6f);
+            var brick = Flat(0.4f);
+            var a = StreetTextureGenerator.WallAtlas(plaster, brick);
+            var b = StreetTextureGenerator.WallAtlas(plaster, brick);
+            try { CollectionAssert.AreEqual(a.GetPixels32(), b.GetPixels32()); }
+            finally
+            {
+                Object.DestroyImmediate(plaster);
+                Object.DestroyImmediate(brick);
+                Object.DestroyImmediate(a);
+                Object.DestroyImmediate(b);
+            }
+        }
+
+        [Test]
+        public void FenceBars_HaveOpaqueBarsAndClearGaps()
+        {
+            var f = StreetTextureGenerator.FenceBars();
+            try
+            {
+                Assert.AreEqual(1f, f.GetPixel(1, 30).a, 1e-3f, "bar");
+                Assert.AreEqual(0f, f.GetPixel(8, 30).a, 1e-3f, "gap");
+                Assert.AreEqual(1f, f.GetPixel(8, 1).a, 1e-3f, "bottom rail");
+                Assert.AreEqual(1f, f.GetPixel(8, 62).a, 1e-3f, "middle rail");
+                Assert.AreEqual(1f, f.GetPixel(8, 126).a, 1e-3f, "top rail");
+            }
+            finally { Object.DestroyImmediate(f); }
+        }
+
+        [Test]
+        public void FenceMaterial_ClipsAlpha()
+        {
+            var m = UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(WorldGenPaths.MaterialsFolder + "/Frontage_Fence.mat");
+            Assert.IsNotNull(m);
+            Assert.AreEqual(1f, m.GetFloat("_AlphaClip"));
+            Assert.IsTrue(m.IsKeywordEnabled("_ALPHATEST_ON"));
+            Assert.AreEqual((int)UnityEngine.Rendering.RenderQueue.AlphaTest, m.renderQueue);
+        }
     }
 }

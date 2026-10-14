@@ -362,6 +362,137 @@ MonoBehaviour:
   maxTrees: 4000
   lampMinSpacing: 8
   lampOffset: 0.6
+  roadEdges:
+    sidewalkHighways:
+    - primary
+    - secondary
+    campusSidewalkHighways:
+    - tertiary
+    gutterHighways:
+    - tertiary
+    - unclassified
+    - residential
+    - living_street
+    - service
+    noEdgeServiceValues:
+    - driveway
+    - parking_aisle
+    - drive-through
+    campusSidewalkDistance: 10
+    minProfileRun: 8
+    sampleStep: 0.5
+    mouthMargin: 0.3
+    minRunLength: 0.5
+    edgeBaseY: 0.055
+    gutterLipY: 0.155
+    sidewalkTopY: 0.21
+    underlap: 0.05
+    shoulderWidth: 0.3
+    gutterWidth: 0.5
+    gutterLipWidth: 0.08
+    sidewalkWidth: 1.5
+    kerbWidth: 0.15
+    markingHighways:
+    - primary
+    - secondary
+    wideMarkingHighways:
+    - tertiary
+    markingMinWidth: 7
+    markingWidth: 0.12
+    markingLift: 0.003
+    dashLength: 3
+    dashGap: 5
+    dashStart: 2
+    junctionDashClearance: 3
+    sidewalkLampOffset: 0.45
+    gutterLampOffset: 0.15
+    concrete: {fileID: 2100000, guid: 2e9749dad1958b2458952d76e1c99aa6, type: 2}
+    gutter: {fileID: 2100000, guid: e9ce195d6aae9f540b6ea342dc753088, type: 2}
+    kerb: {fileID: 2100000, guid: 4d071433fe1e7214b85a3063c767c22a, type: 2}
+    sidewalk: {fileID: 2100000, guid: f238828ecdb518d4086c544b90573b26, type: 2}
+    marking: {fileID: 2100000, guid: 92dc8c424aaa31649bc8c96eb876990b, type: 2}
+  frontage:
+    propertyLineGap: 0.4
+    corridorDepth: 15
+    flushDistance: 1
+    minInterval: 1.5
+    contextProbe: 0.5
+    wallThickness: 0.15
+    copingHeight: 0.05
+    copingOverhang: 0.02
+    pilasterSize: 0.25
+    pilasterSpacing: 3
+    pilasterExtra: 0.1
+    pilasterMinGap: 1
+    pilasterMinTurnDegrees: 20
+    gateWidth: 2
+    doorWidth: 0.9
+    gateHeight: 1.6
+    gateMinLot: 4.5
+    doorMinLot: 2.5
+    gateEndMargin: 0.3
+    slabTopY: 0.165
+    slabExtraWidth: 0.4
+    kosExclusionRadius: 8
+    kosBuildingId: 409467778
+    atlasBands: 8
+    atlasTileMeters: 4
+    atlasBandMeters: 2
+    styles:
+    - style: 0
+      share: 0.55
+      minHeight: 1.6
+      maxHeight: 2
+      fenceHeight: 0
+      firstBand: 0
+      bandCount: 6
+    - style: 1
+      share: 0.35
+      minHeight: 0.8
+      maxHeight: 0.8
+      fenceHeight: 0.9
+      firstBand: 0
+      bandCount: 6
+    - style: 2
+      share: 0.1
+      minHeight: 1.7
+      maxHeight: 1.7
+      fenceHeight: 0
+      firstBand: 6
+      bandCount: 2
+    - style: 3
+      share: 0
+      minHeight: 0.6
+      maxHeight: 0.6
+      fenceHeight: 1.2
+      firstBand: 5
+      bandCount: 1
+    - style: 4
+      share: 0
+      minHeight: 0.7
+      maxHeight: 0.7
+      fenceHeight: 0
+      firstBand: 5
+      bandCount: 1
+    wallAtlas: {fileID: 2100000, guid: b58438254aba030428b30f7059bf78be, type: 2}
+    fence: {fileID: 2100000, guid: e9f5ee1284e8d494588f6f67f0da0132, type: 2}
+    gateMetal: {fileID: 2100000, guid: 4688d86d5d37ad849a32f58e08b6bd2a, type: 2}
+  infill:
+    enabled: 1
+    minLotLength: 6
+    minWidth: 6
+    maxWidth: 10
+    minDepth: 8
+    maxDepth: 12
+    minGap: 0
+    maxGap: 0.6
+    flushShare: 0.35
+    flushInset: 0.1
+    minSetback: 1.5
+    maxSetback: 4
+    twoStoreyShare: 0.4
+    clearance: 0.5
+    maxInfill: 2500
   keyBuildings:
   - osmId: 1257717375
     label: Telkom University Landmark Tower (TULT)

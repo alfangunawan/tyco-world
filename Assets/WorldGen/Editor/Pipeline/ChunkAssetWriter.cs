@@ -10,11 +10,14 @@ namespace TycoWorld.WorldGen.Authoring
     {
         public readonly Mesh Mesh;
         public readonly int[] UsedSubmeshes;
+        /// <summary>Separate collision mesh, or null to collide with Mesh.</summary>
+        public readonly Mesh Collider;
 
-        public MeshAsset(Mesh mesh, int[] usedSubmeshes)
+        public MeshAsset(Mesh mesh, int[] usedSubmeshes, Mesh collider = null)
         {
             Mesh = mesh;
             UsedSubmeshes = usedSubmeshes;
+            Collider = collider;
         }
     }
 
@@ -51,7 +54,13 @@ namespace TycoWorld.WorldGen.Authoring
                         {
                             AssetDatabase.AddObjectToAsset(mesh, main);
                         }
-                        result[feature] = new MeshAsset(mesh, used);
+                        Mesh collider = null;
+                        if (feature.ColliderMesh != null && !feature.ColliderMesh.IsEmpty)
+                        {
+                            collider = feature.ColliderMesh.ToMesh(mesh.name + "_Collider", out _);
+                            AssetDatabase.AddObjectToAsset(collider, main);
+                        }
+                        result[feature] = new MeshAsset(mesh, used, collider);
                     }
                 }
             }

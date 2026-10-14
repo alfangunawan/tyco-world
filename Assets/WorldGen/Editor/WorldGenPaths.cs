@@ -19,6 +19,7 @@ namespace TycoWorld.WorldGen.Authoring
         public const string TexturesFolder = Root + "/Textures";
         public const string Cc0TexturesFolder = TexturesFolder + "/CC0";
         public const string FacadeTexturesFolder = TexturesFolder + "/Facade";
+        public const string StreetTexturesFolder = TexturesFolder + "/Street";
         public const string PrefabsFolder = Root + "/Prefabs";
         public const string FixturesFolder = Root + "/Tests/Fixtures";
 
