@@ -11,7 +11,8 @@ namespace TycoWorld.WorldGen.Authoring
         public static readonly string[] Cc0Ids =
         {
             "Asphalt033", "PavingStones070", "PavingStones138", "Ground037", "Ground106",
-            "Grass004", "Grass005", "Concrete034", "Concrete046", "RoofingTiles006"
+            "Grass004", "Grass005", "Concrete034", "Concrete046", "RoofingTiles006",
+            StreetTextureGenerator.PlasterId, StreetTextureGenerator.BrickId
         };
 
         [MenuItem("Tyco World/World Generator/Build Art Assets")]
@@ -41,7 +42,8 @@ namespace TycoWorld.WorldGen.Authoring
             foreach (var path in StreetTextureGenerator.WriteAll(WorldGenPaths.StreetTexturesFolder))
             {
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
-                Configure(path, false, 256);
+                Configure(path, false, path.EndsWith(StreetTextureGenerator.WallAtlasFile) ? 1024 : 256);
+                if (path.EndsWith(StreetTextureGenerator.FenceFile)) ConfigureAlpha(path);
             }
             var materials = CreateMaterials();
             var prefabs = PlaceholderPrefabFactory.CreateAll(materials);
@@ -100,6 +102,21 @@ namespace TycoWorld.WorldGen.Authoring
             if (changed) importer.SaveAndReimport();
         }
 
+        /// <summary>Alpha-tested texture: keep transparency and preserve coverage in the mips so thin bars do not vanish far away.</summary>
+        static void ConfigureAlpha(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) return;
+            bool changed = false;
+            if (!importer.alphaIsTransparency) { importer.alphaIsTransparency = true; changed = true; }
+            if (importer.alphaSource != TextureImporterAlphaSource.FromInput) { importer.alphaSource = TextureImporterAlphaSource.FromInput; changed = true; }
+            if (!importer.mipMapsPreserveCoverage) { importer.mipMapsPreserveCoverage = true; changed = true; }
+            if (Mathf.Abs(importer.alphaTestReferenceValue - 0.5f) > 1e-4f) { importer.alphaTestReferenceValue = 0.5f; changed = true; }
+            if (changed) importer.SaveAndReimport();
+        }
+
+        static Texture2D StreetTexture(string file) => AssetDatabase.LoadAssetAtPath<Texture2D>(WorldGenPaths.StreetTexturesFolder + "/" + file);
+
         static Color Hex(string hex)
         {
             ColorUtility.TryParseHtmlString("#" + hex, out var color);
@@ -148,12 +165,21 @@ namespace TycoWorld.WorldGen.Authoring
             Cc0("Roof_Genteng_Coklat", "RoofingTiles006", "8A6A5A", 2f);
             Cc0("Roof_Dak_A", "Concrete046", "FFFFFF", 3f);
             Cc0("Roof_Dak_B", "Concrete046", "A8A8A8", 3f);
-            Cc0("Edge_Concrete", "Concrete034", "F0F0F0", 2f);
+            Cc0("Edge_Concrete", "Concrete034", "B4B2AA", 2f);
             Cc0("Edge_Sidewalk", "PavingStones070", "E8E8E8", 1.5f);
             m["Edge_Gutter"] = Mat("Edge_Gutter", Tex("Concrete046", "Color"), Tex("Concrete046", "NormalGL"), Hex("3A3A36"), 2f, 0.4f);
             m["Edge_Kerb"] = Mat("Edge_Kerb", AssetDatabase.LoadAssetAtPath<Texture2D>(WorldGenPaths.StreetTexturesFolder + "/" + StreetTextureGenerator.KerbFile),
                 null, Color.white, 1f);
             m["Road_Marking"] = Mat("Road_Marking", null, null, Hex("DCDCD2"), 1f, 0.2f);
+            m["Frontage_WallAtlas"] = Mat("Frontage_WallAtlas", StreetTexture(StreetTextureGenerator.WallAtlasFile), null, Color.white, 1f);
+            var fence = Mat("Frontage_Fence", StreetTexture(StreetTextureGenerator.FenceFile), null, Color.white, 1f, 0.3f);
+            fence.SetFloat("_AlphaClip", 1f);
+            fence.SetFloat("_Cutoff", 0.5f);
+            fence.EnableKeyword("_ALPHATEST_ON");
+            fence.renderQueue = (int)UnityEngine.Rendering.RenderQueue.AlphaTest;
+            EditorUtility.SetDirty(fence);
+            m["Frontage_Fence"] = fence;
+            m["Frontage_GateMetal"] = Mat("Frontage_GateMetal", null, null, Hex("2B2F33"), 1f, 0.45f);
             m["Water"] = Mat("Water", null, null, Hex("10161A"), 1f, 0.9f);
             m["WorldGen_Fallback"] = Mat("WorldGen_Fallback", null, null, Hex("808080"), 1f);
 
@@ -215,6 +241,10 @@ namespace TycoWorld.WorldGen.Authoring
             e.sidewalk = m["Edge_Sidewalk"];
             e.kerb = m["Edge_Kerb"];
             e.marking = m["Road_Marking"];
+            var f = s.frontage;
+            f.wallAtlas = m["Frontage_WallAtlas"];
+            f.fence = m["Frontage_Fence"];
+            f.gateMetal = m["Frontage_GateMetal"];
             EditorUtility.SetDirty(s);
         }
     }

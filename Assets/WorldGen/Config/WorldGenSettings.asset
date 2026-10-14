@@ -472,9 +472,9 @@ MonoBehaviour:
       fenceHeight: 0
       firstBand: 5
       bandCount: 1
-    wallAtlas: {fileID: 0}
-    fence: {fileID: 0}
-    gateMetal: {fileID: 0}
+    wallAtlas: {fileID: 2100000, guid: b58438254aba030428b30f7059bf78be, type: 2}
+    fence: {fileID: 2100000, guid: e9f5ee1284e8d494588f6f67f0da0132, type: 2}
+    gateMetal: {fileID: 2100000, guid: 4688d86d5d37ad849a32f58e08b6bd2a, type: 2}
   infill:
     enabled: 1
     minLotLength: 6

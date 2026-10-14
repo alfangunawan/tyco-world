@@ -15,9 +15,12 @@ tanpa kewajiban atribusi). Versi 1K-JPG; hanya peta Color dan NormalGL yang dipa
 | Concrete034 | https://ambientcg.com/view?id=Concrete034 | Area_Parking, Area_Hardground, Edge_Concrete |
 | Concrete046 | https://ambientcg.com/view?id=Concrete046 | Roof_Dak_A, Roof_Dak_B, Edge_Gutter |
 | RoofingTiles006 | https://ambientcg.com/view?id=RoofingTiles006 | Roof_Genteng_Merah, Roof_Genteng_Coklat |
+| Plaster001 | https://ambientcg.com/view?id=Plaster001 | Frontage_WallAtlas (band plester 0–5, di-tint) |
+| Bricks059 | https://ambientcg.com/view?id=Bricks059 | Frontage_WallAtlas (band bata 6–7) |
 
 Tekstur di `Facade/` dibuat oleh `FacadeTextureGenerator` (placeholder milik proyek). Ganti dengan
 foto sendiri lewat material `M_Res_*` / `M_Campus_*` kapan saja.
 
 Tekstur di `Street/` dibuat oleh `StreetTextureGenerator` (prosedural, milik proyek): `KerbStripes.png`
-(belang kerb hitam-putih per 0,5 m).
+(belang kerb), `FenceBars.png` (jeruji besi alpha-clip), dan `WallAtlas.png` (8 band tembok, turunan
+Plaster001/Bricks059 yang di-tint, plus noda dan lumut).

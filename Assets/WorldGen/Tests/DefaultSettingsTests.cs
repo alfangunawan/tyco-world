@@ -293,5 +293,14 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual("Edge_Sidewalk", NameOf(e.sidewalk));
             Assert.AreEqual("Road_Marking", NameOf(e.marking));
         }
+
+        [Test]
+        public void SavedAsset_HasFrontageMaterials()
+        {
+            var f = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset).frontage;
+            Assert.AreEqual("Frontage_WallAtlas", NameOf(f.wallAtlas));
+            Assert.AreEqual("Frontage_Fence", NameOf(f.fence));
+            Assert.AreEqual("Frontage_GateMetal", NameOf(f.gateMetal));
+        }
     }
 }
