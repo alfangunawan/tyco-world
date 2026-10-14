@@ -53,7 +53,7 @@ namespace TycoWorld.Gameplay.Tests
             else stall = d.Stalls[Mathf.Clamp(index, 0, d.Stalls.Count - 1)];
             var site = stall.Site;
             var forward = Quaternion.Euler(0f, site.yaw, 0f) * Vector3.forward;
-            var feet = site.counter + forward * (site.slabLength + 1.6f);
+            var feet = site.counter + forward * (site.slabLength + 0.6f);
             feet.y = GroundY(feet);
             d.Player.Teleport(feet, site.yaw + 180f);
             McpPlayerDriver.Install();

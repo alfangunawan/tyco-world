@@ -95,7 +95,9 @@ namespace TycoWorld.Gameplay
             }
             // The keeper.
             stall.keeper = PersonFigure.Build(t, "Keeper", PersonLook.From(SeededRandom.Hash(site.id + ":keeper")), palette);
-            stall.keeper.Root.localPosition = new Vector3(0f, 0f, -0.55f);
+            // Beside the counter, turned toward the customer: flush fronts leave no room behind it.
+            stall.keeper.Root.localPosition = new Vector3(1.2f, 0f, 0.15f);
+            stall.keeper.Root.localRotation = Quaternion.Euler(0f, -25f, 0f);
             if (site.type == ShopType.Minimarket)
             {
                 var lampGo = new GameObject("Lamp");

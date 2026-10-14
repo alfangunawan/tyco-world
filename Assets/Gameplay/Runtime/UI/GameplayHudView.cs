@@ -27,10 +27,12 @@ namespace TycoWorld.Gameplay
             GameplayStyle.FullScreen(root);
             parent.Add(root);
 
+            // Top right under the clock (the FPS counter owns the top left).
             var corner = new VisualElement { pickingMode = PickingMode.Ignore };
             corner.style.position = Position.Absolute;
-            corner.style.left = 24f;
-            corner.style.top = 20f;
+            corner.style.right = 24f;
+            corner.style.top = 48f;
+            corner.style.alignItems = Align.FlexEnd;
             root.Add(corner);
             money = GameplayStyle.HudText(RupiahFormat.Format(0), 26f, true, MoneyName);
             money.style.color = new Color(0.7f, 0.95f, 0.6f, 1f);
