@@ -83,3 +83,34 @@ Menu "Tyco World/Gameplay/Bake Kampung Data" menjalankan Classify → RoadNetwor
 
 - Ada pejalan kaki (siang ramai, malam sepi dengan sosok), toko kelontong, makan, distro, dan toko lain yang bisa dibeli, enam side mission yang bisa diselesaikan, motor dan mobil warga yang bisa dicuri dengan konsekuensi, HP dengan peta, dan simpan/muat.
 - Semua tes lulus, dunia tetap deterministik, dan perf batch naik ≤ +10% di titik kos/road/high.
+
+## 9. Hasil implementasi: keputusan yang diambil saat membangun
+
+Dicatat supaya spec tetap jujur terhadap kode. Semua angka ada sebagai konstanta di kode yang disebut.
+
+- **Pejalan kaki (`PedestrianSystem`, `PedestrianSchedule`):**
+  - Pool 30 orang. Target 26 (06.30–18.00), 14 (18.00–21.00), 6 (05.00–06.30), dan 3 di jam lain, ditambah satu sosok pukul 22.00–04.00.
+  - Muncul 24–70 m dari pemain dan tidak di dalam pandangan dalam 45 m. Hilang lewat 88 m.
+  - Kalau jam dilompati (tidur, pingsan), kelebihan orang langsung pulang; di luar itu hanya yang tidak terlihat.
+  - Pengejar berlari 5,3 m/s, sedikit di bawah lari pemain (5,5 m/s), jadi pemain bisa lolos selama stamina masih ada. Pengejar menyerah kalau tertinggal lebih dari 45 m.
+  - Sosok hanya muncul di jalur 28–48 m di depan pemain yang terlihat langsung (raycast), dan hilang begitu pemain mendekat dalam 9 m.
+- **Kendaraan (`VehicleSystem`):**
+  - Motor muncul dalam 110 m (maks 14), mobil dalam 130 m (maks 5), di-pool.
+  - Motor warga adalah salinan prefab Motorbike dengan cat per titik parkir. Mobil berbentuk angkot dari primitif, memakai controller `Motorbike` dengan tuning mobil, ditambah hull kotak supaya hidung dan ekornya padat.
+  - Bobol kunci tidak mengunci kaki. Bergerak lebih dari 0,6 m membatalkannya, supaya maling yang ketahuan masih bisa kabur.
+  - Alarm mobil menggandakan jarak saksi (36 m). Hoodie mengalikan jarak saksi 0,7.
+  - Mencuri motor menambah 1 bintang, mobil 2 bintang. Satu bintang turun tiap 25 s tidak terlihat.
+- **Misi (`MissionSystem`):**
+  - Ronda Malam juga ditawarkan Pak RT, yang berdiri di pos ronda terdekat dari kos pukul 20.00–02.00. Ini NPC pemberi misi yang disebut di §2.
+  - Pilar beacon dimulai 3,2 m di atas tanah, supaya orang yang berdiri di titik tujuan tidak tertutup.
+  - Pekerjaan gagal kalau layar memudar (tidur, pingsan, tertangkap), waktu habis, atau dibatalkan dari HP.
+- **Anggaran perf:**
+  - Bola, kapsul, dan silinder primitif digambar dengan `LowPolyMeshes` (12 segmen; 120/144/48 segitiga).
+  - Pejalan kaki lebih dari 40 m hanya di-step tiap 4 frame tanpa ayunan anggota badan. Lengan dan rambut tidak membuat bayangan.
+  - Kendaraan parkir mematikan komponen `Motorbike` sampai dinaiki.
+  - Hasil: batch naik ≤ +3,0% dan FPS 92–98% (catatan verifikasi).
+- **Toko:** penjaga berdiri di samping meja, menghadap pembeli, karena fasad ruko yang rata tidak menyisakan ruang di belakang meja.
+- **Belum dibuat (sengaja ditunda):**
+  - `driveLanes` dan lalu lintas kendaraan warga (opsional di §3).
+  - Toko dari bangunan OSM bertag `shop`/`amenity`; semua toko diambil dari interval Flush.
+  - Helm, serta baju yang terlihat pada pengendara di kamera orang ketiga.
