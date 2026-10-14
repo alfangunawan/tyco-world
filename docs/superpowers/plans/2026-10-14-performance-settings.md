@@ -159,9 +159,10 @@ internal class CommandScript : IRunCommand
 }
 ```
 
-Keluar Play: snippet yang sama dengan isi `Execute` diganti menjadi `EditorApplication.isPlaying = false; result.Log("exit");`.
+Keluar Play: snippet yang sama dengan isi `Execute` diganti menjadi `UnityEngine.Application.runInBackground = false; EditorApplication.isPlaying = false; result.Log("exit");`.
 - Editor bisa masuk Play dalam keadaan Pause. Snippet di atas melepasnya.
-- `McpPerfProbe.Place` menyalakan `Application.runInBackground`.
+- `McpPerfProbe.Place` menyalakan `Application.runInBackground`; `McpPerfProbe.Release` dan snippet keluar mematikannya lagi. Di editor nilai ini sama dengan PlayerSettings "Run In Background" (nilai yang di-commit: mati), jadi tidak boleh tertinggal nyala.
+- Snippet hanya punya `using UnityEditor;`, jadi `Application` ditulis lengkap `UnityEngine.Application`.
 
 ### Procedure C — commit
 

@@ -28,7 +28,7 @@ namespace TycoWorld.GameSettings.Tests
             Assert.AreEqual(scale, s.renderScale);
             Assert.AreEqual(shadows, s.shadows);
             Assert.AreEqual(ssao, s.ssao);
-            Assert.IsTrue(s.gpuOcclusion);
+            Assert.IsFalse(s.gpuOcclusion);
             Assert.AreEqual(lamps, s.lampLights);
             Assert.AreEqual(smallMesh, s.smallMeshCulling, 1e-4f);
             Assert.AreEqual(msaa, s.msaa);

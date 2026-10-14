@@ -12,6 +12,9 @@ namespace TycoWorld.GameSettings.Tests
     /// Dev helper for MCP performance measurements in Play mode (not a test). Keeps no static state: the sampler and the
     /// player lock live on the "PerfProbe" GameObject. Viewpoints: "kos" (yard, facing the lane), "road" (Jalan
     /// Sukabirus, looking north-east along it) and "high" (30 m above the road, facing the campus).
+    /// Place turns Application.runInBackground on so sampling continues while the editor is unfocused; Release turns it
+    /// off again, because in the editor it mirrors PlayerSettings "Run In Background" (would be saved into
+    /// ProjectSettings.asset), and the project's committed value is off (runInBackground: 0).
     /// </summary>
     public static class McpPerfProbe
     {
@@ -95,6 +98,7 @@ namespace TycoWorld.GameSettings.Tests
 
         public static string Release()
         {
+            Application.runInBackground = false;
             var go = GameObject.Find(ProbeName);
             if (go == null) return "NO PROBE";
             var player = Object.FindAnyObjectByType<FirstPersonPlayer>();

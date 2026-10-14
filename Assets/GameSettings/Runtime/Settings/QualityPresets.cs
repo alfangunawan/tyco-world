@@ -10,13 +10,13 @@ namespace TycoWorld.GameSettings
             switch (preset)
             {
                 case QualityPreset.Low:
-                    Set(s, 200, 70, ShadowQuality.Low, false, true, 8, 2f, 1);
+                    Set(s, 200, 70, ShadowQuality.Low, false, false, 8, 2f, 1);
                     break;
                 case QualityPreset.Medium:
-                    Set(s, 300, 85, ShadowQuality.Medium, false, true, 16, 1f, 1);
+                    Set(s, 300, 85, ShadowQuality.Medium, false, false, 16, 1f, 1);
                     break;
                 case QualityPreset.High:
-                    Set(s, 500, 100, ShadowQuality.High, true, true, 32, 0f, 2);
+                    Set(s, 500, 100, ShadowQuality.High, true, false, 32, 0f, 2);
                     break;
             }
             s.preset = preset;

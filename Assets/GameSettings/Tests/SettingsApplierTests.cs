@@ -18,6 +18,7 @@ namespace TycoWorld.GameSettings.Tests
         MemorySettingsBackend backend;
         RenderPipelineAsset pipelineBefore;
         int frameRateBefore, vSyncBefore;
+        float volumeBefore;
 
         [SetUp]
         public void SetUp()
@@ -25,6 +26,7 @@ namespace TycoWorld.GameSettings.Tests
             pipelineBefore = QualitySettings.renderPipeline;
             frameRateBefore = Application.targetFrameRate;
             vSyncBefore = QualitySettings.vSyncCount;
+            volumeBefore = AudioListener.volume;
             fx = new GameFixture();
             player = fx.CreatePlayer();
             director = fx.CreateDirector(player);
@@ -47,6 +49,7 @@ namespace TycoWorld.GameSettings.Tests
             if (QualitySettings.renderPipeline != pipelineBefore) QualitySettings.renderPipeline = pipelineBefore;
             if (QualitySettings.vSyncCount != vSyncBefore) QualitySettings.vSyncCount = vSyncBefore;
             Application.targetFrameRate = frameRateBefore;
+            AudioListener.volume = volumeBefore;
         }
 
         Camera Cam => player.View.GetComponent<Camera>();
@@ -153,6 +156,17 @@ namespace TycoWorld.GameSettings.Tests
             applier.Shutdown();
             Assert.AreSame(pipelineBefore, QualitySettings.renderPipeline);
             Assert.IsFalse(applier.IsInitialized);
+        }
+
+        [Test]
+        public void Shutdown_RestoresTheMasterVolume()
+        {
+            AudioListener.volume = 0.7f;
+            applier.Initialize();
+            applier.Apply(new SettingsData { masterVolume = 40 });
+            Assert.AreEqual(0.4f, AudioListener.volume, 1e-5f);
+            applier.Shutdown();
+            Assert.AreEqual(0.7f, AudioListener.volume, 1e-5f);
         }
 
         [Test]

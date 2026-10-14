@@ -10,7 +10,7 @@ namespace TycoWorld.GameSettings
     /// <summary>
     /// Owns the current settings (spec #4 §3): loads them before the first frame, applies them to the camera, player,
     /// culler, day cycle, quality, audio and screen whenever they change, saves on request, and gives the quality
-    /// globals back on shutdown.
+    /// globals and AudioListener.volume back on shutdown.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class SettingsApplier : MonoBehaviour
@@ -22,6 +22,7 @@ namespace TycoWorld.GameSettings
         SettingsStore store;
         QualityApplier quality;
         float retryTime;
+        float originalVolume;
         bool targetsReady;
         bool screenApplied, lastFullscreen;
         int lastWidth, lastHeight;
@@ -63,6 +64,7 @@ namespace TycoWorld.GameSettings
         public void Initialize()
         {
             if (IsInitialized) return;
+            originalVolume = AudioListener.volume;
             store = new SettingsStore(Backend != null ? Backend : new PlayerPrefsBackend());
             Current = store.Load();
             quality = new QualityApplier();
@@ -92,6 +94,7 @@ namespace TycoWorld.GameSettings
             SceneManager.sceneLoaded -= OnSceneLoaded;
             if (quality != null) quality.Dispose();
             quality = null;
+            AudioListener.volume = originalVolume;
         }
 
         public void ApplyAll()

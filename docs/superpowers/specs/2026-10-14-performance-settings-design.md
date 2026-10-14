@@ -146,7 +146,7 @@ Tombol di bawah halaman: **Kembalikan default** dan **Kembali**.
 | Render scale | 70 % + STP | 85 % + STP | 100 %, MSAA 2× |
 | Bayangan | Rendah: 30 m, 1 cascade, 1024, keras | Sedang: 50 m, 2 cascade, 2048, halus | Tinggi: 80 m, 4 cascade, 2048, halus |
 | SSAO | mati | mati | nyala |
-| GPU occlusion | nyala | nyala | nyala |
+| GPU occlusion | mati | mati | mati |
 | Lampu menyala | 8 | 16 | 32 |
 | Small-mesh culling | 2 % layar | 1 % | 0 |
 
@@ -342,3 +342,7 @@ Langkahnya:
   - penanda kos, motor, dan gedung kunci;
   - jam selalu tampil, nama jalan/lokasi;
   - toggle minimap di tab Tampilan.
+
+## 11. Catatan implementasi
+
+- **GPU occlusion default mati di semua preset** (aturan §4). Hasil ukur di preset Sedang: atas 30 m mati 268.8 fps vs nyala 231.1 fps (mati 16 % lebih cepat); di jalan (setinggi mata) netral (mati 235.5 vs nyala 237.8 fps). Opsi ini tetap bisa dinyalakan di tab Grafis.

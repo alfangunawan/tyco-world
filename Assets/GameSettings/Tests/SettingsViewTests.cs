@@ -62,7 +62,7 @@ namespace TycoWorld.GameSettings.Tests
             Assert.AreEqual("1,0×", ValueText(SettingsView.SensitivityName));
             Assert.AreEqual("70°", ValueText(SettingsView.FovName));
             Assert.AreEqual("100 %", ValueText(SettingsView.MasterName));
-            Assert.IsTrue(Q<Toggle>(SettingsView.GpuOcclusionName).value);
+            Assert.IsFalse(Q<Toggle>(SettingsView.GpuOcclusionName).value);
             Assert.IsFalse(Q<Toggle>(SettingsView.ShowFpsName).value);
         }
 

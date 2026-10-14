@@ -82,13 +82,25 @@ namespace TycoWorld.GameSettings.Tests
             Assert.AreEqual(2048, copy.mainLightShadowmapResolution);
             Assert.AreEqual(1f, copy.renderScale);
             Assert.AreEqual(2, copy.msaaSampleCount);
-            Assert.IsTrue(copy.gpuResidentDrawerEnableOcclusionCullingInCameras);
+            Assert.IsFalse(copy.gpuResidentDrawerEnableOcclusionCullingInCameras);
             Assert.AreEqual(0f, copy.smallMeshScreenPercentage);
             Assert.AreEqual(shadowBefore, original.shadowDistance);
             Assert.AreEqual(scaleBefore, original.renderScale);
             Assert.AreEqual(msaaBefore, original.msaaSampleCount);
             Assert.AreEqual(occlusionBefore, original.gpuResidentDrawerEnableOcclusionCullingInCameras);
             Assert.IsFalse(EditorUtility.IsDirty(original), "PC_RPAsset tidak boleh berubah");
+        }
+
+        [Test]
+        public void Apply_GpuOcclusionToggle_ReachesTheCopy()
+        {
+            var s = Preset(QualityPreset.Medium);
+            s.gpuOcclusion = true;
+            applier.Apply(s, null, null);
+            Assert.IsTrue(applier.RuntimeAsset.gpuResidentDrawerEnableOcclusionCullingInCameras);
+            s.gpuOcclusion = false;
+            applier.Apply(s, null, null);
+            Assert.IsFalse(applier.RuntimeAsset.gpuResidentDrawerEnableOcclusionCullingInCameras);
         }
 
         [Test]

@@ -20,7 +20,7 @@ namespace TycoWorld.GameSettings
         public int renderScale = 85;
         public ShadowQuality shadows = ShadowQuality.Medium;
         public bool ssao;
-        public bool gpuOcclusion = true;
+        public bool gpuOcclusion;
         public int lampLights = 16;
         /// <summary>GPU Resident Drawer small-mesh culling in % of the screen; set by presets only.</summary>
         public float smallMeshCulling = 1f;
