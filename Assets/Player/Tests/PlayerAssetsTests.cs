@@ -34,6 +34,7 @@ namespace TycoWorld.Player.Tests
             var cam = rig.GetComponentInChildren<Camera>(true);
             Assert.IsTrue(cam.CompareTag("MainCamera"));
             Assert.AreEqual(70f, cam.fieldOfView, 1e-3f);
+            Assert.AreEqual(CameraClearFlags.Skybox, cam.clearFlags);
             Assert.AreEqual(1.6f, cam.transform.parent.localPosition.y, 1e-4f);
             var cc = rig.GetComponent<CharacterController>();
             Assert.AreEqual(1.8f, cc.height, 1e-4f);

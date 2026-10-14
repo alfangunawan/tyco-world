@@ -27,6 +27,20 @@ namespace TycoWorld.Player.Tests
         }
 
         [Test]
+        public void Clock_HiddenByDefault_AndSettable()
+        {
+            var m = Make();
+            Assert.AreEqual("", m.Clock);
+            Assert.IsFalse(m.ClockVisible);
+            m.SetClock("19:30", true);
+            Assert.AreEqual("19:30", m.Clock);
+            Assert.IsTrue(m.ClockVisible);
+            m.SetClock(null, false);
+            Assert.AreEqual("", m.Clock);
+            Assert.IsFalse(m.ClockVisible);
+        }
+
+        [Test]
         public void Message_ExpiresAfterSeconds()
         {
             var m = Make();

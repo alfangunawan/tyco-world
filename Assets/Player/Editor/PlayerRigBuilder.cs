@@ -30,7 +30,7 @@ namespace TycoWorld.Player.Authoring
             cam.fieldOfView = tuning.look.fieldOfView;
             cam.nearClipPlane = 0.05f;
             cam.farClipPlane = 400f;
-            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.clearFlags = CameraClearFlags.Skybox;
             cam.backgroundColor = new Color32(0x0E, 0x12, 0x18, 0xFF);
             cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
             camGo.AddComponent<AudioListener>();

@@ -3,7 +3,7 @@ using UnityEngine.UIElements;
 
 namespace TycoWorld.Player
 {
-    /// <summary>Code-built UI Toolkit HUD: crosshair dot, interaction prompt, message line, stamina bar.</summary>
+    /// <summary>Code-built UI Toolkit HUD: crosshair dot, interaction prompt, message line, stamina bar, debug clock.</summary>
     public sealed class HudView
     {
         public const string CrosshairName = "crosshair";
@@ -11,9 +11,10 @@ namespace TycoWorld.Player
         public const string MessageName = "message";
         public const string StaminaName = "stamina";
         public const string StaminaFillName = "stamina-fill";
+        public const string ClockName = "clock";
 
         readonly VisualElement crosshair, staminaBar, staminaFill;
-        readonly Label prompt, message;
+        readonly Label prompt, message, clock;
 
         public HudView(VisualElement root)
         {
@@ -55,10 +56,20 @@ namespace TycoWorld.Player
             staminaFill.style.backgroundColor = new Color(0.86f, 0.86f, 0.78f, 0.8f);
             staminaBar.Add(staminaFill);
 
+            clock = new Label { name = ClockName, pickingMode = PickingMode.Ignore };
+            Absolute(clock);
+            clock.style.top = 16f;
+            clock.style.right = 24f;
+            clock.style.unityTextAlign = TextAnchor.MiddleRight;
+            clock.style.fontSize = 22f;
+            clock.style.color = new Color(0.92f, 0.92f, 0.88f, 0.9f);
+            clock.style.display = DisplayStyle.None;
+
             root.Add(crosshair);
             root.Add(prompt);
             root.Add(message);
             root.Add(staminaBar);
+            root.Add(clock);
         }
 
         public void Render(HudModel model)
@@ -70,6 +81,8 @@ namespace TycoWorld.Player
             message.style.display = model.Message.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
             staminaBar.style.display = model.StaminaVisible ? DisplayStyle.Flex : DisplayStyle.None;
             staminaFill.style.width = Length.Percent(model.StaminaFill * 100f);
+            clock.text = model.Clock;
+            clock.style.display = model.ClockVisible && model.Clock.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         static void Absolute(VisualElement e) => e.style.position = Position.Absolute;
