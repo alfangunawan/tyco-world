@@ -35,18 +35,26 @@ Perf (spec induk §15): pembacaan satu frame `UnityStats.drawCalls` ternyata nai
 
 Jumlah titik **tidak berubah**: titik yang diciutkan menjadi segmen nol-panjang. Ini menjaga syarat `RoadEdgeBuilder` bahwa semua offset satu polyline punya jumlah titik sama. Pemakai sudah melewati segmen < 1 mm. `along` tetap monoton.
 
-### 2.3 Gerbang menjauhi tikungan (G3, G4)
+### 2.3 Gerbang menjauhi tikungan, satu garis tembok per sisi (G3, G4)
 
 - `FrontagePlanner.AddOpening` memilih pusat gerbang S di [lo, hi], sedekat mungkin ke proyeksi centroid bangunan, dengan syarat total belokan centreline di [S − w/2 − 0.3, S + w/2 + 0.3] ≤ `gateMaxTurnDegrees` (5°). Kandidat dicari tiap 0.1 m ke dua arah. Kalau tidak ada kandidat yang lolos, dipakai S lama (clamp).
-- `FrontageMeshBuilder` membuang bukaan yang tali busur rentang offset-nya < 0.6 × lebar bukaan (gerbang terlipat). Tembok di situ menyambung tanpa celah, dan Gates/Doors tidak dihitung.
-- Slab selokan kembali memakai tangen chain di o.S (arah keluar = normal kiri × sisi), tidak lagi tali busur.
+- **Garis tembok tunggal.** `FrontageMeshBuilder` meng-offset centreline **sekali per (chain, sisi, offset)** dengan collapse §2.2, lalu mengukurnya dengan panjang busurnya sendiri u. s centreline dipetakan ke u lewat interpolasi `along`. Batas run, potongan tembok, dan bukaan semuanya dipotong dari garis ini. Hasilnya:
+  - lot yang bertemu tepat setelah sudut dalam berbagi satu titik ujung, tidak saling tumpuk;
+  - bukaan selalu selebar w di garis tembok, juga melintasi tikungan (sebelumnya terlipat ke ±0 di sisi dalam);
+  - slab selokan tegak lurus garis tembok di tengah bukaan.
+- **Tanpa potongan pendek.** Awal bukaan memilih yang paling dekat ke posisi yang diinginkan di antara: rata dengan ujung lot (berbagi pilaster), atau berjarak ≥ `pilasterMinGap` (1 m) dari ujung lot. Sebelumnya margin 0.3 m menyisakan potongan tembok 0.3 m dengan dua pilaster nyaris bersentuhan. `gateEndMargin` kini hanya dipakai planner.
 - Pilaster ujung yang jaraknya < `pilasterSize + 0.05` dari pilaster yang sudah ada tidak dipasang lagi (sebelumnya 0.05 m).
 
-### 2.4 Penutup lompatan profil (G5)
+### 2.4 Pulau bundaran dan jahitan aspal loop (ditemukan saat verifikasi)
+
+- Sisi dalam chain loop yang inradius-nya (2 × luas / panjang) menyisakan < 2 m di luar pita tepinya adalah pulau lalu lintas. Profilnya None: tidak ada tepi jalan, tidak ada tembok. Planner memperlakukan profil None sebagai Blocked. Contoh: loop 686884808 (r ≈ 5 m) sebelumnya mendapat cincin tembok penuh pilaster.
+- `RoadMeshBuilder.AddRibbon` menyambung segmen terakhir dan pertama way loop (titik awal = titik akhir, tanpa ujung bebas) dengan miter. Sebelumnya aspal menyisakan takik rumput berbentuk V di titik awal way.
+
+### 2.5 Penutup lompatan profil (G5)
 
 Dua run pada chain dan sisi yang sama, dengan S1 run pertama = S0 run kedua (≤ 1 mm) dan offset garis berbeda > 5 cm, mendapat **sambungan**: satu kotak tembok lurus dari ujung run pertama ke awal run kedua (gaya, tinggi, dan band run pertama), plus coping, collider, dan blocker.
 
-### 2.5 Perf
+### 2.6 Perf
 
 - **Culling jarak "Detail":** `CullCategory.Detail` baru. `Frontage` dan `RoadEdges` masuk Detail. Jaraknya `ViewDistanceRules.DetailDistance(view) = max(80, view × 0.4)`, jadi High 200 m, Medium 120 m, Low 80 m. Tembok 2 m di 200 m sudah tertutup fog sekitar 60% dan bangunan. Infill tetap Structure, karena rumah tidak boleh hilang.
 - **Pengukuran baru:** batch = rata-rata `UnityStats.drawCalls` selama 90 frame (setelah 60 frame jeda). Pembanding "before" = dunia yang sama dengan Frontage, RoadEdges, dan Infill dimatikan. Angkanya cocok dengan before asli (selisih ±3%).

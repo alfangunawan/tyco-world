@@ -23,7 +23,7 @@ namespace TycoWorld.GameSettings
         /// <summary>Trees and lamp posts disappear (and lamp lights are budgeted) within this distance.</summary>
         public static float PropDistance(float viewDistance) => Mathf.Max(PropMinimum, viewDistance * PropRatio);
 
-        /// <summary>Property-line walls and road edges disappear within this distance (spec frontage-polish §2.5).</summary>
+        /// <summary>Property-line walls and road edges disappear within this distance (spec frontage-polish §2.6).</summary>
         public static float DetailDistance(float viewDistance) => Mathf.Max(DetailMinimum, viewDistance * DetailRatio);
     }
 }

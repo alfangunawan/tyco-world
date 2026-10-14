@@ -103,7 +103,7 @@ namespace TycoWorld.WorldGen.Authoring
 
         /// <summary>
         /// Where one side of a chain changes edge profile, the property line jumps (sidewalk 1.9 m vs gutter 1.2 m past the
-        /// asphalt). Two walls that meet there get a short return wall across the jump (spec frontage-polish §2.4).
+        /// asphalt). Two walls that meet there get a short return wall across the jump (spec frontage-polish §2.5).
         /// </summary>
         static void AddProfileReturns(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r,
             Dictionary<(RoadChain chain, int side, int centreMm), WallLine> lines)
