@@ -208,12 +208,15 @@ namespace TycoWorld.DayCycle
                 float sqr = (e.Lamp.transform.position - viewer).sqrMagnitude;
                 if (sqr <= maxSqr) candidates.Add(new Candidate { SqrDistance = sqr, Index = i });
             }
-            candidates.Sort(ByDistance);
+            candidates.Sort(ByDistanceComparison);
             int count = Mathf.Min(lightBudget, candidates.Count);
             for (int k = 0; k < count; k++) entries[candidates[k].Index].Selected = true;
         }
 
         static int ByDistance(Candidate a, Candidate b) => a.SqrDistance.CompareTo(b.SqrDistance);
+
+        /// <summary>Cached so the periodic re-selection does not allocate a delegate (immutable, safe without domain reload).</summary>
+        static readonly Comparison<Candidate> ByDistanceComparison = ByDistance;
 
         void EnsureCopies(Material source)
         {

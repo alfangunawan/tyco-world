@@ -15,12 +15,15 @@ namespace TycoWorld.GameSettings
     {
         public const string NoSsaoRendererName = "PC_Renderer_NoSSAO";
         public const string MissingPipelineWarning = "[Settings] URP asset aktif tidak ditemukan; pengaturan grafis dilewati.";
+        public const string MissingNoSsaoRendererWarning =
+            "[Settings] PC_Renderer_NoSSAO tidak terdaftar di URP asset; SSAO tidak bisa dimatikan. Jalankan \"Tyco World/Game Settings Setup\".";
 
         readonly RenderPipelineAsset originalPipeline;
         readonly int originalVSync;
         readonly int originalFrameRate;
         UniversalRenderPipelineAsset copy;
         bool disposed;
+        bool warnedMissingRenderer;
 
         public QualityApplier()
         {
@@ -72,6 +75,11 @@ namespace TycoWorld.GameSettings
             if (camera != null)
             {
                 int index = s.ssao ? -1 : FindRenderer(NoSsaoRendererName);
+                if (!s.ssao && index < 0 && !warnedMissingRenderer)
+                {
+                    warnedMissingRenderer = true;
+                    Debug.LogWarning(MissingNoSsaoRendererWarning);
+                }
                 camera.GetUniversalAdditionalCameraData().SetRenderer(index);
                 LastRendererIndex = index;
             }

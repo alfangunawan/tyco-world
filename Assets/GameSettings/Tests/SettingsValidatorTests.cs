@@ -44,6 +44,15 @@ namespace TycoWorld.GameSettings.Tests
             Assert.AreEqual(100, s.ambienceVolume);
         }
 
+        [TestCase(int.MinValue + 8, 8)]
+        [TestCase(int.MaxValue, 32)]
+        public void LampLights_ExtremeValues_SnapWithoutOverflow(int input, int expected)
+        {
+            var s = new SettingsData { lampLights = input };
+            Assert.DoesNotThrow(() => SettingsValidator.Sanitize(s));
+            Assert.AreEqual(expected, s.lampLights);
+        }
+
         [Test]
         public void NaNSensitivity_FallsBackToDefault()
         {

@@ -23,6 +23,7 @@ namespace TycoWorld.GameSettings
         PauseMenuView pauseView;
         SettingsView settingsView;
         FpsCounterView fpsView;
+        bool fpsShown;
 
         /// <summary>Pause side effects; null (default) = the real Time.timeScale and AudioListener. Tests set a fake.</summary>
         public IPauseEffects PauseEffects { get; set; }
@@ -110,18 +111,25 @@ namespace TycoWorld.GameSettings
 
         public void Tick(float unscaledDeltaTime)
         {
-            fpsStats.Sample(unscaledDeltaTime);
-            if (fpsView != null) fpsView.Render(applier != null && applier.Current.showFps, fpsStats.HasResult ? fpsStats.AverageFps : 0f);
+            bool sampled = fpsStats.Sample(unscaledDeltaTime);
+            if (fpsView == null) return;
+            bool visible = applier != null && applier.Current.showFps;
+            // Redraw only on a new sample or a visibility change: the label text is a new string each time.
+            if (!sampled && visible == fpsShown) return;
+            fpsShown = visible;
+            fpsView.Render(visible, fpsStats.HasResult ? fpsStats.AverageFps : 0f);
         }
 
-        /// <summary>Unpauses when the menu goes away (Play stopped, scene unloaded).</summary>
+        /// <summary>Unpauses when the menu goes away (Play stopped, scene unloaded); live edits on the settings page are saved.</summary>
         public void Shutdown()
         {
+            if (navigator.Page == MenuPage.Settings && applier != null) applier.Save();
             if (pause != null) pause.Shutdown();
         }
 
         void OnPageChanged(MenuPage from, MenuPage to)
         {
+            BlurFocusedControl();
             if (from == MenuPage.Closed) pause.Pause();
             if (to == MenuPage.Closed) pause.Resume();
             if (from == MenuPage.Settings && applier != null) applier.Save();
@@ -131,6 +139,14 @@ namespace TycoWorld.GameSettings
                 settingsView.Refresh();
             }
             if (pauseView != null) pauseView.Show(to);
+        }
+
+        /// <summary>A hidden slider or button must not keep keyboard focus after its page closes.</summary>
+        void BlurFocusedControl()
+        {
+            var panel = pauseView != null ? pauseView.Overlay.panel : null;
+            if (panel != null && panel.focusController != null && panel.focusController.focusedElement != null)
+                panel.focusController.focusedElement.Blur();
         }
 
         void OnSettingsEdited(SettingsData settings)

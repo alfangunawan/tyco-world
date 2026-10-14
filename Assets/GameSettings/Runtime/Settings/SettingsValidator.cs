@@ -59,8 +59,9 @@ namespace TycoWorld.GameSettings
         static int Nearest(int value, int[] choices)
         {
             int best = choices[0];
+            // long: the difference of two ints can overflow (e.g. 8 - (int.MinValue + 8)).
             foreach (int choice in choices)
-                if (Math.Abs(choice - value) < Math.Abs(best - value)) best = choice;
+                if (Math.Abs((long)choice - value) < Math.Abs((long)best - value)) best = choice;
             return best;
         }
 

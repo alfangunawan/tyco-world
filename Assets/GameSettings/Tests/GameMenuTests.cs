@@ -140,6 +140,43 @@ namespace TycoWorld.GameSettings.Tests
         }
 
         [Test]
+        public void FpsCounter_HidesOnTheNextTick_WithoutANewSample()
+        {
+            applier.Apply(new SettingsData { showFps = true });
+            for (int i = 0; i < 4; i++) menu.Tick(0.125f);
+            var label = root.Q<Label>(FpsCounterView.LabelName);
+            Assert.AreEqual(DisplayStyle.Flex, Display(label));
+            applier.Apply(new SettingsData { showFps = false });
+            menu.Tick(0.01f);
+            Assert.AreEqual(DisplayStyle.None, Display(label));
+        }
+
+        [Test]
+        public void FpsCounter_RedrawsOnlyOnANewSample()
+        {
+            applier.Apply(new SettingsData { showFps = true });
+            for (int i = 0; i < 4; i++) menu.Tick(0.125f);
+            var label = root.Q<Label>(FpsCounterView.LabelName);
+            label.text = "stale";
+            menu.Tick(0.01f);
+            Assert.AreEqual("stale", label.text, "tanpa sampel baru, label tidak digambar ulang");
+            menu.Tick(0.5f);
+            Assert.AreNotEqual("stale", label.text);
+        }
+
+        [Test]
+        public void Shutdown_OnTheSettingsPage_SavesTheLiveEdits()
+        {
+            menu.Escape();
+            menu.OpenSettings();
+            menu.Presenter.Edit(s => s.fieldOfView = 90);
+            Assert.AreEqual(0, backend.Writes);
+            menu.Shutdown();
+            Assert.AreEqual(1, backend.Writes);
+            StringAssert.Contains("\"fieldOfView\":90", backend.Json);
+        }
+
+        [Test]
         public void Shutdown_WhilePaused_Resumes()
         {
             menu.Escape();
