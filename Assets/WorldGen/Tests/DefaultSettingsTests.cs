@@ -128,6 +128,131 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void RoadEdges_MatchStreetFrontageSpec()
+        {
+            var e = s.roadEdges;
+            CollectionAssert.AreEqual(new[] { "primary", "secondary" }, e.sidewalkHighways);
+            CollectionAssert.AreEqual(new[] { "tertiary" }, e.campusSidewalkHighways);
+            CollectionAssert.AreEqual(new[] { "tertiary", "unclassified", "residential", "living_street", "service" }, e.gutterHighways);
+            CollectionAssert.AreEqual(new[] { "driveway", "parking_aisle", "drive-through" }, e.noEdgeServiceValues);
+            Assert.AreEqual(10f, e.campusSidewalkDistance);
+            Assert.AreEqual(8f, e.minProfileRun);
+            Assert.AreEqual(0.5f, e.sampleStep);
+            Assert.AreEqual(0.3f, e.mouthMargin, 1e-6f);
+            Assert.AreEqual(0.055f, e.edgeBaseY, 1e-6f);
+            Assert.AreEqual(0.155f, e.gutterLipY, 1e-6f);
+            Assert.AreEqual(0.21f, e.sidewalkTopY, 1e-6f);
+            Assert.AreEqual(0.05f, e.underlap, 1e-6f);
+            Assert.AreEqual(0.3f, e.shoulderWidth, 1e-6f);
+            Assert.AreEqual(0.5f, e.gutterWidth, 1e-6f);
+            Assert.AreEqual(0.08f, e.gutterLipWidth, 1e-6f);
+            Assert.AreEqual(1.5f, e.sidewalkWidth, 1e-6f);
+            Assert.AreEqual(0.15f, e.kerbWidth, 1e-6f);
+            Assert.AreEqual(0.8f, e.Width(EdgeProfile.Gutter), 1e-6f);
+            Assert.AreEqual(1.5f, e.Width(EdgeProfile.Sidewalk), 1e-6f);
+            Assert.AreEqual(0f, e.Width(EdgeProfile.None));
+            CollectionAssert.AreEqual(new[] { "primary", "secondary" }, e.markingHighways);
+            CollectionAssert.AreEqual(new[] { "tertiary" }, e.wideMarkingHighways);
+            Assert.AreEqual(7f, e.markingMinWidth);
+            Assert.AreEqual(0.12f, e.markingWidth, 1e-6f);
+            Assert.AreEqual(0.003f, e.markingLift, 1e-6f);
+            Assert.AreEqual(3f, e.dashLength);
+            Assert.AreEqual(5f, e.dashGap);
+            Assert.AreEqual(2f, e.dashStart);
+            Assert.AreEqual(3f, e.junctionDashClearance);
+            Assert.AreEqual(0.45f, e.sidewalkLampOffset, 1e-6f);
+            Assert.AreEqual(0.15f, e.gutterLampOffset, 1e-6f);
+        }
+
+        [Test]
+        public void Frontage_MatchesStreetFrontageSpec()
+        {
+            var f = s.frontage;
+            Assert.AreEqual(0.4f, f.propertyLineGap, 1e-6f);
+            Assert.AreEqual(15f, f.corridorDepth);
+            Assert.AreEqual(1f, f.flushDistance);
+            Assert.AreEqual(1.5f, f.minInterval);
+            Assert.AreEqual(0.5f, f.contextProbe);
+            Assert.AreEqual(0.15f, f.wallThickness, 1e-6f);
+            Assert.AreEqual(0.25f, f.pilasterSize, 1e-6f);
+            Assert.AreEqual(3f, f.pilasterSpacing);
+            Assert.AreEqual(0.1f, f.pilasterExtra, 1e-6f);
+            Assert.AreEqual(2f, f.gateWidth);
+            Assert.AreEqual(0.9f, f.doorWidth, 1e-6f);
+            Assert.AreEqual(1.6f, f.gateHeight, 1e-6f);
+            Assert.AreEqual(4.5f, f.gateMinLot);
+            Assert.AreEqual(2.5f, f.doorMinLot);
+            Assert.AreEqual(0.165f, f.slabTopY, 1e-6f);
+            Assert.AreEqual(0.4f, f.slabExtraWidth, 1e-6f);
+            Assert.AreEqual(8f, f.kosExclusionRadius);
+            Assert.AreEqual(409467778L, f.kosBuildingId);
+            Assert.AreEqual(8, f.atlasBands);
+            Assert.AreEqual(5, f.styles.Length);
+            var plaster = f.Style(WallStyle.Plaster);
+            Assert.AreEqual(0.55f, plaster.share, 1e-6f);
+            Assert.AreEqual(1.6f, plaster.minHeight, 1e-6f);
+            Assert.AreEqual(2.0f, plaster.maxHeight, 1e-6f);
+            Assert.AreEqual(0, plaster.firstBand);
+            Assert.AreEqual(6, plaster.bandCount);
+            var low = f.Style(WallStyle.LowFence);
+            Assert.AreEqual(0.8f, low.maxHeight, 1e-6f);
+            Assert.AreEqual(0.9f, low.fenceHeight, 1e-6f);
+            var brick = f.Style(WallStyle.Brick);
+            Assert.AreEqual(1.7f, brick.minHeight, 1e-6f);
+            Assert.AreEqual(6, brick.firstBand);
+            Assert.AreEqual(2, brick.bandCount);
+            Assert.AreEqual(1.2f, f.Style(WallStyle.Campus).fenceHeight, 1e-6f);
+            Assert.AreEqual(0.6f, f.Style(WallStyle.Campus).maxHeight, 1e-6f);
+            Assert.AreEqual(0.7f, f.Style(WallStyle.Cemetery).maxHeight, 1e-6f);
+            Assert.AreEqual(1f, f.styles.Where(x => x.share > 0f).Sum(x => x.share), 1e-5f);
+        }
+
+        [TestCase(0.0, WallStyle.Plaster)]
+        [TestCase(0.549, WallStyle.Plaster)]
+        [TestCase(0.6, WallStyle.LowFence)]
+        [TestCase(0.95, WallStyle.Brick)]
+        [TestCase(0.9999, WallStyle.Brick)]
+        public void PickResidential_FollowsShares(double roll, WallStyle expected)
+        {
+            Assert.AreEqual(expected, s.frontage.PickResidential(roll).style);
+        }
+
+        [Test]
+        public void Infill_MatchesStreetFrontageSpec()
+        {
+            var i = s.infill;
+            Assert.IsTrue(i.enabled);
+            Assert.AreEqual(6f, i.minLotLength);
+            Assert.AreEqual(6f, i.minWidth);
+            Assert.AreEqual(10f, i.maxWidth);
+            Assert.AreEqual(8f, i.minDepth);
+            Assert.AreEqual(12f, i.maxDepth);
+            Assert.AreEqual(0f, i.minGap);
+            Assert.AreEqual(0.6f, i.maxGap, 1e-6f);
+            Assert.AreEqual(0.35f, i.flushShare, 1e-6f);
+            Assert.AreEqual(0.1f, i.flushInset, 1e-6f);
+            Assert.AreEqual(1.5f, i.minSetback);
+            Assert.AreEqual(4f, i.maxSetback);
+            Assert.AreEqual(0.4f, i.twoStoreyShare, 1e-6f);
+            Assert.AreEqual(0.5f, i.clearance, 1e-6f);
+            Assert.AreEqual(2500, i.maxInfill);
+        }
+
+        [Test]
+        public void SavedAsset_HasStreetDressing()
+        {
+            var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset);
+            Assert.IsNotNull(asset);
+            Assert.IsNotNull(asset.roadEdges);
+            Assert.AreEqual(1.5f, asset.roadEdges.sidewalkWidth, 1e-6f);
+            Assert.IsNotNull(asset.frontage);
+            Assert.AreEqual(409467778L, asset.frontage.kosBuildingId);
+            Assert.AreEqual(5, asset.frontage.styles.Length);
+            Assert.IsNotNull(asset.infill);
+            Assert.AreEqual(2500, asset.infill.maxInfill);
+        }
+
+        [Test]
         public void SavedAsset_HasKosRaflesia3()
         {
             var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset);
