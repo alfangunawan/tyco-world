@@ -216,8 +216,41 @@ namespace TycoWorld.WorldGen.Authoring
             if (width <= 0f) return;
             float lo = x.S0 + f.gateEndMargin + width * 0.5f, hi = x.S1 - f.gateEndMargin - width * 0.5f;
             if (lo > hi) return;
-            float centre = Polyline2D.Project(x.Chain.Points, x.Chain.Cum, x.Building.Centroid, out _);
-            run.Openings.Add(new WallOpening { S = Mathf.Clamp(centre, lo, hi), Width = width, IsGate = width >= f.gateWidth });
+            float centre = Mathf.Clamp(Polyline2D.Project(x.Chain.Points, x.Chain.Cum, x.Building.Centroid, out _), lo, hi);
+            run.Openings.Add(new WallOpening { S = Straightest(x.Chain, centre, lo, hi, width * 0.5f + f.pilasterSize + 0.05f, f.gateMaxTurnDegrees), Width = width, IsGate = width >= f.gateWidth });
+        }
+
+        const float GateSlideStep = 0.1f;
+
+        /// <summary>
+        /// The arc length nearest <paramref name="centre"/> within [lo, hi] whose ±reach stretch turns at most maxTurn degrees,
+        /// so the gate and its posts stand on a straight part of the wall line; <paramref name="centre"/> when none does.
+        /// </summary>
+        static float Straightest(RoadChain chain, float centre, float lo, float hi, float reach, float maxTurn)
+        {
+            int steps = Mathf.CeilToInt((hi - lo) / GateSlideStep) + 1;
+            for (int k = 0; k <= steps; k++)
+                for (int sign = 1; sign >= -1; sign -= 2)
+                {
+                    if (k == 0 && sign < 0) continue;
+                    float s = centre + sign * k * GateSlideStep;
+                    if (s < lo - 1e-4f || s > hi + 1e-4f) continue;
+                    if (TurnWithin(chain, s - reach, s + reach) <= maxTurn) return s;
+                }
+            return centre;
+        }
+
+        /// <summary>Sum of the centreline's turn angles at the vertices strictly inside (a, b).</summary>
+        static float TurnWithin(RoadChain chain, float a, float b)
+        {
+            var pts = chain.Points;
+            float total = 0f;
+            for (int i = Mathf.Max(1, Polyline2D.SegmentAt(chain.Cum, a)); i + 1 < pts.Count && chain.Cum[i] < b; i++)
+            {
+                if (chain.Cum[i] <= a) continue;
+                total += Vector2.Angle(pts[i] - pts[i - 1], pts[i + 1] - pts[i]);
+            }
+            return total;
         }
     }
 }

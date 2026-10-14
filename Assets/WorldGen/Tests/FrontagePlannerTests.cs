@@ -49,6 +49,38 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual(EdgeProfile.Gutter, run.Profile);
         }
 
+        /// <summary>A residential chain turning 30° right at s = 20 (legs of 20 m), with one lot on its left (outside) between s0 and s1.</summary>
+        (RoadChain chain, FrontageInterval lot) BentLot(float s0, float s1)
+        {
+            float a = 30f * Mathf.Deg2Rad;
+            var rule = settings.roadRules.Single(r => r.highway == "residential");
+            var road = new RoadFeature { Id = 9, Highway = "residential", Rule = rule, Width = 5f, Y = 0.08f, Tags = TestOsm.Tags(("highway", "residential")) };
+            road.Pieces.Add(new LinePiece(new List<Vector2> { V(0, 0), V(20, 0), V(20f + 20f * Mathf.Cos(a), -20f * Mathf.Sin(a)) }, false, false));
+            var chain = new RoadNetwork(new[] { road }, new Polygon[0], settings.roadEdges).Chains[0];
+            // The house sits on the outside of the bend, on its bisector, so it faces (projects onto) the vertex itself.
+            var bisector = (V(0, 1) + V(Mathf.Sin(a), Mathf.Cos(a))).normalized;
+            var house = new StreetBuilding { Id = 77, Centroid = V(20, 0) + bisector * 9f };
+            return (chain, new FrontageInterval { Chain = chain, Side = 1, Profile = EdgeProfile.Gutter, S0 = s0, S1 = s1, Kind = FrontageKind.Lot, Building = house });
+        }
+
+        [Test]
+        public void GateFacingABend_SlidesToTheStraightPartOfItsLot()
+        {
+            var (_, lot) = BentLot(12f, 30f);
+            var gate = FrontagePlanner.Walls(new[] { lot }, settings.frontage).Single().Openings.Single();
+            float clear = gate.Width * 0.5f + settings.frontage.pilasterSize + 0.05f;
+            Assert.GreaterOrEqual(Mathf.Abs(gate.S - 20f), clear - 0.01f, "gate and posts clear the 30° vertex");
+            Assert.LessOrEqual(Mathf.Abs(gate.S - 20f), clear + 0.15f, "but stays as close to the house as it can");
+        }
+
+        [Test]
+        public void GateOnALotThatIsAllBend_StaysFacingTheHouse()
+        {
+            var (_, lot) = BentLot(18f, 22.5f);
+            var gate = FrontagePlanner.Walls(new[] { lot }, settings.frontage).Single().Openings.Single();
+            Assert.AreEqual(20f, gate.S, 0.05f, "no straight stretch long enough: the old placement");
+        }
+
         [Test]
         public void FlushHouse_GetsNoWall()
         {

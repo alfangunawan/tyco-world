@@ -115,6 +115,8 @@ namespace TycoWorld.WorldGen.Authoring
         public float gateMinLot = 4.5f;
         public float doorMinLot = 2.5f;
         public float gateEndMargin = 0.3f;
+        /// <summary>Most centreline turn allowed under a gate and its posts; the gate slides along its lot to find such a stretch (spec frontage-polish §2.3).</summary>
+        public float gateMaxTurnDegrees = 5f;
         public float slabTopY = 0.165f;
         public float slabExtraWidth = 0.4f;
         public float kosExclusionRadius = 8f;

@@ -431,6 +431,7 @@ MonoBehaviour:
     gateMinLot: 4.5
     doorMinLot: 2.5
     gateEndMargin: 0.3
+    gateMaxTurnDegrees: 5
     slabTopY: 0.165
     slabExtraWidth: 0.4
     kosExclusionRadius: 8
