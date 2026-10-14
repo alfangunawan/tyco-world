@@ -33,6 +33,8 @@ namespace TycoWorld.Gameplay
         public float GroundY;
         public float GroundTimer;
         public float CurrentSpeed;
+        /// <summary>Time not yet stepped (far people step every few frames).</summary>
+        public float PendingDt;
         public SeededRandom Random;
         public int Serial;
 
@@ -42,6 +44,10 @@ namespace TycoWorld.Gameplay
             Root = new GameObject(sosok ? "Sosok" : "Pedestrian_" + index);
             Root.transform.SetParent(parent, false);
             Figure = PersonFigure.Build(Root.transform, "Figure", look, palette, sosok);
+            // Torso, head and legs make the shadow; arms and hair would only add shadow casters.
+            foreach (var r in Root.GetComponentsInChildren<MeshRenderer>(true))
+                if (r.name.StartsWith("Arm", System.StringComparison.Ordinal) || r.name == "Hair" || r.name == "Hijab" || r.name == "Drape")
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             var capsule = Root.AddComponent<CapsuleCollider>();
             capsule.center = new Vector3(0f, 0.9f, 0f);
             capsule.height = 1.8f;

@@ -25,6 +25,8 @@ namespace TycoWorld.Gameplay
         /// <summary>Stepping further than this from where the break-in started gives it up (so a seen thief can still run).</summary>
         public const float HotwireDrift = 0.6f;
         public const string GaveUpToast = "Batal membobol kunci.";
+        /// <summary>A riderless vehicle standing still this long stops ticking (its Motorbike component sleeps).</summary>
+        public const float SleepAfter = 1.5f;
         public const string AlarmToast = "NGIUNG NGIUNG! Alarm mobil meraung.";
         public const string ShoutToast = "Warga: \"MALING! MALING!\"";
 
@@ -129,6 +131,7 @@ namespace TycoWorld.Gameplay
                 UpdateSpawns();
             }
             TickHotwire(dt);
+            TickSleep(dt);
             checkTimer -= dt;
             if (checkTimer <= 0f)
             {
@@ -179,6 +182,31 @@ namespace TycoWorld.Gameplay
             }
         }
 
+        /// <summary>
+        /// Parked vehicles do not need the controller's per-frame physics: a riderless one that stands still is put to
+        /// sleep (component off) and woken just before someone gets on.
+        /// </summary>
+        void TickSleep(float dt)
+        {
+            foreach (var v in vehicles)
+            {
+                if (!v.Active || !v.Body.enabled) continue;
+                if (v.Body.IsMounted || v == hotwiring || Mathf.Abs(v.Body.Speed) > 0.05f)
+                {
+                    v.Idle = 0f;
+                    continue;
+                }
+                v.Idle += dt;
+                if (v.Idle >= SleepAfter) v.Body.enabled = false;
+            }
+        }
+
+        static void Wake(WorldVehicle v)
+        {
+            v.Idle = 0f;
+            v.Body.enabled = true;
+        }
+
         static VehicleKind KindOf(SpotKind kind) => kind == SpotKind.ParkingCar ? VehicleKind.Car : VehicleKind.Bike;
         static float RangeOf(VehicleKind kind) => kind == VehicleKind.Car ? CarRange : BikeRange;
 
@@ -212,6 +240,9 @@ namespace TycoWorld.Gameplay
             var at = spot.position;
             at.y = Ground(at);
             v.Body.Teleport(at, spot.yaw);
+            // Parked on the ground found above: no need to fall or tick until someone gets on.
+            v.Body.enabled = false;
+            v.Idle = 0f;
             bySpot[spotIndex] = v;
         }
 
@@ -241,6 +272,7 @@ namespace TycoWorld.Gameplay
             if (!CanUse(v) || director.Player == null) return;
             if (v.Unlocked)
             {
+                Wake(v);
                 v.Body.Mount(director.Player);
                 return;
             }
@@ -288,6 +320,7 @@ namespace TycoWorld.Gameplay
             // Its spot is free for another parked vehicle; this one now lives where the player leaves it.
             if (v.Spot >= 0) bySpot.Remove(v.Spot);
             v.Spot = -1;
+            Wake(v);
             v.Body.Mount(director.Player);
             director.Toast(v.Hot ? "Kunci jebol. Kabur!" : "Kunci jebol. Tidak ada yang lihat... sepertinya.");
         }

@@ -17,6 +17,12 @@ namespace TycoWorld.Gameplay
         public const float TalkSeconds = 3.5f;
         public const float WitnessRadius = 18f;
         public const float CatchDistance = 1.3f;
+        /// <summary>
+        /// Within this range people move and swing their limbs every frame; further out they step every
+        /// <see cref="FarStride"/>th frame with the time saved up, limbs still (spec #6: NPCs within the perf budget).
+        /// </summary>
+        public const float DetailRange = 40f;
+        public const int FarStride = 4;
         /// <summary>A chaser this far behind gives up and walks back to the lanes.</summary>
         public const float GiveUpDistance = 45f;
         const int PoolSize = 30;
@@ -49,7 +55,7 @@ namespace TycoWorld.Gameplay
         readonly RaycastHit[] hits = new RaycastHit[8];
         SeededRandom rng = new SeededRandom(0x5EED5EEDUL);
         float spawnTimer, lastHours = -1f;
-        int serial;
+        int serial, frame;
 
         public int Order => 10;
         /// <summary>Fills the streets by the hour (and lets the figure appear); tests turn it off and place people themselves.</summary>
@@ -146,8 +152,16 @@ namespace TycoWorld.Gameplay
                     break;
                 }
             }
+            frame++;
             foreach (var p in pool)
-                if (p.Active) Step(p, dt, viewer);
+            {
+                if (!p.Active) continue;
+                p.PendingDt += dt;
+                bool near = p.State == PedestrianState.Chase || p.State == PedestrianState.Flee || Flat(p.Position - viewer) <= DetailRange;
+                if (!near && (frame + p.Serial) % FarStride != 0) continue;
+                Step(p, p.PendingDt, viewer, near);
+                p.PendingDt = 0f;
+            }
             if (AutoSpawn) TickSosok(dt, viewer);
         }
 
@@ -205,7 +219,7 @@ namespace TycoWorld.Gameplay
             p.Lane = -1;
         }
 
-        void Step(Pedestrian p, float dt, Vector3 viewer)
+        void Step(Pedestrian p, float dt, Vector3 viewer, bool animate)
         {
             switch (p.State)
             {
@@ -242,7 +256,7 @@ namespace TycoWorld.Gameplay
                     break;
                 case PedestrianState.Chase: Chase(p, dt, viewer); break;
             }
-            p.Figure.Animate(p.CurrentSpeed, dt);
+            if (animate) p.Figure.Animate(p.CurrentSpeed, dt);
         }
 
         static bool Blocked(Pedestrian p, Vector3 viewer)

@@ -25,6 +25,8 @@ namespace TycoWorld.Gameplay
         /// <summary>Warga saw it stolen and it has not been repainted.</summary>
         public bool Hot;
         public int Colour;
+        /// <summary>Seconds standing still without a rider (it is put to sleep after a while).</summary>
+        public float Idle;
 
         public WorldVehicle(VehicleKind kind, Motorbike body, VehicleSystem system)
         {

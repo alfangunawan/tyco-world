@@ -142,6 +142,7 @@ namespace TycoWorld.Gameplay.Tests
         public void BreakingIn_Unseen_TakesThreeSecondsStill_ThenYouRide()
         {
             var bike = Near(VehicleKind.Bike);
+            Assert.IsFalse(bike.Body.enabled, "parked: asleep, no per-frame physics");
             Assert.IsTrue(bike.Lock.Interact(fx.Context));
             Assert.AreSame(bike, vehicles.Hotwiring);
             Assert.IsFalse(fx.Player.Locks.Allows(PlayerAbility.Interact), "hands busy with the lock");
@@ -157,6 +158,15 @@ namespace TycoWorld.Gameplay.Tests
             Assert.AreEqual("", fx.Director.Hud.StarsText);
             Assert.IsNull(vehicles.Hotwiring);
             Assert.AreEqual("[E] Naik motor", bike.Lock.GetPrompt(fx.Context));
+            Assert.IsTrue(bike.Body.enabled, "woken to be ridden");
+            // Off the bike (teleported away), it settles and sleeps again.
+            fx.Player.Teleport(O + new Vector3(0f, 0f, -4f), 0f);
+            Run(VehicleSystem.SleepAfter + 0.5f);
+            Assert.IsFalse(bike.Body.IsMounted);
+            Assert.IsFalse(bike.Body.enabled);
+            Assert.AreEqual("[E] Naik motor", bike.Lock.GetPrompt(fx.Context), "still unlocked");
+            Assert.IsTrue(bike.Lock.Interact(fx.Context));
+            Assert.IsTrue(bike.Body.IsMounted && bike.Body.enabled, "E gets straight on, no second break-in");
         }
 
         [Test]
