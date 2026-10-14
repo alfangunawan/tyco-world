@@ -177,45 +177,64 @@ namespace TycoWorld.WorldGen.Tests
             return Chain(new Vector2(0f, 0f), new Vector2(20f, 0f), new Vector2(20f + 20f * Mathf.Cos(a), turn * 20f * Mathf.Sin(a)));
         }
 
-        [Test]
-        public void GateOnTheInsideOfABend_FoldsAway_AndTheWallRunsOn()
+        /// <summary>Blocker ends met by no other blocker end: the loose ends of the wall line(s).</summary>
+        static int LooseEnds(FrontageMeshResult r)
         {
-            var chain = Bend(-1f);
-            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 2f, chain.Length - 2f, Gate(20f)));
-            Assert.AreEqual(0, r.Gates, "the 2 m span folds to nothing on the inside, so no gate is drawn");
-            Assert.AreEqual(0, r.Slabs);
-            // The wall is one unbroken line: every blocker end but the two run ends meets another blocker.
             var ends = r.Blockers.SelectMany(b => new[] { b.A, b.B }).ToList();
-            int loose = ends.Count(p => ends.Count(o => Vector2.Distance(o, p) < 0.01f) < 2);
-            Assert.AreEqual(2, loose, "no gap where the gate would have been");
-            var corner = r.PilasterPositions.Where(p => Vector2.Distance(p, new Vector2(20f, 0f)) < 6f).ToList();
-            for (int i = 0; i < corner.Count; i++)
-                for (int j = i + 1; j < corner.Count; j++)
-                    Assert.GreaterOrEqual(Vector2.Distance(corner[i], corner[j]), settings.frontage.pilasterMinGap - 1e-3f, "posts bunched at the corner");
+            return ends.Count(p => ends.Count(o => Vector2.Distance(o, p) < 0.01f) < 2);
         }
 
-        [Test]
-        public void GateOnTheOutsideOfABend_MeetsItsWallPiecesAndStaysBehindTheLine()
+        static bool AnyBlockersCross(FrontageMeshResult r)
         {
-            var chain = Bend(1f);
+            var b = r.Blockers;
+            for (int i = 0; i < b.Count; i++)
+                for (int j = i + 1; j < b.Count; j++)
+                {
+                    Vector2 p = b[i].A, d = b[i].B - p, q = b[j].A, e = b[j].B - q;
+                    float denom = Polygon2D.Cross(d, e);
+                    if (Mathf.Abs(denom) < 1e-9f) continue;
+                    float t = Polygon2D.Cross(q - p, e) / denom, u = Polygon2D.Cross(q - p, d) / denom;
+                    if (t > 1e-3f && t < 1f - 1e-3f && u > 1e-3f && u < 1f - 1e-3f) return true;
+                }
+            return false;
+        }
+
+        static float Length(List<Vector2> line)
+        {
+            float total = 0f;
+            for (int i = 0; i + 1 < line.Count; i++) total += Vector2.Distance(line[i], line[i + 1]);
+            return total;
+        }
+
+        [TestCase(1f)]
+        [TestCase(-1f)]
+        public void GateAtABend_IsFullWidthOnTheWallLine_WithNoGapOrFold(float turn)
+        {
+            var chain = Bend(turn);
             var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 2f, chain.Length - 2f, Gate(20f)));
             var f = settings.frontage;
             float lineOffset = FrontagePlanner.LineOffset(chain, EdgeProfile.Gutter, settings.roadEdges, f);
-            var along = new List<float>();
-            var span = Polyline2D.Offset(Polyline2D.Slice(chain.Points, chain.Cum, 19f, 21f, along), along, -(lineOffset + f.wallThickness * 0.5f), new List<float>());
-            Vector2 g0 = span[0], g1 = span[span.Count - 1];
             Assert.AreEqual(1, r.Gates);
-            Assert.IsTrue(r.PilasterPositions.Any(q => Vector2.Distance(q, g0) < 0.01f), "wall piece ends at the gate start");
-            Assert.IsTrue(r.PilasterPositions.Any(q => Vector2.Distance(q, g1) < 0.01f), "wall piece ends at the gate end");
-            Assert.IsTrue(r.Blockers.Any(b => Vector2.Distance(b.A, g0) < 0.01f), "leaf starts on the wall end");
-            Assert.IsTrue(r.Blockers.Any(b => Vector2.Distance(b.B, g1) < 0.01f), "leaf ends on the wall end");
+            var span = r.OpeningSpans.Single();
+            Assert.AreEqual(2f, Length(span), 0.01f, "the gate keeps its width along the wall line, inside or outside the turn");
+            Assert.IsTrue(r.PilasterPositions.Any(q => Vector2.Distance(q, span[0]) < 0.01f), "a wall piece ends at the gate start");
+            Assert.IsTrue(r.PilasterPositions.Any(q => Vector2.Distance(q, span[span.Count - 1]) < 0.01f), "a wall piece ends at the gate end");
+            Assert.AreEqual(2, LooseEnds(r), "walls and leaf form one line: no gap");
+            Assert.IsFalse(AnyBlockersCross(r), "no fold");
             foreach (var m in r.Render.Values)
                 foreach (var v in Verts(m, FrontageMeshBuilder.SubMetal))
                     Assert.GreaterOrEqual(Polyline2D.DistanceTo(chain.Points, new Vector2(v.x, v.z)), lineOffset - 0.01f, "leaf render vertex " + v);
-            foreach (var bl in r.Blockers)
-                foreach (var q in new[] { bl.A, bl.B })
-                    if (Vector2.Distance(q, g0) < 2.6f)
-                        Assert.GreaterOrEqual(Polyline2D.DistanceTo(chain.Points, q), lineOffset - 0.01f, "blocker end " + q);
+        }
+
+        [Test]
+        public void RunsMeetingJustPastAnInnerCorner_ShareTheirEndAndDoNotOverlap()
+        {
+            // Right turn: the right-hand (-1) wall is inside; the lot boundary at s = 20.2 lies within the corner's miter reach (≈ 1 m).
+            var chain = Bend(-1f);
+            var r = Build(Run(chain, WallStyle.Plaster, 1.8f, 0, 2f, 20.2f), Run(chain, WallStyle.Plaster, 1.8f, 1, 20.2f, chain.Length - 2f, Gate(21.5f)));
+            Assert.IsFalse(AnyBlockersCross(r), "the two lots' walls and the gate do not cross");
+            Assert.AreEqual(2, LooseEnds(r), "the two runs meet at one point");
+            Assert.AreEqual(2f, Length(r.OpeningSpans.Single()), 0.01f);
         }
 
         [Test]

@@ -13,7 +13,66 @@ namespace TycoWorld.WorldGen.Authoring
         public int Gates, Doors, Slabs, Pilasters;
         /// <summary>Placed pilaster centres in placement order.</summary>
         public readonly List<Vector2> PilasterPositions = new List<Vector2>();
+        /// <summary>Each drawn gate or door as its stretch of the wall-centre line, in drawing order.</summary>
+        public readonly List<List<Vector2>> OpeningSpans = new List<List<Vector2>>();
         internal readonly SpatialGrid<int> PilasterGrid = new SpatialGrid<int>(2f);
+    }
+
+    /// <summary>
+    /// The wall-centre line of one chain side at one offset: offset once over the whole chain (the inside of tight turns
+    /// collapsed) and measured by its own arc length u. Every run, piece and opening on that side is cut from it, so
+    /// neighbouring lots share their end point and an opening keeps its width even on a bend (spec frontage-polish §2.3).
+    /// </summary>
+    sealed class WallLine
+    {
+        public readonly List<Vector2> Points;
+        readonly float[] along, u;
+
+        public WallLine(RoadChain chain, int side, float centre)
+        {
+            var a = new List<float>();
+            Points = Polyline2D.Offset(chain.Points, chain.Cum, side * centre, a);
+            along = a.ToArray();
+            u = Polyline2D.Cumulative(Points);
+        }
+
+        /// <summary>Wall-line arc length at centreline arc length s, interpolated along the offset segment covering s.</summary>
+        public float UAt(float s)
+        {
+            int n = along.Length;
+            if (s <= along[0]) return u[0];
+            if (s >= along[n - 1]) return u[n - 1];
+            int lo = 0, hi = n - 2;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) / 2;
+                if (along[mid] <= s) lo = mid;
+                else hi = mid - 1;
+            }
+            float span = along[lo + 1] - along[lo];
+            return span > 1e-6f ? Mathf.Lerp(u[lo], u[lo + 1], (s - along[lo]) / span) : u[lo + 1];
+        }
+
+        public List<Vector2> Slice(float u0, float u1) => Polyline2D.Slice(Points, u, u0, u1, new List<float>());
+
+        public Vector2 PointAt(float at) => Polyline2D.PointAt(Points, u, at, out _);
+
+        /// <summary>Direction of the nearest segment of real length to arc length <paramref name="at"/>.</summary>
+        public Vector2 TangentAt(float at)
+        {
+            int i = Polyline2D.SegmentAt(u, at);
+            for (int k = 0; k < Points.Count; k++)
+            {
+                for (int pass = 0; pass < 2; pass++)
+                {
+                    int j = pass == 0 ? i + k : i - k;
+                    if (j < 0 || j + 1 >= Points.Count) continue;
+                    var d = Points[j + 1] - Points[j];
+                    if (d.sqrMagnitude > 1e-8f) return d.normalized;
+                }
+            }
+            return Vector2.right;
+        }
     }
 
     /// <summary>Walls, coping, pilasters, fence bands, gates and gutter slabs as per-chunk meshes (spec street-frontage §7).</summary>
@@ -22,93 +81,86 @@ namespace TycoWorld.WorldGen.Authoring
         public const string WallsName = "Walls";
         public const int SubWall = 0, SubConcrete = 1, SubFence = 2, SubMetal = 3, SubmeshCount = 4;
         const float JointCapDegrees = 10f, RailSize = 0.04f, GateFrame = 0.06f, GateBottom = 0.1f, LeafThickness = 0.05f, GateColliderThickness = 0.06f;
-        /// <summary>An opening whose wall-line span is shorter than this share of its width sits on the inside of a bend that folds it away; the wall runs on instead.</summary>
-        const float MinOpeningShare = 0.6f;
-
-        /// <summary>Straight-line length of the opening's span on the wall line (after the offset folds the inside of a bend away).</summary>
-        static float SpanChord(WallRun run, WallOpening o, float centre)
-        {
-            var along = new List<float>();
-            var span = Polyline2D.Offset(Polyline2D.Slice(run.Chain.Points, run.Chain.Cum, o.S - o.Width * 0.5f, o.S + o.Width * 0.5f, along),
-                along, run.Side * centre, new List<float>());
-            return Vector2.Distance(span[0], span[span.Count - 1]);
-        }
-
         public static FrontageMeshResult Build(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize)
         {
             var result = new FrontageMeshResult();
-            foreach (var run in runs) AddRun(run, e, f, chunkSize, result);
-            AddProfileReturns(runs, e, f, chunkSize, result);
+            var lines = new Dictionary<(RoadChain chain, int side, int centreMm), WallLine>();
+            foreach (var run in runs) AddRun(run, LineOf(run, e, f, lines), e, f, chunkSize, result);
+            AddProfileReturns(runs, e, f, chunkSize, result, lines);
             return result;
+        }
+
+        static float Centre(WallRun run, RoadEdgeSettings e, FrontageSettings f) =>
+            FrontagePlanner.LineOffset(run.Chain, run.Profile, e, f) + f.wallThickness * 0.5f;
+
+        static WallLine LineOf(WallRun run, RoadEdgeSettings e, FrontageSettings f, Dictionary<(RoadChain chain, int side, int centreMm), WallLine> lines)
+        {
+            float centre = Centre(run, e, f);
+            var key = (run.Chain, run.Side, Mathf.RoundToInt(centre * 1000f));
+            if (!lines.TryGetValue(key, out var line)) lines[key] = line = new WallLine(run.Chain, run.Side, centre);
+            return line;
         }
 
         /// <summary>
         /// Where one side of a chain changes edge profile, the property line jumps (sidewalk 1.9 m vs gutter 1.2 m past the
         /// asphalt). Two walls that meet there get a short return wall across the jump (spec frontage-polish §2.4).
         /// </summary>
-        static void AddProfileReturns(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r)
+        static void AddProfileReturns(IReadOnlyList<WallRun> runs, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r,
+            Dictionary<(RoadChain chain, int side, int centreMm), WallLine> lines)
         {
-            var bySide = new Dictionary<(int chain, int side), List<WallRun>>();
+            var groups = new List<List<WallRun>>();
+            var bySide = new Dictionary<(RoadChain chain, int side), List<WallRun>>();
             foreach (var run in runs)
             {
-                var key = (run.Chain.Index, run.Side);
-                if (!bySide.TryGetValue(key, out var list)) bySide[key] = list = new List<WallRun>();
+                if (!bySide.TryGetValue((run.Chain, run.Side), out var list))
+                {
+                    bySide[(run.Chain, run.Side)] = list = new List<WallRun>();
+                    groups.Add(list);
+                }
                 list.Add(run);
             }
-            var keys = new List<(int chain, int side)>(bySide.Keys);
-            keys.Sort();
-            foreach (var key in keys)
+            foreach (var list in groups)
             {
-                var list = bySide[key];
-                list.Sort((a, b) => a.S0.CompareTo(b.S0));
+                list.Sort((a, b) => a.S0 != b.S0 ? a.S0.CompareTo(b.S0) : a.S1.CompareTo(b.S1));
                 for (int i = 0; i + 1 < list.Count; i++)
                 {
                     WallRun a = list[i], b = list[i + 1];
-                    if (Mathf.Abs(a.S1 - b.S0) > 1e-3f) continue;
-                    float ca = FrontagePlanner.LineOffset(a.Chain, a.Profile, e, f) + f.wallThickness * 0.5f;
-                    float cb = FrontagePlanner.LineOffset(b.Chain, b.Profile, e, f) + f.wallThickness * 0.5f;
-                    if (Mathf.Abs(ca - cb) < 0.05f) continue;
-                    var end = LineEnd(a, Mathf.Max(a.S0, a.S1 - 0.5f), a.S1, ca, false);
-                    var start = LineEnd(b, b.S0, Mathf.Min(b.S1, b.S0 + 0.5f), cb, true);
+                    if (Mathf.Abs(a.S1 - b.S0) > 1e-3f || Mathf.Abs(Centre(a, e, f) - Centre(b, e, f)) < 0.05f) continue;
+                    var la = LineOf(a, e, f, lines);
+                    var lb = LineOf(b, e, f, lines);
+                    Vector2 end = la.PointAt(la.UAt(a.S1)), start = lb.PointAt(lb.UAt(b.S0));
                     if (Vector2.Distance(end, start) < 0.05f) continue;
                     RenderLine(a, new List<Vector2> { end, start }, f, chunkSize, r);
                 }
             }
         }
 
-        /// <summary>First or last point of the wall line over [s0, s1]; equal to the matching end of any longer slice ending there.</summary>
-        static Vector2 LineEnd(WallRun run, float s0, float s1, float centre, bool first)
+        /// <summary>The run's stretch of its wall line, with each opening kept whole (full width, inside the run's end margins).</summary>
+        static void AddRun(WallRun run, WallLine line, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r)
         {
-            var along = new List<float>();
-            var line = Polyline2D.Offset(Polyline2D.Slice(run.Chain.Points, run.Chain.Cum, s0, s1, along), along, run.Side * centre, new List<float>());
-            return first ? line[0] : line[line.Count - 1];
-        }
-
-        static void AddRun(WallRun run, RoadEdgeSettings e, FrontageSettings f, float chunkSize, FrontageMeshResult r)
-        {
-            float lineOffset = FrontagePlanner.LineOffset(run.Chain, run.Profile, e, f);
-            float centre = lineOffset + f.wallThickness * 0.5f;
-            var openings = new List<WallOpening>();
-            foreach (var o in run.Openings)
-                if (SpanChord(run, o, centre) >= MinOpeningShare * o.Width) openings.Add(o);
-            openings.Sort((a, b) => a.S.CompareTo(b.S));
-            float cursor = run.S0;
-            foreach (var o in openings)
+            float u0 = line.UAt(run.S0), u1 = line.UAt(run.S1);
+            if (u1 - u0 < 0.05f) return;
+            var openings = new List<(WallOpening o, float at)>();
+            foreach (var o in run.Openings) openings.Add((o, line.UAt(o.S)));
+            openings.Sort((a, b) => a.at.CompareTo(b.at));
+            float cursor = u0;
+            foreach (var (o, at) in openings)
             {
-                AddPiece(run, cursor, o.S - o.Width * 0.5f, centre, f, chunkSize, r);
-                AddOpening(run, o, centre, lineOffset, e, f, chunkSize, r);
-                cursor = o.S + o.Width * 0.5f;
+                float half = o.Width * 0.5f;
+                float lo = Mathf.Max(cursor, u0 + f.gateEndMargin) + half, hi = u1 - f.gateEndMargin - half;
+                if (lo > hi) continue;
+                float centre = Mathf.Clamp(at, lo, hi);
+                AddPiece(run, line, cursor, centre - half, f, chunkSize, r);
+                AddOpening(run, o, line, centre, e, f, chunkSize, r);
+                cursor = centre + half;
             }
-            AddPiece(run, cursor, run.S1, centre, f, chunkSize, r);
+            AddPiece(run, line, cursor, u1, f, chunkSize, r);
         }
 
-        static void AddPiece(WallRun run, float s0, float s1, float centre, FrontageSettings f, float chunkSize, FrontageMeshResult r)
+        static void AddPiece(WallRun run, WallLine line, float u0, float u1, FrontageSettings f, float chunkSize, FrontageMeshResult r)
         {
-            if (s1 - s0 < 0.05f) return;
-            var chain = run.Chain;
-            var along = new List<float>();
-            var center = Polyline2D.Slice(chain.Points, chain.Cum, s0, s1, along);
-            RenderLine(run, Polyline2D.Offset(center, along, run.Side * centre, new List<float>()), f, chunkSize, r);
+            if (u1 - u0 < 0.05f) return;
+            RenderLine(run, line.Slice(u0, u1), f, chunkSize, r);
         }
 
         /// <summary>Wall boxes, coping, fence band, collider, blockers and pilasters along one wall-centre polyline in the run's look.</summary>
@@ -224,20 +276,18 @@ namespace TycoWorld.WorldGen.Authoring
             m.AddQuad(SubFence, p0, p1, p2, p3, u0, u1, u2, u3, -normal);
         }
 
-        static void AddOpening(WallRun run, WallOpening o, float centre, float lineOffset, RoadEdgeSettings e, FrontageSettings f, float chunkSize,
+        static void AddOpening(WallRun run, WallOpening o, WallLine line, float at, RoadEdgeSettings e, FrontageSettings f, float chunkSize,
             FrontageMeshResult r)
         {
             var chain = run.Chain;
-            var c = chain.PointAt(o.S, out var tangent);
-            // Same slice + mitred offset as the wall pieces, so the leaf meets their ends exactly even across a bend.
-            var along = new List<float>();
-            var span = Polyline2D.Offset(Polyline2D.Slice(chain.Points, chain.Cum, o.S - o.Width * 0.5f, o.S + o.Width * 0.5f, along),
-                along, run.Side * centre, new List<float>());
+            float half = o.Width * 0.5f;
+            var span = line.Slice(at - half, at + half);
             Vector2 g0 = span[0], g1 = span[span.Count - 1];
-            if ((g1 - g0).sqrMagnitude < 1e-8f) return;
-            // The slab crosses the gutter square to the road at the opening centre.
-            var outward = Polyline2D.LeftNormal(tangent) * run.Side;
-            var chunk = WorldMeshPipeline.ChunkOf((g0 + g1) * 0.5f, chunkSize);
+            r.OpeningSpans.Add(span);
+            var middle = line.PointAt(at);
+            // The slab crosses the gutter square to the wall at the opening centre.
+            var outward = Polyline2D.LeftNormal(line.TangentAt(at)) * run.Side;
+            var chunk = WorldMeshPipeline.ChunkOf(middle, chunkSize);
             var m = MeshIn(r.Render, chunk, SubmeshCount);
             var col = MeshIn(r.Collider, chunk, 1);
             float top = f.gateHeight;
@@ -257,7 +307,8 @@ namespace TycoWorld.WorldGen.Authoring
             if (o.IsGate) r.Gates++;
             else r.Doors++;
             if (run.Profile != EdgeProfile.Gutter) return;
-            Vector2 near = c + outward * (chain.HalfWidth + e.shoulderWidth), far = c + outward * lineOffset;
+            float centre = Centre(run, e, f);
+            Vector2 near = middle - outward * (centre - chain.HalfWidth - e.shoulderWidth), far = middle - outward * (f.wallThickness * 0.5f);
             float width = o.Width + f.slabExtraWidth;
             SolidBox.Add(m, SubConcrete, near, far, 0f, f.slabTopY, width, BoxUv.Meters);
             SolidBox.Add(col, 0, near, far, 0f, f.slabTopY, width, BoxUv.Meters);
