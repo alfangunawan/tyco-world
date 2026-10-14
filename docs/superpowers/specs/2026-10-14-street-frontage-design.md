@@ -147,10 +147,16 @@ Setiap jalan punya dua sisi (kiri dan kanan arah polyline). Profil diputuskan pe
 | `highway` | Profil |
 |---|---|
 | primary, secondary | **Trotoar** |
-| tertiary | **Trotoar** jika titik sampel di garis tengah tepi berada di dalam poligon Campus atau berjarak ≤ 10 m dari batasnya; selain itu **Selokan** |
+| tertiary | **Trotoar** jika sisi ini menghadap kampus (aturan di bawah tabel); selain itu **Selokan** |
 | unclassified, residential, living_street | **Selokan** |
 | service | **Selokan**, kecuali `service` ∈ {driveway, parking_aisle, drive-through} → **Tanpa** |
 | pedestrian, footway, path, cycleway, steps, track | **Tanpa** |
+
+**Sisi yang menghadap kampus.** Ambil titik di garis tengah tepi sisi ini, yaitu hw + 0.75 m dari garis tengah jalan, lalu hitung `d` = jaraknya ke poligon Campus (0 jika di dalam). Hitung `d_seberang` dengan cara yang sama untuk titik cermin di sisi seberang. Sisi ini menghadap kampus jika keduanya terpenuhi:
+- `d` ≤ `campusSidewalkDistance` (10 m);
+- `d < d_seberang − 0.5`, atau kedua titik ada di dalam kampus.
+
+Tanpa syarat kedua, jalan 6 m yang menempel kampus akan mendapat trotoar di kedua sisi, karena sisi seberangnya pun masih dalam 10 m.
 
 Profil diproses per run, dengan aturan berikut:
 - Run dengan profil yang sama digabung.
@@ -201,7 +207,7 @@ Tiap sisi chain disampel tiap `sampleStep` = 0.5 m sepanjang garis tengah. Sebua
 3. **Di dalam footprint bangunan OSM.**
 4. **Di dalam area air, atau di pita garis air.**
 5. **Di luar batas area.**
-6. **Lipatan sisi dalam belokan:** jarak ke garis tengah chain sendiri < offset − 0.05.
+6. **Lipatan sisi dalam belokan:** jarak ke garis tengah chain sendiri < offset − 0.05. Segmen chain sendiri yang rentang s-nya beririsan dengan [s − offset − 1, s + offset + 1] diabaikan, supaya belokan biasa tidak membuat lubang di sisi dalam. Aturan ini hanya menangkap jalan yang melipat kembali ke dirinya sendiri (putaran U, gang buntu melingkar).
 
 Batas run (sampel dipakai ↔ dibuang) dirapikan dengan bisection 3 langkah (presisi sekitar 6 cm).
 
@@ -250,15 +256,22 @@ Dasar tepi berada di bawah jalan terendah, jadi di simpang aspal selalu tergamba
 - Letak: offset = hw + lebar profil di titik itu + `propertyLineGap` = 0.4 m. Untuk residential, itu 1.2 m dari aspal.
 
 ### Klasifikasi sampel (tiap 0.5 m)
-Sampel dibuang dengan aturan simpang yang sama seperti §5, tetapi bandnya memakai offset property line + 0.15 (ketebalan tembok). Sampel yang tersisa diklasifikasi berurutan; aturan pertama yang cocok yang dipakai:
+Sampel dibuang (**Blocked**) jika:
+- titik property line berada di luar batas area;
+- titik itu terlipat di atas jalan sendiri (§5 no. 6);
+- jaraknya ke garis tengah jalan lain B < hw_B + lebar tepi maksimum B + 0.4 + 0.15 (tebal tembok).
+
+Aturan terakhir berlaku tanpa memandang prioritas. Di pojok simpang, tembok kedua jalan berhenti di garis belakang tembok jalan lainnya.
+
+Sampel yang tersisa diklasifikasi berurutan; aturan pertama yang cocok yang dipakai:
 
 1. **Air** (titik 0.5 m di belakang garis ada di area air atau pita garis air) → **Kosong**.
 2. **Konteks area** di titik 0.5 m di belakang garis:
 
    | Kategori | Hasil |
    |---|---|
-   | Campus | **Pagar kampus** |
-   | Cemetery | **Tembok makam** |
+   | Campus | **Pagar kampus** jika garis tengah jalan di luar kampus; jalan di dalam kampus → **Kosong** (kampus terbuka) |
+   | Cemetery | **Tembok makam** jika garis tengah jalan di luar makam; selain itu **Kosong** |
    | Parking, Pitch, Farmland, Wood, Grass, Hardground, Paving | **Kosong** |
 
 3. **Zona kos:** titik berjarak < `kosExclusionRadius` = 8 m dari footprint gedung kunci kos (way 409467778) → **Dikecualikan**. Halaman kos (#2) yang mengurus tepi di situ.
@@ -319,7 +332,7 @@ Satu `MeshData` render per chunk (`Frontage/Chunk_x_z`), dengan submesh:
 |---|---|---|
 | 0 | Tembok | `Frontage_WallAtlas` |
 | 1 | Coping, pilaster, plat | `Edge_Concrete` |
-| 2 | Jeruji | `Frontage_Fence` (alpha clip, cull off) |
+| 2 | Jeruji (dua quad berlawanan arah supaya kedua sisi terkena cahaya dengan benar) | `Frontage_Fence` (alpha clip) |
 | 3 | Rangka gerbang | `Frontage_GateMetal` |
 
 `ColliderMesh` terpisah, hanya box solid: tembok setinggi penuh (termasuk band pagar), gerbang tertutup, dan plat. Quad alpha satu sisi tidak dijadikan collider.
@@ -337,18 +350,19 @@ Satu `MeshData` render per chunk (`Frontage/Chunk_x_z`), dengan submesh:
 - **Kedalaman:** acak 8–12 m, dipotong agar sisi belakang ≤ 15 m dari property line.
 - **Lantai:** 1 lantai (60%) atau 2 lantai. `LevelHeight` mengikuti settings (3.2 m).
 - **Footprint:** persegi panjang yang sejajar dengan tali busur property line di sepanjang lebar rumah.
-- **Validasi:** footprint yang diperbesar 0.5 m tidak boleh berpotongan dengan:
-  - bangunan OSM atau infill lain yang sudah diterima;
-  - band jalan mana pun (hw + lebar tepi + 0.5);
-  - air;
-  - poligon area mana pun;
-  - zona kos (8 m) atau gedung kunci;
-  - luar batas area.
+- **Validasi:**
+  - Footprint asli harus berada di belakang property line semua jalan. Untuk jalan sendiri dipakai offset lokal; untuk jalan lain dipakai hw + lebar tepi maksimum + 0.4.
+  - Footprint yang diperbesar 0.5 m tidak boleh berpotongan dengan:
+    - bangunan OSM atau infill lain yang sudah diterima;
+    - air;
+    - poligon area mana pun.
+  - Footprint tidak boleh berada dalam 8 m dari kos.
+  - Semua sudut harus di dalam batas area.
 
   Jika gagal, coba lagi dengan kedalaman 8 m. Jika tetap gagal, rumah dilewati (dicatat di report).
 - **Id:** `−(hash(chainId, sisi, round(s × 10)) & 0x3FFF_FFFF_FFFF_FFFF) − 1`, selalu negatif. Penambahan jalan lain tidak mengubah id rumah yang tidak terkait.
 - **Material:** set residential, dengan pick `SplitMix64` yang sama seperti `AddBuildings` (salt ground/upper/roof).
-- **Cap:** `maxInfill` = 2500. Jika terlampaui, rumah dipilih deterministik berdasarkan hash, dan jumlah yang dibuang dicatat.
+- **Cap:** `maxInfill` = 2500. Kandidat diproses dalam urutan tetap (kunci chain, sisi, s). Setelah cap tercapai, sisa kandidat dilewati dan dicatat di report.
 - **Output:** semua rumah di satu chunk digabung jadi **satu** objek `Buildings/Chunk_x_z/Infill`:
   - Kind `Building`, sehingga `PlayerSpawner.IsUnderBuilding` tetap bekerja.
   - Id = hash negatif dari chunk.
