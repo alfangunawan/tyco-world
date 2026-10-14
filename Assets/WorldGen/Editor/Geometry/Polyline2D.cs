@@ -62,14 +62,23 @@ namespace TycoWorld.WorldGen.Authoring
         /// Mitered offset; positive = left of travel. A joint whose miter would be longer than RoadMeshBuilder.MiterLimit
         /// times the offset becomes a bevel (two points). The decision depends only on the turn angle, so every offset of one
         /// polyline has the same point count. along receives the centreline s of each output point.
+        /// Where the offset is larger than the local turning radius the inside folds over itself; those stretches collapse
+        /// onto one point (zero-length segments) instead of running backwards, keeping the point count (spec frontage-polish §2.2).
         /// </summary>
         public static List<Vector2> Offset(IReadOnlyList<Vector2> pts, IReadOnlyList<float> s, float offset, List<float> along)
         {
             int n = pts.Count;
             along.Clear();
             var result = new List<Vector2>(n + 4);
+            var dirs = new Vector2[n - 1];
             var normals = new Vector2[n - 1];
-            for (int i = 0; i + 1 < n; i++) normals[i] = LeftNormal((pts[i + 1] - pts[i]).normalized);
+            for (int i = 0; i + 1 < n; i++)
+            {
+                dirs[i] = (pts[i + 1] - pts[i]).normalized;
+                normals[i] = LeftNormal(dirs[i]);
+            }
+            // source[j]: the centreline segment output segment j runs along; -1 for a bevel's connecting segment.
+            var source = new List<int>(n + 4);
             result.Add(pts[0] + normals[0] * offset);
             along.Add(s[0]);
             for (int i = 1; i + 1 < n; i++)
@@ -77,6 +86,7 @@ namespace TycoWorld.WorldGen.Authoring
                 Vector2 n0 = normals[i - 1], n1 = normals[i];
                 Vector2 sum = n0 + n1;
                 float cosHalf = sum.sqrMagnitude > 1e-6f ? Vector2.Dot(sum.normalized, n1) : 0f;
+                source.Add(i - 1);
                 if (cosHalf > 1e-4f && 1f / cosHalf <= RoadMeshBuilder.MiterLimit)
                 {
                     result.Add(pts[i] + sum.normalized * (offset / cosHalf));
@@ -86,13 +96,144 @@ namespace TycoWorld.WorldGen.Authoring
                 {
                     result.Add(pts[i] + n0 * offset);
                     along.Add(s[i]);
+                    source.Add(-1);
                     result.Add(pts[i] + n1 * offset);
                     along.Add(s[i]);
                 }
             }
+            source.Add(n - 2);
             result.Add(pts[n - 1] + normals[n - 2] * offset);
             along.Add(s[n - 1]);
+            CollapseReversed(result, source, dirs);
+            CollapseCrossings(result, along, Mathf.Abs(offset));
             return result;
+        }
+
+        const float FoldEpsilon = 1e-5f;
+
+        static bool Reversed(List<Vector2> r, List<int> source, Vector2[] dirs, int j)
+        {
+            if (source[j] < 0) return false;
+            var d = r[j + 1] - r[j];
+            return d.sqrMagnitude > FoldEpsilon * FoldEpsilon && Vector2.Dot(d, dirs[source[j]]) < 0f;
+        }
+
+        static bool Forward(List<Vector2> r, List<int> source, Vector2[] dirs, int j)
+        {
+            if (source[j] < 0) return false;
+            var d = r[j + 1] - r[j];
+            return d.sqrMagnitude > FoldEpsilon * FoldEpsilon && Vector2.Dot(d, dirs[source[j]]) > 0f;
+        }
+
+        /// <summary>
+        /// A segment running against its centreline segment is the inside of a turn tighter than the offset. It and its
+        /// neighbours up to the nearest forward segments on both sides collapse onto the point where those two segments' lines
+        /// meet; at an open end the stretch collapses onto the first forward segment's end.
+        /// </summary>
+        static void CollapseReversed(List<Vector2> r, List<int> source, Vector2[] dirs)
+        {
+            int segments = r.Count - 1;
+            for (int guard = 0; guard < segments + 1; guard++)
+            {
+                int j = -1;
+                for (int k = 0; k < segments; k++)
+                    if (Reversed(r, source, dirs, k)) { j = k; break; }
+                if (j < 0) return;
+                int p = j - 1, q = j + 1;
+                while (p >= 0 && !Forward(r, source, dirs, p)) p--;
+                while (q < segments && !Forward(r, source, dirs, q)) q++;
+                while (true)
+                {
+                    if (p < 0 && q >= segments)
+                    {
+                        Fill(r, 0, segments, r[segments / 2 + (segments % 2 == 0 ? 0 : 1)]);
+                        break;
+                    }
+                    if (p < 0)
+                    {
+                        Fill(r, 0, q, r[q]);
+                        break;
+                    }
+                    if (q >= segments)
+                    {
+                        Fill(r, p + 1, segments, r[p + 1]);
+                        break;
+                    }
+                    if (LineIntersection(r[p], r[p + 1], r[q], r[q + 1], out var x))
+                    {
+                        bool pOk = Vector2.Dot(x - r[p], dirs[source[p]]) > FoldEpsilon;
+                        bool qOk = Vector2.Dot(r[q + 1] - x, dirs[source[q]]) > FoldEpsilon;
+                        if (pOk && qOk)
+                        {
+                            Fill(r, p + 1, q, x);
+                            break;
+                        }
+                        if (!pOk) { do p--; while (p >= 0 && !Forward(r, source, dirs, p)); }
+                        if (!qOk) { do q++; while (q < segments && !Forward(r, source, dirs, q)); }
+                    }
+                    else
+                    {
+                        // Parallel neighbours (a U-turn): meet halfway between them.
+                        Fill(r, p + 1, q, 0.5f * (r[p + 1] + r[q]));
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Two non-adjacent segments within the arc window crossing each other enclose a loop (the inside of a bevelled corner);
+        /// every point inside the loop moves to the crossing.
+        /// </summary>
+        static void CollapseCrossings(List<Vector2> r, List<float> along, float offset)
+        {
+            float window = 4f * offset + 1f;
+            int segments = r.Count - 1;
+            for (int k = 0; k + 2 < segments; k++)
+            {
+                if ((r[k + 1] - r[k]).sqrMagnitude < FoldEpsilon * FoldEpsilon) continue;
+                int hit = -1;
+                Vector2 cross = default;
+                for (int l = k + 2; l < segments; l++)
+                {
+                    if (along[l] - along[k + 1] > window) break;
+                    if (SegmentsCross(r[k], r[k + 1], r[l], r[l + 1], out var x))
+                    {
+                        hit = l;
+                        cross = x;
+                    }
+                }
+                if (hit < 0) continue;
+                Fill(r, k + 1, hit, cross);
+                k = hit - 1;
+            }
+        }
+
+        static void Fill(List<Vector2> r, int from, int to, Vector2 p)
+        {
+            for (int i = from; i <= to; i++) r[i] = p;
+        }
+
+        static bool LineIntersection(Vector2 a0, Vector2 a1, Vector2 b0, Vector2 b1, out Vector2 x)
+        {
+            Vector2 r = a1 - a0, d = b1 - b0;
+            float denom = Polygon2D.Cross(r, d);
+            x = default;
+            if (Mathf.Abs(denom) < 1e-9f) return false;
+            x = a0 + r * (Polygon2D.Cross(b0 - a0, d) / denom);
+            return true;
+        }
+
+        static bool SegmentsCross(Vector2 a0, Vector2 a1, Vector2 b0, Vector2 b1, out Vector2 x)
+        {
+            Vector2 r = a1 - a0, d = b1 - b0;
+            float denom = Polygon2D.Cross(r, d);
+            x = default;
+            if (d.sqrMagnitude < FoldEpsilon * FoldEpsilon || Mathf.Abs(denom) < 1e-9f) return false;
+            float t = Polygon2D.Cross(b0 - a0, d) / denom, u = Polygon2D.Cross(b0 - a0, r) / denom;
+            if (t <= 1e-4f || t >= 1f - 1e-4f || u <= 1e-4f || u >= 1f - 1e-4f) return false;
+            x = a0 + r * t;
+            return true;
         }
 
         /// <summary>Arc length of the polyline point closest to p; distance receives how far p is from it.</summary>
