@@ -250,6 +250,11 @@ namespace TycoWorld.WorldGen.Tests
             Assert.IsNotNull(asset.frontage);
             Assert.AreEqual(409467778L, asset.frontage.kosBuildingId);
             Assert.AreEqual(5, asset.frontage.styles.Length);
+            Assert.AreEqual(1f, asset.frontage.pilasterMinGap, 1e-6f);
+            Assert.AreEqual(20f, asset.frontage.pilasterMinTurnDegrees, 1e-6f);
+            string yaml = System.IO.File.ReadAllText(WorldGenPaths.SettingsAsset);
+            StringAssert.Contains("pilasterMinGap:", yaml, "the saved file itself carries the field, not only the initializer");
+            StringAssert.Contains("pilasterMinTurnDegrees:", yaml);
             Assert.IsNotNull(asset.infill);
             Assert.AreEqual(2500, asset.infill.maxInfill);
         }

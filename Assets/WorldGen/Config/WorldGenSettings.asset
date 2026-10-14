@@ -423,6 +423,8 @@ MonoBehaviour:
     pilasterSize: 0.25
     pilasterSpacing: 3
     pilasterExtra: 0.1
+    pilasterMinGap: 1
+    pilasterMinTurnDegrees: 20
     gateWidth: 2
     doorWidth: 0.9
     gateHeight: 1.6
