@@ -49,6 +49,9 @@ namespace TycoWorld.WorldGen.Authoring
     {
         /// <summary>Longest triangle edge allowed in walkable (collider) meshes; PhysX warns above 500 m.</summary>
         public const float MaxColliderEdge = 100f;
+        /// <summary>Prop containers under the generated root; WorldChunkIndex culls by these names.</summary>
+        public const string TreesGroup = "Props/Trees";
+        public const string LampsGroup = "Props/Lamps";
 
         public static Vector2Int ChunkOf(Vector2 p, float chunkSize) =>
             new Vector2Int(Mathf.FloorToInt(p.x / chunkSize), Mathf.FloorToInt(p.y / chunkSize));

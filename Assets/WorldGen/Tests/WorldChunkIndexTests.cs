@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using NUnit.Framework;
+using TycoWorld.WorldGen.Authoring;
 using UnityEngine;
 
 namespace TycoWorld.WorldGen.Tests
@@ -57,6 +59,28 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual(2, buildings.Renderers.Count);
             Assert.IsTrue(buildings.Bounds.Contains(CullingFixture.Origin + new Vector3(100f, 0f, 0f)));
             Assert.IsTrue(buildings.Bounds.Contains(CullingFixture.Origin + new Vector3(120f, 0f, 10f)));
+        }
+
+        [Test]
+        public void Build_IndexesEveryContainerTheGeneratorCreates()
+        {
+            var structures = new[] { FeatureGroups.Roads, FeatureGroups.Buildings, FeatureGroups.Areas, FeatureGroups.Water };
+            var props = new[] { WorldMeshPipeline.TreesGroup, WorldMeshPipeline.LampsGroup };
+            var paths = new List<string>(structures);
+            paths.AddRange(props);
+            for (int i = 0; i < paths.Count; i++)
+                fx.Cube(paths[i] + "/" + WorldMeshPipeline.ChunkName(new Vector2Int(i, 0)), new Vector3(i * 100f, 0f, 0f));
+
+            var groups = WorldChunkIndex.Build(fx.Root.transform);
+
+            Assert.AreEqual(paths.Count, groups.Count);
+            for (int i = 0; i < paths.Count; i++)
+            {
+                var chunk = new Vector2Int(i, 0);
+                var group = groups.Find(g => g.Chunk == chunk);
+                Assert.IsNotNull(group, paths[i]);
+                Assert.AreEqual(i < structures.Length ? CullCategory.Structure : CullCategory.Prop, group.Category, paths[i]);
+            }
         }
 
         [Test]

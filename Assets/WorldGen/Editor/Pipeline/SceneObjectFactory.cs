@@ -91,9 +91,9 @@ namespace TycoWorld.WorldGen.Authoring
                 GameObjectUtility.SetStaticEditorFlags(go, Flags);
             }
 
-            PlaceProps(scene, world.Trees, settings.treePrefabs, "Props/Trees", world.ChunkSize, Container, report, "pohon");
+            PlaceProps(scene, world.Trees, settings.treePrefabs, WorldMeshPipeline.TreesGroup, world.ChunkSize, Container, report, "pohon");
             var lampPrefabs = settings.lampPrefab != null ? new[] { settings.lampPrefab } : new GameObject[0];
-            PlaceProps(scene, world.Lamps, lampPrefabs, "Props/Lamps", world.ChunkSize, Container, report, "lampu");
+            PlaceProps(scene, world.Lamps, lampPrefabs, WorldMeshPipeline.LampsGroup, world.ChunkSize, Container, report, "lampu");
             return root;
         }
 
