@@ -74,6 +74,20 @@ namespace TycoWorld.Gameplay
             Mathf.FloorToInt((Hours - Mathf.Floor(Hours)) * 60f).ToString("00", CultureInfo.InvariantCulture);
         /// <summary>The "Gameplay/Objects" container for runtime objects (never under the generated root).</summary>
         public Transform ObjectsRoot => objectsRoot;
+        /// <summary>Height of the flat world the baked lanes lie on (0 in the generated world; test fixtures move it).</summary>
+        public float GroundLevel { get; set; }
+
+        /// <summary>The walking lanes as a graph, built on first use and shared by pedestrians and missions.</summary>
+        public LaneGraph Lanes
+        {
+            get
+            {
+                if (lanes == null && data != null) lanes = new LaneGraph(data.walkLanes, data.walkNodes);
+                return lanes;
+            }
+        }
+
+        LaneGraph lanes;
 
         public event Action Ready;
 
@@ -460,8 +474,8 @@ namespace TycoWorld.Gameplay
 
         /// <summary>Jobs shown in the phone's Kerjaan tab (the mission system fills it).</summary>
         public Func<IReadOnlyList<JobListing>> Jobs;
-        /// <summary>Extra map markers (the mission target, wanted warga...).</summary>
-        public Func<IEnumerable<MapMarker>> ExtraMarkers;
+        /// <summary>Extra map markers, one source per system (the mission target, a stolen bike...).</summary>
+        public readonly List<Func<IEnumerable<MapMarker>>> MarkerSources = new List<Func<IEnumerable<MapMarker>>>();
 
         void RenderPhone()
         {
@@ -470,9 +484,9 @@ namespace TycoWorld.Gameplay
                 markers.Add(new MapMarker { Position = new Vector2(site.counter.x, site.counter.z), Color = new Color(0.3f, 0.7f, 1f), Size = 4f });
             foreach (var spot in data.spots)
                 if (spot.kind == SpotKind.Kos) markers.Add(new MapMarker { Position = new Vector2(spot.position.x, spot.position.z), Color = new Color(1f, 0.85f, 0.2f), Size = 6f });
-            if (ExtraMarkers != null)
+            foreach (var source in MarkerSources)
             {
-                var extra = ExtraMarkers();
+                var extra = source();
                 if (extra != null) markers.AddRange(extra);
             }
             var p = Player != null ? Player.transform.position : Vector3.zero;

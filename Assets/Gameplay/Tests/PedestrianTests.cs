@@ -82,49 +82,15 @@ namespace TycoWorld.Gameplay.Tests
 
     public class PedestrianSystemTests
     {
-        const float Spacing = 20f;
-        const int GridCells = 8;
-
         KampungFixture fx;
         PedestrianSystem people;
-
-        /// <summary>A 9x9 node street grid, 20 m apart, centred on the fixture origin (lanes in world x/z).</summary>
-        static void Grid(KampungData d)
-        {
-            var nodes = new List<LaneNode>();
-            var lanes = new List<Lane>();
-            var nodeLanes = new List<List<int>>();
-            float half = GridCells * Spacing / 2f;
-            int Id(int x, int z) => z * (GridCells + 1) + x;
-            for (int z = 0; z <= GridCells; z++)
-                for (int x = 0; x <= GridCells; x++)
-                {
-                    nodes.Add(new LaneNode { position = new Vector2(KampungFixture.Origin.x - half + x * Spacing, KampungFixture.Origin.z - half + z * Spacing) });
-                    nodeLanes.Add(new List<int>());
-                }
-            void Link(int a, int b)
-            {
-                nodeLanes[a].Add(lanes.Count);
-                nodeLanes[b].Add(lanes.Count);
-                lanes.Add(new Lane { points = new[] { nodes[a].position, nodes[b].position }, startNode = a, endNode = b, width = 1 });
-            }
-            for (int z = 0; z <= GridCells; z++)
-                for (int x = 0; x <= GridCells; x++)
-                {
-                    if (x < GridCells) Link(Id(x, z), Id(x + 1, z));
-                    if (z < GridCells) Link(Id(x, z), Id(x, z + 1));
-                }
-            for (int i = 0; i < nodes.Count; i++) nodes[i].lanes = nodeLanes[i].ToArray();
-            d.walkLanes = lanes.ToArray();
-            d.walkNodes = nodes.ToArray();
-        }
 
         [SetUp]
         public void SetUp()
         {
             Interactable.ResetStatics();
-            fx = new KampungFixture(Grid);
-            people = new PedestrianSystem { GroundLevel = KampungFixture.Origin.y };
+            fx = new KampungFixture(KampungFixture.StreetGrid);
+            people = new PedestrianSystem();
             fx.Director.AddSystem(people);
             fx.Fx.Sync();
         }

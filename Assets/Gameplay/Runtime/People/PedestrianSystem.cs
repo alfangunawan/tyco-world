@@ -50,8 +50,7 @@ namespace TycoWorld.Gameplay
         int serial;
 
         public int Order => 10;
-        /// <summary>Height of the flat world the lanes lie on (0 in the generated world; tests move it).</summary>
-        public float GroundLevel { get; set; }
+        float GroundLevel => director != null ? director.GroundLevel : 0f;
         public LaneGraph Graph => graph;
         public IReadOnlyList<Pedestrian> Pool => pool;
         public Pedestrian Sosok => sosok;
@@ -72,7 +71,7 @@ namespace TycoWorld.Gameplay
         public void Begin(KampungDirector owner)
         {
             director = owner;
-            graph = new LaneGraph(owner.Data.walkLanes, owner.Data.walkNodes);
+            graph = owner.Lanes;
             root = new GameObject("Pedestrians").transform;
             root.SetParent(owner.ObjectsRoot, false);
             for (int i = 0; i < PoolSize; i++)

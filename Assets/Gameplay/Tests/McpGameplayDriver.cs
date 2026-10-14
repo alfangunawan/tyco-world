@@ -156,6 +156,67 @@ namespace TycoWorld.Gameplay.Tests
             return text.ToString();
         }
 
+        static MissionSystem Jobs => Director != null ? Director.GetSystem<MissionSystem>() : null;
+
+        /// <summary>The Kerjaan list and the running job: objective, target distance, compass, time left.</summary>
+        public static string Mission()
+        {
+            var jobs = Jobs;
+            if (jobs == null) return "no mission system";
+            var text = new System.Text.StringBuilder();
+            foreach (var l in jobs.Listings())
+                text.Append(l.Id).Append(l.Active ? "[active]" : l.Available ? "[ok]" : "[-]").Append(' ');
+            var m = jobs.Active;
+            if (m == null) return text.Append("| idle hud='").Append(Director.Hud.ObjectiveText).Append("'").ToString();
+            var target = m.Target;
+            text.Append("| ").Append(m.Id).Append(" step ").Append(m.StepIndex + 1).Append('/').Append(m.StepCount)
+                .Append(" '").Append(m.Objective).Append("' reward=").Append(m.Reward)
+                .Append(" target=").Append(target.HasValue ? target.Value.ToString("F1") : "-")
+                .Append(" dist=").Append(target.HasValue ? jobs.Context.Distance(target.Value).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) : "-")
+                .Append(" left=").Append(m.TimeLeft.ToString("F0", System.Globalization.CultureInfo.InvariantCulture))
+                .Append(" compass='").Append(Director.Hud.CompassText).Append("' beacon=").Append(jobs.Beacon != null && jobs.Beacon.activeSelf);
+            return text.ToString();
+        }
+
+        public static string StartJob(string id)
+        {
+            var jobs = Jobs;
+            if (jobs == null) return "no mission system";
+            var m = jobs.Find(id);
+            return m != null && jobs.StartJob(m) ? "started " + id + ": " + m.Objective : "could not start " + id;
+        }
+
+        /// <summary>Walks (teleports) the player to <paramref name="metres"/> short of the current target, facing it.</summary>
+        public static string GoToTarget(float metres = 2f)
+        {
+            var jobs = Jobs;
+            var m = jobs != null ? jobs.Active : null;
+            var target = m != null ? m.Target : null;
+            if (!target.HasValue) return "no target";
+            var player = Director.Player.transform.position;
+            var dir = target.Value - player;
+            dir.y = 0f;
+            var at = target.Value - (dir.sqrMagnitude > 1e-4f ? dir.normalized : Vector3.forward) * metres;
+            at.y = jobs.Context.Ground(at) + 0.05f;
+            Director.Player.Teleport(at, Mathf.Atan2(dir.x, dir.z) * Mathf.Rad2Deg);
+            return "at " + at.ToString("F1") + " facing target";
+        }
+
+        /// <summary>Uses the nearest mission E target within 4 m (as if E was pressed while looking at it).</summary>
+        public static string UseNearest()
+        {
+            var d = Director;
+            if (d == null) return "no director";
+            var player = d.Player.transform.position;
+            ActionInteractable best = null;
+            foreach (var a in d.ObjectsRoot.GetComponentsInChildren<ActionInteractable>())
+                if (best == null || (a.transform.position - player).sqrMagnitude < (best.transform.position - player).sqrMagnitude) best = a;
+            if (best == null || Vector3.Distance(best.transform.position, player) > 4f) return "nothing to use nearby";
+            var context = new TycoWorld.Player.InteractionContext(d.Player, d.Player.Hud, d.Player.View.position);
+            string prompt = best.GetPrompt(context);
+            return best.Interact(context) ? "used " + best.name + " (" + prompt + ")" : "cannot use " + best.name + " (" + prompt + ")";
+        }
+
         public static string ForceSosok()
         {
             var people = Director != null ? Director.GetSystem<PedestrianSystem>() : null;

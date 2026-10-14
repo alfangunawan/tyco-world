@@ -13,11 +13,14 @@ namespace TycoWorld.Gameplay
         public const string MoneyName = "gameplay-money";
         public const string ObjectiveName = "gameplay-objective";
         public const string ToastsName = "gameplay-toasts";
+        public const string CompassName = "gameplay-compass";
         public const float ToastSeconds = 4f;
         const int MaxToasts = 4;
 
         readonly VisualElement root, toastStack, progressTrack, progressFill, fade, laparFill, energiFill;
-        readonly Label money, objective, progressLabel, stars, laparLabel, energiLabel;
+        readonly Label money, objective, progressLabel, stars, laparLabel, energiLabel, compassLabel;
+        readonly VisualElement compassBox;
+        readonly CompassArrow compassArrow;
         readonly List<(Label label, float until)> toasts = new List<(Label label, float until)>();
         float clock;
 
@@ -44,13 +47,39 @@ namespace TycoWorld.Gameplay
             stars.style.marginTop = 6f;
             corner.Add(stars);
 
+            // Top centre on a dark strip so it reads against a bright sky.
+            var objectiveRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            objectiveRow.style.position = Position.Absolute;
+            objectiveRow.style.top = 16f;
+            objectiveRow.style.left = 0f;
+            objectiveRow.style.right = 0f;
+            objectiveRow.style.flexDirection = FlexDirection.Row;
+            objectiveRow.style.justifyContent = Justify.Center;
+            root.Add(objectiveRow);
             objective = GameplayStyle.HudText("", 20f, false, ObjectiveName);
-            objective.style.position = Position.Absolute;
-            objective.style.top = 22f;
-            objective.style.left = 0f;
-            objective.style.right = 0f;
             objective.style.unityTextAlign = TextAnchor.UpperCenter;
-            root.Add(objective);
+            objective.style.backgroundColor = new Color(0f, 0f, 0f, 0.5f);
+            GameplayStyle.Pad(objective, 6f);
+            GameplayStyle.Round(objective, 4f);
+            objective.style.display = DisplayStyle.None;
+            objectiveRow.Add(objective);
+
+            // Under the objective: an arrow turning toward the target and the distance to it.
+            compassBox = new VisualElement { name = CompassName, pickingMode = PickingMode.Ignore };
+            compassBox.style.position = Position.Absolute;
+            compassBox.style.top = 56f;
+            compassBox.style.left = 0f;
+            compassBox.style.right = 0f;
+            compassBox.style.flexDirection = FlexDirection.Row;
+            compassBox.style.justifyContent = Justify.Center;
+            compassBox.style.alignItems = Align.Center;
+            compassArrow = new CompassArrow();
+            compassBox.Add(compassArrow);
+            compassLabel = GameplayStyle.HudText("", 18f, true);
+            compassLabel.style.marginLeft = 8f;
+            compassBox.Add(compassLabel);
+            compassBox.style.display = DisplayStyle.None;
+            root.Add(compassBox);
 
             toastStack = new VisualElement { name = ToastsName, pickingMode = PickingMode.Ignore };
             toastStack.style.position = Position.Absolute;
@@ -130,7 +159,23 @@ namespace TycoWorld.Gameplay
             }
         }
 
-        public void SetObjective(string text) => objective.text = text ?? "";
+        public void SetObjective(string text)
+        {
+            objective.text = text ?? "";
+            objective.style.display = string.IsNullOrEmpty(objective.text) ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        /// <summary>Shows the arrow turned <paramref name="relativeDegrees"/> from straight ahead (clockwise) with a text; null text hides it.</summary>
+        public void SetCompass(string text, float relativeDegrees)
+        {
+            bool show = !string.IsNullOrEmpty(text);
+            compassBox.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!show) return;
+            compassLabel.text = text;
+            compassArrow.style.rotate = new Rotate(new Angle(relativeDegrees, AngleUnit.Degree));
+        }
+
+        public string CompassText => compassBox.style.display == DisplayStyle.None ? "" : compassLabel.text;
 
         public void SetProgress(string text, float amount01)
         {
@@ -168,6 +213,34 @@ namespace TycoWorld.Gameplay
                 }
                 else toasts[i].label.style.opacity = Mathf.Clamp01(left / 0.6f);
             }
+        }
+    }
+
+    /// <summary>A filled triangle pointing up; rotated to point at the mission target.</summary>
+    sealed class CompassArrow : VisualElement
+    {
+        public CompassArrow()
+        {
+            pickingMode = PickingMode.Ignore;
+            style.width = 22f;
+            style.height = 22f;
+            generateVisualContent += Draw;
+        }
+
+        static void Draw(MeshGenerationContext context)
+        {
+            var p = context.painter2D;
+            p.fillColor = new Color(1f, 0.77f, 0.25f, 1f);
+            p.strokeColor = new Color(0f, 0f, 0f, 0.7f);
+            p.lineWidth = 1.5f;
+            p.BeginPath();
+            p.MoveTo(new Vector2(11f, 1f));
+            p.LineTo(new Vector2(20f, 20f));
+            p.LineTo(new Vector2(11f, 15f));
+            p.LineTo(new Vector2(2f, 20f));
+            p.ClosePath();
+            p.Fill();
+            p.Stroke();
         }
     }
 }
