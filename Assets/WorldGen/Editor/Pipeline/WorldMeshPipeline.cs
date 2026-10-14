@@ -12,6 +12,8 @@ namespace TycoWorld.WorldGen.Authoring
         public const string Buildings = "Buildings";
         public const string Areas = "Areas";
         public const string Water = "Water";
+        public const string RoadEdges = "RoadEdges";
+        public const string Frontage = "Frontage";
         public const string KeyBuildings = "KeyBuildings";
     }
 
@@ -32,6 +34,10 @@ namespace TycoWorld.WorldGen.Authoring
         public Obb Obb;
         public string Category = "";
         public IReadOnlyDictionary<string, string> Tags = OsmTags.Empty;
+        /// <summary>Separate collision mesh (solid boxes for walls); null = collide with Mesh.</summary>
+        public MeshData ColliderMesh;
+        /// <summary>False for generated chunk objects with no OSM element behind them (edges, walls): they get no OsmFeature.</summary>
+        public bool HasOsmIdentity = true;
     }
 
     public sealed class BuiltWorld
@@ -75,6 +81,8 @@ namespace TycoWorld.WorldGen.Authoring
             AddBuildings(world, settings, built, report);
             AddAreas(world, built, report);
             AddWater(world, settings, built, report);
+            var street = StreetContext.From(world, settings);
+            AddEdges(built, network, street, settings, report);
             foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
             var placer = new PropPlacer(world.Buildings, world.Roads);
@@ -217,6 +225,45 @@ namespace TycoWorld.WorldGen.Authoring
             }
         }
 
+        /// <summary>Stable negative id of a per-chunk generated object (never collides with OSM ids, which are positive).</summary>
+        public static long ChunkFeatureId(string group, string name, Vector2Int chunk) =>
+            -(long)(SplitMix64.Hash(((long)chunk.x << 32) ^ (uint)chunk.y, group + "/" + name) & 0x3FFF_FFFF_FFFF_FFFFUL) - 1;
+
+        static void AddChunkFeatures(BuiltWorld built, IReadOnlyDictionary<Vector2Int, MeshData> meshes, IReadOnlyDictionary<Vector2Int, MeshData> colliders,
+            FeatureKind kind, string group, string name, Material[] materials, GenerationReport report)
+        {
+            var chunks = new List<Vector2Int>(meshes.Keys);
+            chunks.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
+            foreach (var chunk in chunks)
+            {
+                var mesh = meshes[chunk];
+                if (mesh.IsEmpty) continue;
+                MeshData collider = null;
+                if (colliders != null && colliders.TryGetValue(chunk, out var c) && !c.IsEmpty) collider = c.SplitLongTriangles(MaxColliderEdge);
+                built.Features.Add(new BuiltFeature
+                {
+                    Kind = kind, OsmId = ChunkFeatureId(group, name, chunk), ElementType = OsmElementType.Way, Name = name,
+                    Group = group, Chunk = chunk,
+                    Anchor = new Vector2((chunk.x + 0.5f) * built.ChunkSize, (chunk.y + 0.5f) * built.ChunkSize),
+                    Mesh = mesh.SplitLongTriangles(MaxColliderEdge), ColliderMesh = collider,
+                    Materials = materials, AddCollider = true, HasOsmIdentity = false, Category = name
+                });
+                report.Count(name);
+            }
+        }
+
+        static void AddEdges(BuiltWorld built, RoadNetwork network, StreetContext street, WorldGenSettings settings, GenerationReport report)
+        {
+            var e = settings.roadEdges;
+            var edges = RoadEdgeBuilder.Build(network, street, e, built.ChunkSize);
+            AddChunkFeatures(built, edges.Gutter, null, FeatureKind.RoadEdge, FeatureGroups.RoadEdges, RoadEdgeBuilder.GutterName,
+                new[] { e.concrete, e.gutter }, report);
+            AddChunkFeatures(built, edges.Sidewalk, null, FeatureKind.RoadEdge, FeatureGroups.RoadEdges, RoadEdgeBuilder.SidewalkName,
+                new[] { e.sidewalk, e.kerb, e.concrete }, report);
+            report.Count("EdgeMeters.Gutter", Mathf.RoundToInt(edges.GutterMeters));
+            report.Count("EdgeMeters.Sidewalk", Mathf.RoundToInt(edges.SidewalkMeters));
+        }
+
         static int Length(Material[] list) => list != null ? list.Length : 0;
 
         static Material At(Material[] list, int index) =>
@@ -253,7 +300,10 @@ namespace TycoWorld.WorldGen.Authoring
             }
 
             foreach (var f in built.Features.OrderBy(f => f.Kind).ThenBy(f => f.OsmId))
+            {
                 Mix(f.Chunk, f.Mesh != null ? f.Mesh.ContentHash() : unchecked((ulong)f.OsmId));
+                if (f.ColliderMesh != null) Mix(f.Chunk, f.ColliderMesh.ContentHash());
+            }
             foreach (var t in built.Trees) Mix(ChunkOf(t.Position, built.ChunkSize), Quantize(t));
             foreach (var l in built.Lamps) Mix(ChunkOf(l.Position, built.ChunkSize), Quantize(l));
 

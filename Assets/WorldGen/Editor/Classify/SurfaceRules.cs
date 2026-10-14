@@ -22,6 +22,9 @@ namespace TycoWorld.WorldGen.Authoring
                 case "Ground_Dirt":
                 case "Area_Cemetery": return SurfaceType.Dirt;
                 case "Water": return SurfaceType.Water;
+                case "Edge_Sidewalk": return SurfaceType.Paving;
+                case "Edge_Concrete":
+                case "Edge_Gutter": return SurfaceType.Concrete;
                 default: return SurfaceType.Default;
             }
         }
@@ -45,6 +48,7 @@ namespace TycoWorld.WorldGen.Authoring
                     return Enum.TryParse(feature.Category, out AreaCategory category) ? ForArea(category) : SurfaceType.Default;
                 case FeatureKind.WaterArea:
                 case FeatureKind.WaterLine: return SurfaceType.Water;
+                case FeatureKind.RoadEdge: return feature.Name == RoadEdgeBuilder.SidewalkName ? SurfaceType.Paving : SurfaceType.Concrete;
                 default: return SurfaceType.Default;
             }
         }

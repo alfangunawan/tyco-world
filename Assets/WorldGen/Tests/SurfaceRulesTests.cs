@@ -16,12 +16,23 @@ namespace TycoWorld.WorldGen.Tests
         [TestCase("Area_Pitch", SurfaceType.Grass)]
         [TestCase("Ground_Dirt", SurfaceType.Dirt)]
         [TestCase("Area_Cemetery", SurfaceType.Dirt)]
+        [TestCase("Edge_Sidewalk", SurfaceType.Paving)]
+        [TestCase("Edge_Concrete", SurfaceType.Concrete)]
+        [TestCase("Edge_Gutter", SurfaceType.Concrete)]
         [TestCase("Water", SurfaceType.Water)]
         [TestCase("M_Res_Ground_KosDoor", SurfaceType.Default)]
         [TestCase("", SurfaceType.Default)]
         public void ForMaterialName_MapsDrawnMaterial(string name, SurfaceType expected)
         {
             Assert.AreEqual(expected, SurfaceRules.ForMaterialName(name));
+        }
+
+        [Test]
+        public void For_RoadEdgeWithoutMaterial_UsesItsName()
+        {
+            Assert.AreEqual(SurfaceType.Paving, SurfaceRules.For(new BuiltFeature { Kind = FeatureKind.RoadEdge, Name = RoadEdgeBuilder.SidewalkName }));
+            Assert.AreEqual(SurfaceType.Concrete, SurfaceRules.For(new BuiltFeature { Kind = FeatureKind.RoadEdge, Name = RoadEdgeBuilder.GutterName }));
+            Assert.AreEqual(SurfaceType.Default, SurfaceRules.For(new BuiltFeature { Kind = FeatureKind.Frontage, Name = "Walls" }));
         }
 
         [TestCase("primary", SurfaceType.Asphalt)]

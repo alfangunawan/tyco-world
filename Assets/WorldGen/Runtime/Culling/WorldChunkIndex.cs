@@ -6,7 +6,7 @@ using UnityEngine;
 namespace TycoWorld.WorldGen
 {
     /// <summary>
-    /// Reads the generated hierarchy (Roads|Buildings|Areas|Water|Props/Trees|Props/Lamps → Chunk_x_z) into cullable
+    /// Reads the generated hierarchy (Roads|Buildings|Areas|Water|Frontage|RoadEdges|Props/Trees|Props/Lamps → Chunk_x_z) into cullable
     /// groups. Ground, KeyBuildings and WorldEdge are not indexed, so they are always drawn (spec #4 §5.1).
     /// </summary>
     public static class WorldChunkIndex
@@ -23,6 +23,8 @@ namespace TycoWorld.WorldGen
             Add(root.Find("Water"), CullCategory.Structure, groups);
             Add(root.Find("Props/Trees"), CullCategory.Prop, groups);
             Add(root.Find("Props/Lamps"), CullCategory.Prop, groups);
+            Add(root.Find("RoadEdges"), CullCategory.Prop, groups);
+            Add(root.Find("Frontage"), CullCategory.Structure, groups);
             return groups;
         }
 

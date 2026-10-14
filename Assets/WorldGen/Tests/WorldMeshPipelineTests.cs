@@ -93,6 +93,62 @@ namespace TycoWorld.WorldGen.Tests
             Assert.Greater(built.Features.Count, 0);
             foreach (var f in built.Features.Where(f => f.Mesh != null))
                 Assert.IsTrue(f.AddCollider, f.Kind + " " + f.OsmId);
+            var edges = built.Features.Where(f => f.Kind == FeatureKind.RoadEdge).ToList();
+            Assert.Greater(edges.Count, 0);
+            foreach (var f in edges)
+                Assert.LessOrEqual(MeshDataSplitTests.MaxEdge(f.Mesh), WorldMeshPipeline.MaxColliderEdge + 1e-3f, f.Name + " " + f.Chunk);
+        }
+
+        BuiltWorld BuildStreet(GenerationReport report, System.Action<TestOsm> extra = null)
+        {
+            var osm = StreetFixture.Osm();
+            extra?.Invoke(osm);
+            return WorldMeshPipeline.Build(new FeatureClassifier(settings, report).Classify(osm.Data), settings, report);
+        }
+
+        [Test]
+        public void Street_EdgesAreChunkObjectsWithoutOsmIdentity()
+        {
+            var report = new GenerationReport();
+            var edges = BuildStreet(report).Features.Where(f => f.Kind == FeatureKind.RoadEdge).ToList();
+            Assert.Greater(edges.Count, 0);
+            foreach (var f in edges)
+            {
+                Assert.AreEqual(FeatureGroups.RoadEdges, f.Group);
+                Assert.IsFalse(f.HasOsmIdentity);
+                Assert.IsTrue(f.AddCollider);
+                Assert.IsNull(f.ColliderMesh);
+                Assert.Less(f.OsmId, 0);
+                Assert.AreEqual(f.Name == RoadEdgeBuilder.SidewalkName ? SurfaceType.Paving : SurfaceType.Concrete, f.Surface);
+                Assert.AreEqual(f.Chunk, WorldMeshPipeline.ChunkOf(f.Anchor, 100f));
+            }
+            Assert.IsTrue(edges.Any(f => f.Name == RoadEdgeBuilder.SidewalkName));
+            Assert.IsTrue(edges.Any(f => f.Name == RoadEdgeBuilder.GutterName));
+            Assert.AreEqual(edges.Count, edges.Select(f => f.OsmId).Distinct().Count());
+            Assert.Greater(report.GetCount("EdgeMeters.Gutter"), 0);
+            Assert.Greater(report.GetCount("EdgeMeters.Sidewalk"), 0);
+        }
+
+        [Test]
+        public void Street_IsDeterministic()
+        {
+            var first = new GenerationReport();
+            var second = new GenerationReport();
+            BuildStreet(first);
+            BuildStreet(second);
+            CollectionAssert.AreEqual(first.ChunkHashes, second.ChunkHashes);
+        }
+
+        [Test]
+        public void ChunkFeatureId_IsNegativeAndDistinct()
+        {
+            long a = WorldMeshPipeline.ChunkFeatureId(FeatureGroups.RoadEdges, RoadEdgeBuilder.GutterName, new Vector2Int(1, 2));
+            long b = WorldMeshPipeline.ChunkFeatureId(FeatureGroups.RoadEdges, RoadEdgeBuilder.SidewalkName, new Vector2Int(1, 2));
+            long c = WorldMeshPipeline.ChunkFeatureId(FeatureGroups.RoadEdges, RoadEdgeBuilder.GutterName, new Vector2Int(2, 1));
+            Assert.Less(a, 0);
+            Assert.AreNotEqual(a, b);
+            Assert.AreNotEqual(a, c);
+            Assert.AreEqual(a, WorldMeshPipeline.ChunkFeatureId(FeatureGroups.RoadEdges, RoadEdgeBuilder.GutterName, new Vector2Int(1, 2)));
         }
 
         [Test]

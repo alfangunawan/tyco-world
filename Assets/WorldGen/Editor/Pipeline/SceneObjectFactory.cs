@@ -66,7 +66,7 @@ namespace TycoWorld.WorldGen.Authoring
                         ? FeatureGroups.KeyBuildings
                         : feature.Group + "/" + WorldMeshPipeline.ChunkName(feature.Chunk);
                     go.transform.SetParent(Container(path), false);
-                    go.AddComponent<MeshFilter>().sharedMesh = asset.Mesh;
+                    go.AddComponent<MeshFilter>().sharedMesh = asset.Collider != null ? asset.Collider : asset.Mesh;
                     var materials = new Material[asset.UsedSubmeshes.Length];
                     for (int k = 0; k < materials.Length; k++)
                     {
@@ -78,9 +78,12 @@ namespace TycoWorld.WorldGen.Authoring
                     if (feature.AddCollider) go.AddComponent<MeshCollider>().sharedMesh = asset.Mesh;
                 }
 
-                var osm = go.GetComponent<OsmFeature>();
-                if (osm == null) osm = go.AddComponent<OsmFeature>();
-                osm.Initialize(feature.OsmId, feature.ElementType, feature.Kind, feature.Name ?? "", feature.Tags);
+                if (feature.HasOsmIdentity)
+                {
+                    var osm = go.GetComponent<OsmFeature>();
+                    if (osm == null) osm = go.AddComponent<OsmFeature>();
+                    osm.Initialize(feature.OsmId, feature.ElementType, feature.Kind, feature.Name ?? "", feature.Tags);
+                }
                 ApplySurface(go, feature.Surface);
                 if (feature.Key != null)
                 {

@@ -64,8 +64,8 @@ namespace TycoWorld.WorldGen.Tests
         [Test]
         public void Build_IndexesEveryContainerTheGeneratorCreates()
         {
-            var structures = new[] { FeatureGroups.Roads, FeatureGroups.Buildings, FeatureGroups.Areas, FeatureGroups.Water };
-            var props = new[] { WorldMeshPipeline.TreesGroup, WorldMeshPipeline.LampsGroup };
+            var structures = new[] { FeatureGroups.Roads, FeatureGroups.Buildings, FeatureGroups.Areas, FeatureGroups.Water, FeatureGroups.Frontage };
+            var props = new[] { WorldMeshPipeline.TreesGroup, WorldMeshPipeline.LampsGroup, FeatureGroups.RoadEdges };
             var paths = new List<string>(structures);
             paths.AddRange(props);
             for (int i = 0; i < paths.Count; i++)
