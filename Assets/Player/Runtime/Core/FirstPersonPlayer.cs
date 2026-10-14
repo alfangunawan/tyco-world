@@ -51,6 +51,15 @@ namespace TycoWorld.Player
         public float Pitch => yawPitch.y;
         public IReadOnlyList<IPlayerModule> Modules => modules;
 
+        /// <summary>Settings multiplier on mouse look; only the keyboard/mouse reader is scaled, scripted sources are not.</summary>
+        public float LookSensitivity { get; set; } = 1f;
+
+        /// <summary>Settings: invert vertical mouse look (keyboard/mouse reader only).</summary>
+        public bool InvertY { get; set; }
+
+        /// <summary>False while the pause menu owns Esc (spec #4 §6); true keeps Esc = release the cursor.</summary>
+        public bool EscapeUnlocksCursor { get; set; } = true;
+
         public void Configure(PlayerTuning playerTuning, Transform pivot, Transform view)
         {
             tuning = playerTuning;
@@ -119,7 +128,10 @@ namespace TycoWorld.Player
             if (!IsInitialized) Initialize();
             if (dt <= 0f) return;
             var source = ActiveSource;
-            Intent = Filter(source != null ? source.Read(dt) : default);
+            var raw = source != null ? source.Read(dt) : default;
+            if (reader != null && ReferenceEquals(source, reader))
+                raw.LookDegrees = PlayerInputReader.ApplyLookSettings(raw.LookDegrees, LookSensitivity, InvertY);
+            Intent = Filter(raw);
 
             yawPitch = LookModel.Apply(yawPitch, Intent.LookDegrees, tuning.look.pitchLimit);
             transform.rotation = Quaternion.Euler(0f, yawPitch.x, 0f);
@@ -214,7 +226,7 @@ namespace TycoWorld.Player
         void HandleCursor()
         {
             if (scriptedSource != null || ActiveSource == null) return;
-            if (reader.ReleaseCursorPressed) UnlockCursor();
+            if (EscapeUnlocksCursor && reader.ReleaseCursorPressed) UnlockCursor();
             else if (reader.AttackPressed && Cursor.lockState != CursorLockMode.Locked && Locks.Allows(PlayerAbility.Look)) LockCursor();
             reader.CursorLocked = Cursor.lockState == CursorLockMode.Locked;
         }
