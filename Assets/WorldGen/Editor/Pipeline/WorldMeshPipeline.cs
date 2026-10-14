@@ -70,7 +70,8 @@ namespace TycoWorld.WorldGen.Authoring
                 ChunkSize = settings.chunkSize > 0f ? settings.chunkSize : 100f,
                 Ground = GroundBuilder.Build(world.LocalBounds)
             };
-            AddRoads(world, built, report);
+            var network = new RoadNetwork(world.Roads, CampusShapes(world), settings.roadEdges);
+            AddRoads(world, built, network, settings, report);
             AddBuildings(world, settings, built, report);
             AddAreas(world, built, report);
             AddWater(world, settings, built, report);
@@ -85,13 +86,20 @@ namespace TycoWorld.WorldGen.Authoring
             return built;
         }
 
-        static void AddRoads(ClassifiedWorld world, BuiltWorld built, GenerationReport report)
+        static void AddRoads(ClassifiedWorld world, BuiltWorld built, RoadNetwork network, WorldGenSettings settings, GenerationReport report)
         {
+            var meshes = new Dictionary<long, MeshData>();
             foreach (var road in world.Roads)
             {
-                var mesh = new MeshData(1);
+                var mesh = new MeshData(2);
                 foreach (var piece in road.Pieces)
                     RoadMeshBuilder.AddRibbon(mesh, 0, piece.Points, road.Width, road.Y, piece.ExtendStart, piece.ExtendEnd);
+                meshes[road.Id] = mesh;
+            }
+            report.Count("MarkingDashes", RoadMarkingBuilder.Build(network, settings.roadEdges, meshes));
+            foreach (var road in world.Roads)
+            {
+                var mesh = meshes[road.Id];
                 if (mesh.IsEmpty) { report.Skip(SkipReasons.RoadEmptyMesh, road.Id); continue; }
                 mesh = mesh.SplitLongTriangles(MaxColliderEdge);
                 var anchor = MidPoint(road.Pieces);
@@ -99,12 +107,15 @@ namespace TycoWorld.WorldGen.Authoring
                 {
                     Kind = FeatureKind.Road, OsmId = road.Id, ElementType = OsmElementType.Way, Name = road.Name,
                     Group = FeatureGroups.Roads, Anchor = anchor, Chunk = ChunkOf(anchor, built.ChunkSize),
-                    Mesh = mesh, Materials = new[] { road.Rule.material }, Category = road.Highway, Tags = road.Tags,
+                    Mesh = mesh, Materials = new[] { road.Rule.material, settings.roadEdges.marking }, Category = road.Highway, Tags = road.Tags,
                     AddCollider = true
                 });
                 report.Count("Road");
             }
         }
+
+        static List<Polygon> CampusShapes(ClassifiedWorld world) =>
+            world.Areas.Where(a => a.Rule != null && a.Rule.category == AreaCategory.Campus && a.Shape != null).Select(a => a.Shape).ToList();
 
         static void AddBuildings(ClassifiedWorld world, WorldGenSettings settings, BuiltWorld built, GenerationReport report)
         {

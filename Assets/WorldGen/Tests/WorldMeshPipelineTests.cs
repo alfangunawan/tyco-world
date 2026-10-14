@@ -127,6 +127,27 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void MarkedRoad_KeepsItsAsphaltSurface()
+        {
+            var asphalt = Materials(1)[0];
+            asphalt.name = "Road_Asphalt";
+            var marking = Materials(1)[0];
+            marking.name = "Road_Marking";
+            settings.roadRules.Single(r => r.highway == "primary").material = asphalt;
+            settings.roadEdges.marking = marking;
+            var osm = new TestOsm();
+            osm.Way(950, new[] { new Vector2(-300f, -500f), new Vector2(-200f, -500f) }, false, ("highway", "primary"));
+            var report = new GenerationReport();
+            var built = WorldMeshPipeline.Build(new FeatureClassifier(settings, report).Classify(osm.Data), settings, report);
+            var road = built.Features.Single(f => f.Kind == FeatureKind.Road && f.OsmId == 950);
+            Assert.AreEqual(SurfaceType.Asphalt, road.Surface);
+            Assert.AreSame(asphalt, road.Materials[0]);
+            Assert.AreSame(marking, road.Materials[1]);
+            Assert.Greater(road.Mesh.Indices(RoadMarkingBuilder.Submesh).Count, 0);
+            Assert.AreEqual(12, report.GetCount("MarkingDashes"));
+        }
+
+        [Test]
         public void KeyBuildingWithPrefab_HasNoMesh()
         {
             var prefab = new GameObject("FakePrefab");
