@@ -375,6 +375,21 @@ namespace TycoWorld.Vehicles.Tests
         }
 
         [Test]
+        public void Kerb_IsCrossedWithoutBump()
+        {
+            // Street-frontage spec §4: a 0.21 m kerb (higher than the real 0.13 m step) is below the 0.3 m step offset and below
+            // the wall box cast, so the bike rides up onto the sidewalk instead of stopping.
+            fx.Box("Sidewalk", new Vector3(0f, 0.21f - 0.5f, 8f + 20f), new Vector3(10f, 1f, 40f));
+            fx.Sync();
+            bike.Mount(player);
+            input.Hold(Gas, 3f);
+            Run(3f);
+            Assert.Greater(bike.transform.position.z - O.z, 9f, "motor naik ke trotoar");
+            Assert.AreEqual(0.21f, bike.transform.position.y - O.y, 0.03f);
+            Assert.AreEqual(0, bike.Bumps);
+        }
+
+        [Test]
         public void Body_RestsOnTheGround()
         {
             bike.Mount(player);

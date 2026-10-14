@@ -93,6 +93,21 @@ namespace TycoWorld.Player.Tests
         }
 
         [Test]
+        public void Tick_StepsOntoKerb()
+        {
+            // Street-frontage spec §4: from residential asphalt (y 0.08) up a kerb onto a sidewalk whose top is 0.21.
+            fx.Floor(0.08f);
+            fx.Box("Sidewalk", new Vector3(0f, 0.21f - 0.5f, 2f + 5f), new Vector3(10f, 1f, 10f));
+            fx.Sync();
+            var rig = TestRig.Create(fx, new Vector3(0f, 0.08f, 0f)).Init();
+            rig.Intents.Hold(Forward(), 2.5f);
+            rig.Run(2.5f);
+            Assert.Greater(rig.Local.z, 3f);
+            Assert.That(rig.Local.y, Is.InRange(0.19f, 0.29f), "on the 0.21 m sidewalk (within skin width)");
+            Assert.IsTrue(rig.Player.IsGrounded);
+        }
+
+        [Test]
         public void Tick_WalkingOffRibbon_NoLanding()
         {
             fx.Floor();
