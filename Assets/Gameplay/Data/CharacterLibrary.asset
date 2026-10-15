@@ -14,8 +14,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: TycoWorld.Gameplay::TycoWorld.Gameplay.CharacterLibrary
   controller: {fileID: 9100000, guid: 9cf22e06ea8b4bc4d93dee828d4852ad, type: 2}
   bodies:
-  - {fileID: 919132149155446097, guid: 1a93d331f4c972b46ba6bdca0cf50104, type: 3}
-  womenBodies: []
+  - {fileID: 919132149155446097, guid: f1a492c9c3b33e64c809c1dbae0332ca, type: 3}
+  - {fileID: 919132149155446097, guid: 1a6e922503e0002499723b9218c68890, type: 3}
+  - {fileID: 919132149155446097, guid: 635b4f925017d444ca077ea736e946fd, type: 3}
+  - {fileID: 919132149155446097, guid: 26ffacd0a481395459534bb94440eac7, type: 3}
+  - {fileID: 919132149155446097, guid: cd90cc6b97d74a14e98ef1aae72b7383, type: 3}
+  - {fileID: 919132149155446097, guid: 58fde61da989cd64785931da323aeb62, type: 3}
+  womenBodies:
+  - {fileID: 919132149155446097, guid: 6c24e5333d6a71742ba08545d8240988, type: 3}
+  - {fileID: 919132149155446097, guid: 55dee01942b1fd64a8689ef497461f06, type: 3}
+  - {fileID: 919132149155446097, guid: ee2c8a1075c202f4099f151b938ee509, type: 3}
+  - {fileID: 919132149155446097, guid: cf22f46f73982b64ca8a785a2224de87, type: 3}
   galon: {fileID: 919132149155446097, guid: d6fe4da18956cb04d824984ba052c122, type: 3}
   galonMaterial: {fileID: 2100000, guid: c64758da8a0523c4da2923ede767f63a, type: 2}
   dispenser: {fileID: 919132149155446097, guid: ebce2f98b5cf8b940949f23a6113e520, type: 3}

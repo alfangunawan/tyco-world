@@ -64,6 +64,91 @@ namespace TycoWorld.Gameplay.Tests
             return bike;
         }
 
+        /// <summary>Once animated (out of the T-pose: hands below the shoulders), the body faces its holder's +Z.</summary>
+        static void AssertFacesForward(CharacterRig rig)
+        {
+            var animator = rig.Animator;
+            var culling = animator.cullingMode;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            for (int i = 0; i < 4; i++) animator.Update(0.1f);
+            animator.cullingMode = culling;
+            var hand = rig.Bone(HumanBodyBones.RightHand);
+            var shoulder = rig.Bone(HumanBodyBones.RightUpperArm);
+            Assert.Less(hand.position.y, shoulder.position.y - 0.25f, rig.Root.name + ": the animation is playing (arms down)");
+            var across = shoulder.position - rig.Bone(HumanBodyBones.LeftUpperArm).position;
+            across.y = 0f;
+            Assert.Greater(Vector3.Dot(Vector3.Cross(across, Vector3.up).normalized, rig.Root.forward), 0.8f,
+                rig.Root.name + ": the animated body faces where its holder faces");
+        }
+
+        [Test]
+        public void EveryBody_IsOneSkinnedMesh_WithEachMaterialOnce()
+        {
+            foreach (var body in library.bodies.Concat(library.womenBodies ?? new GameObject[0]))
+            {
+                var parts = body.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+                Assert.AreEqual(1, parts.Length, body.name + ": body, head, legs and feet are merged at import (one skinning, fewer draws)");
+                var mesh = parts[0].sharedMesh;
+                var mats = parts[0].sharedMaterials;
+                Assert.AreEqual(mesh.subMeshCount, mats.Length, body.name);
+                Assert.AreEqual(mats.Length, mats.Distinct().Count(), body.name + ": one submesh per material");
+                Assert.That(mesh.triangles.Length / 3, Is.InRange(4000, 9000), body.name + ": every part's triangles are kept");
+                Assert.AreEqual(mesh.vertexCount, mesh.boneWeights.Length, body.name + ": every vertex stays skinned");
+                Assert.That(mats.Select(m => m.name.ToLowerInvariant()), Has.Some.StartsWith("skin"), body.name);
+            }
+        }
+
+        [Test]
+        public void TheLibrary_SplitsMenAndWomen_AndDressesThemAsKampungFolk()
+        {
+            Assert.That(library.bodies.Select(b => b.name), Has.None.StartsWith("Women"), "men are picked from men's bodies only");
+            var palette = fx.Director.Palette;
+            var parent = new GameObject("DressTest").transform;
+            try
+            {
+                foreach (var body in library.bodies.Concat(library.womenBodies ?? new GameObject[0]))
+                {
+                    var one = ScriptableObject.CreateInstance<CharacterLibrary>();
+                    one.controller = library.controller;
+                    one.bodies = new[] { body };
+                    var rig = CharacterFactory.Spawn(one, parent, body.name, 0x51UL, palette);
+                    Object.DestroyImmediate(one);
+                    Assert.IsNotNull(rig, body.name);
+                    var mats = rig.GetComponentsInChildren<Renderer>(true).SelectMany(r => r.sharedMaterials).Where(m => m != null).ToArray();
+                    foreach (var m in mats)
+                    {
+                        string n = m.name.ToLowerInvariant();
+                        Assert.IsFalse(n.StartsWith("skin") || n.StartsWith("hair") || n.StartsWith("eyebrow") || n == "red" && body.name == "Women_Formal",
+                            body.name + ": " + m.name + " is still the model's own colour");
+                    }
+                    Assert.That(mats, Has.Some.Matches<Material>(m => (Color32)m.color is var c && c.r == CharacterFactory.SkinTone(0x51UL).r && c.g == CharacterFactory.SkinTone(0x51UL).g),
+                        body.name + " has sawo matang skin");
+                    AssertFacesForward(rig);
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(parent.gameObject);
+            }
+        }
+
+        [Test]
+        public void FarPedestrians_StopAnimating_AndCastNoShadows()
+        {
+            var people = new PedestrianSystem { AutoSpawn = false };
+            fx.Director.AddSystem(people);
+            var p = people.SpawnAt(0, 0f, 1);
+            Assert.IsNotNull(p.Rig, "pedestrians are downloaded bodies");
+            var parts = p.Rig.GetComponentsInChildren<Renderer>(true);
+            p.SetDetail(false);
+            Assert.IsFalse(p.Rig.Animator.enabled);
+            Assert.That(parts.Select(r => r.shadowCastingMode), Has.All.EqualTo(UnityEngine.Rendering.ShadowCastingMode.Off),
+                "past the detail range a body is a few pixels tall: no shadow pass for its skinned meshes");
+            p.SetDetail(true);
+            Assert.IsTrue(p.Rig.Animator.enabled);
+            Assert.That(parts.Select(r => r.shadowCastingMode), Has.All.EqualTo(UnityEngine.Rendering.ShadowCastingMode.On));
+        }
+
         [Test]
         public void ThePeople_AreTheDownloadedBodies_WithTheKampungAnimator()
         {
@@ -71,13 +156,12 @@ namespace TycoWorld.Gameplay.Tests
             Assert.IsNotNull(keeper, "the shop keeper is a real body");
             Assert.AreSame(library.controller, keeper.Animator.runtimeAnimatorController);
             Assert.IsTrue(keeper.Animator.isHuman);
-            var smr = keeper.GetComponentInChildren<SkinnedMeshRenderer>();
-            Assert.IsNotNull(smr);
-            Assert.That(smr.bounds.size.y, Is.InRange(1.3f, 2.1f), "about a person's height");
-            var across = keeper.Bone(HumanBodyBones.RightUpperArm).position - keeper.Bone(HumanBodyBones.LeftUpperArm).position;
-            across.y = 0f;
-            Assert.Greater(Vector3.Dot(Vector3.Cross(across, Vector3.up), keeper.transform.parent.forward), 0f,
-                "the body faces where its owner faces (models exported facing -Z are turned around)");
+            var parts = keeper.GetComponentsInChildren<SkinnedMeshRenderer>();
+            Assert.IsNotEmpty(parts);
+            var bounds = parts[0].bounds;
+            foreach (var part in parts) bounds.Encapsulate(part.bounds);
+            Assert.That(bounds.max.y - keeper.Root.position.y, Is.InRange(1.4f, 1.9f), "about a person's height (all body parts together)");
+            AssertFacesForward(keeper);
             keeper.Move(1.3f);
             Assert.AreEqual(1.3f, keeper.Animator.GetFloat(CharacterRig.SpeedId), 1e-4f);
         }

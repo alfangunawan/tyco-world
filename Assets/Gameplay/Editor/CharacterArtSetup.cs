@@ -65,10 +65,13 @@ namespace TycoWorld.Gameplay.Authoring
             return library;
         }
 
-        /// <summary>The Modular Men/Women bodies (women listed apart); the animation library's mannequin until they exist.</summary>
+        /// <summary>
+        /// The Modular Men bodies and, apart, the Modular Women ones (by file name prefix); the animation library's
+        /// mannequin until any exist.
+        /// </summary>
         static List<GameObject> FindBodies(out List<GameObject> women)
         {
-            var all = new List<GameObject>();
+            var men = new List<GameObject>();
             women = new List<GameObject>();
             if (AssetDatabase.IsValidFolder(BodiesFolder))
                 foreach (var guid in AssetDatabase.FindAssets("t:Model", new[] { BodiesFolder }).OrderBy(g => AssetDatabase.GUIDToAssetPath(g)))
@@ -76,15 +79,16 @@ namespace TycoWorld.Gameplay.Authoring
                     string path = AssetDatabase.GUIDToAssetPath(guid);
                     var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                     if (model == null) continue;
-                    all.Add(model);
                     if (Path.GetFileName(path).StartsWith("Women", System.StringComparison.OrdinalIgnoreCase)) women.Add(model);
+                    else men.Add(model);
                 }
-            if (all.Count == 0)
+            if (men.Count == 0) men.AddRange(women);
+            if (men.Count == 0)
             {
                 var mannequin = AssetDatabase.LoadAssetAtPath<GameObject>(AnimationModel);
-                if (mannequin != null) all.Add(mannequin);
+                if (mannequin != null) men.Add(mannequin);
             }
-            return all;
+            return men;
         }
 
         static Material EnsureGalonMaterial()

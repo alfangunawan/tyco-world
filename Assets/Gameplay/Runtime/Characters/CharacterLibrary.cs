@@ -10,9 +10,9 @@ namespace TycoWorld.Gameplay
     public sealed class CharacterLibrary : ScriptableObject
     {
         public RuntimeAnimatorController controller;
-        [Tooltip("Humanoid model roots (FBX prefabs); people pick one from their seed.")]
+        [Tooltip("Humanoid model roots (FBX prefabs) for men; people pick one from their seed.")]
         public GameObject[] bodies = new GameObject[0];
-        [Tooltip("Bodies for women (a subset is fine); empty falls back to all bodies.")]
+        [Tooltip("Bodies for women; empty falls back to the men's.")]
         public GameObject[] womenBodies = new GameObject[0];
         public GameObject galon;
         public Material galonMaterial;

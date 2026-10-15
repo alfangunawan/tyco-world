@@ -24,9 +24,15 @@
 Setiap unduhan masuk ke folder scratch tersendiri dan diperlakukan sebagai data yang tidak tepercaya. Yang disalin ke `Assets/` hanya FBX dan file lisensi. File `.blend` tidak pernah dibuka.
 
 **Status unduhan:**
-- **Sudah:** UAL dan galon.
-- **Menunggu:** Modular Men/Women hanya tersedia di Google Drive Quaternius, dan Drive sedang membalas "Quota exceeded". Skrip latar mencoba ulang tiap 10 menit.
-- **Sementara itu:** sistem dibangun memakai mesh manekin UAL. Setelah paket Modular masuk, cukup ganti daftar model di `CharacterLibrary`.
+- **Sudah:** UAL, galon, dan Modular Men/Women. Paket Modular hanya ada di Google Drive Quaternius, dan unduhan otomatis ditolak ("Quota exceeded"). Karena itu user mengunduh kedua zip lewat browser.
+- **Model yang dipakai** (folder `Humanoid Rig/Individual Characters/FBX`):
+  - **Pria:** Beach (kaos singlet dan celana pendek), Casual (hoodie), Casual2 (kaos), Farmer (petani bertopi), Suit (jas), Worker (tukang berhelm).
+  - **Wanita:** Adventurer (mahasiswi bertas punggung), Casual, Formal (terusan), Suit.
+- **Tidak dipakai:**
+  - King, Spacesuit, Swat, Punk, Witch, Medieval, SciFi, Soldier: kostum fantasi atau militer.
+  - Women_Worker: pekerja proyek wanita jarang ada di kampung.
+- **Belum ada di paket gratis mana pun yang dicek:** wanita berhijab. Modular Women tidak punya hijab, dan menempelkan hijab buatan sendiri bertentangan dengan permintaan user.
+- **Fallback:** kalau folder `Characters/` kosong, `CharacterLibrary` memakai manekin UAL.
 
 ## 2. Impor
 
@@ -35,15 +41,17 @@ Setiap unduhan masuk ke folder scratch tersendiri dan diperlakukan sebagai data 
 - hanya library animasi yang menyimpan klipnya;
 - nama klip tanpa awalan `Rig|`;
 - klip `*_Loop` diputar berulang;
-- root dikunci di tempat, karena game sendiri yang menggerakkan orang.
+- root dikunci di tempat, karena game sendiri yang menggerakkan orang;
+- rotasi root berdasarkan orientasi badan (`keepOriginalOrientation = false`). Klip UAL dibuat menghadap -Z, dan kalau dibiarkan seperti aslinya, setiap badan yang sedang dianimasikan berbalik ke belakang. Badan sekarang selalu menghadap +Z Animator, apa pun arah model saat diekspor;
+- model tubuh (`Characters/`): bagian body, head, legs, dan feet memakai satu rangka. Bagian-bagian itu digabung menjadi satu skinned mesh dengan satu submesh per material. Setiap orang jadi di-skin sekali, bukan empat kali, dan jumlah draw call-nya turun dari ±11 ke 5–11 (satu per warna).
 
 ## 3. Runtime
 
 - **`CharacterLibrary`** (ScriptableObject, diisi oleh Gameplay Setup) memuat:
   - AnimatorController `Kampung`;
-  - daftar model karakter;
+  - daftar model pria (`bodies`) dan wanita (`womenBodies`, dipisah dari awalan nama file);
   - prefab galon dan dispenser.
-- **AnimatorController `Kampung`** dibangun dari kode oleh `CharacterAnimatorBuilder`:
+- **AnimatorController `Kampung`** dibangun dari kode oleh `CharacterArtSetup` (menu Tyco World > Gameplay > Build Character Art, juga dipanggil Gameplay Setup):
   - **Parameter:** `Speed`, `Sit`, `Drive`, `Talk`, dan trigger `PickUp`.
   - **State:**
     - Locomotion: blend tree Idle → Walk → Jog → Sprint menurut `Speed`;
@@ -54,6 +62,12 @@ Setiap unduhan masuk ke folder scratch tersendiri dan diperlakukan sebagai data 
   - **IK:** IK pass menyala supaya tangan bisa memegang barang.
 - **`CharacterRig`** adalah komponen pada setiap orang. Fungsinya `Move(speed)`, `Sit`, `Drive`, `Talk`, `PickUp`, dan `Hold(item)`. `Hold` memakai IK tangan pada pegangan barang dan berjalan di `OnAnimatorIK`.
 - **Siapa yang memakai `CharacterRig`:** pejalan kaki, NPC misi, penjaga toko, Pak RT, dan sosok (dengan material pucat). Pejalan kaki memakai Animator culling `CullUpdateTransforms` sebagai bagian dari LOD.
+- **`CharacterFactory`** mengatur tampilan orang:
+  - kulit sawo matang (5 tone menurut seed);
+  - `Skin_Darker` dibuat 18% lebih gelap;
+  - rambut, alis, dan kumis hampir hitam (3 tone). Ini termasuk kepang merah `Women_Formal`, yang materialnya hanya bernama "Red";
+  - flag `woman` memilih model dari daftar wanita.
+- **LOD pejalan kaki:** lebih dari 40 m dari pemain, animator berhenti dan skinned mesh tidak membuat bayangan.
 
 ## 4. Adegan
 
@@ -67,9 +81,14 @@ Setiap unduhan masuk ke folder scratch tersendiri dan diperlakukan sebagai data 
 
 ## 5. Pengetesan
 
-- **Impor:** avatar valid dan humanoid, 46 klip, flag loop benar.
+- **Impor:**
+  - avatar valid dan humanoid, 46 klip, flag loop benar;
+  - setiap model tubuh terdiri dari satu skinned mesh, setiap material muncul sekali, dan semua verteks punya bobot tulang.
+- **Arah hadap:** setiap model dievaluasi animatornya (lengan turun dari T-pose), lalu badan dicek menghadap +Z pemegangnya.
+- **Library:** daftar pria tanpa model `Women_*`; kulit dan rambut setiap model sudah ditint.
 - **Controller:** semua state dan parameter ada, IK pass menyala.
 - **Rig:** `Move` dan `Sit` mengubah parameter. `Hold` menempelkan barang ke target tangan.
 - **Ojek:** penumpang tidak langsung hilang. Ia menempel ke jok hanya setelah berjalan dan memutar enter, dan turun di tujuan.
 - **Galon:** ada model galon di bahu pemain (atau di jok saat naik motor). Galon pindah ke pemesan saat diserahkan.
+- **LOD:** pejalan kaki jauh mematikan animator dan bayangan, dan menyalakannya lagi saat dekat.
 - **Performa:** sweep kos/road/high dengan batas yang sama seperti #6 (batch ≤ +10%).

@@ -40,6 +40,8 @@ namespace TycoWorld.Gameplay
         public float PendingDt;
         public SeededRandom Random;
         public int Serial;
+        readonly Renderer[] bodyParts;
+        bool detailSet;
 
         public Pedestrian(Transform parent, int index, PersonLook look, Palette palette, bool sosok, PedestrianSystem system)
         {
@@ -50,6 +52,7 @@ namespace TycoWorld.Gameplay
             ulong seed = SeededRandom.Mix(0xFACEUL, (ulong)index);
             Rig = CharacterFactory.Spawn(library, Root.transform, "Body", seed, palette, woman: look.Hijab || (seed & 2UL) != 0UL, ghost: sosok);
             if (Rig == null) Figure = PersonFigure.Build(Root.transform, "Figure", look, palette, sosok);
+            else bodyParts = Rig.GetComponentsInChildren<Renderer>(true);
             // Torso, head and legs make the shadow; arms and hair would only add shadow casters.
             foreach (var r in Root.GetComponentsInChildren<MeshRenderer>(true))
                 if (r.name.StartsWith("Arm", System.StringComparison.Ordinal) || r.name == "Hair" || r.name == "Hijab" || r.name == "Drape")
@@ -81,10 +84,17 @@ namespace TycoWorld.Gameplay
             else Figure.Animate(speed, dt);
         }
 
-        /// <summary>Far people keep their pose: the animator only runs near the player (or for a chase).</summary>
+        /// <summary>
+        /// Far people keep their pose and cast no shadow: the animator and the skinned meshes' shadow pass only run near
+        /// the player (or for a chase).
+        /// </summary>
         public void SetDetail(bool near)
         {
-            if (Rig != null && Rig.Animator.enabled != near) Rig.Animator.enabled = near;
+            if (Rig == null || Rig.Animator.enabled == near && detailSet) return;
+            detailSet = true;
+            Rig.Animator.enabled = near;
+            var shadows = near ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            foreach (var r in bodyParts) r.shadowCastingMode = shadows;
         }
         public Vector3 Position => Root.transform.position;
 

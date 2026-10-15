@@ -4,8 +4,9 @@ namespace TycoWorld.Gameplay
 {
     /// <summary>
     /// Makes a person from the character library (spec #7): a copy of a humanoid body model, picked by seed, with the
-    /// Kampung animator, scaled to a kampung height, skin in a sawo matang tone (flat-coloured skin materials only;
-    /// textured ones are kept), and for the night figure every material swapped for a pale glow.
+    /// Kampung animator, scaled to a kampung height, skin in a sawo matang tone and hair and eyebrows near black
+    /// (flat-coloured materials only; textured ones are kept), and for the night figure every material swapped for a
+    /// pale glow.
     /// </summary>
     public static class CharacterFactory
     {
@@ -15,7 +16,10 @@ namespace TycoWorld.Gameplay
             new Color32(104, 71, 50, 255)
         };
 
+        static readonly Color32[] HairTones = { new Color32(18, 14, 12, 255), new Color32(28, 20, 16, 255), new Color32(42, 30, 22, 255) };
+
         public static Color32 SkinTone(ulong seed) => SkinTones[(int)(seed % (ulong)SkinTones.Length)];
+        public static Color32 HairTone(ulong seed) => HairTones[(int)((seed >> 4) % (ulong)HairTones.Length)];
 
         /// <summary>
         /// A new person under <paramref name="parent"/>: an empty holder named <paramref name="name"/> (place and turn
@@ -41,25 +45,16 @@ namespace TycoWorld.Gameplay
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
             Normalise(go, animator, library.targetHeight * (woman ? 0.95f : 1f) * (0.96f + 0.08f * ((seed >> 8) % 100) / 100f));
-            Dress(go, seed, palette, ghost);
+            Dress(go, prefab.name, seed, palette, ghost);
             return go.AddComponent<CharacterRig>();
         }
 
         /// <summary>
-        /// Turns the body to face the parent's +Z (some models are exported facing -Z: their right shoulder lies on -X)
-        /// and scales it so the top of the head lands at <paramref name="height"/>.
+        /// Scales the body so the top of the head lands at <paramref name="height"/>. Which way it faces is the
+        /// animations' business: they are imported to face the Animator's +Z (see CharacterImportRules).
         /// </summary>
         static void Normalise(GameObject go, Animator animator, float height)
         {
-            var left = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.LeftUpperArm) : null;
-            var right = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.RightUpperArm) : null;
-            if (left != null && right != null)
-            {
-                var across = right.position - left.position;
-                across.y = 0f;
-                var facing = Vector3.Cross(across, Vector3.up);
-                if (Vector3.Dot(facing, go.transform.forward) < 0f) go.transform.localRotation *= Quaternion.Euler(0f, 180f, 0f);
-            }
             var head = animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.Head) : null;
             float measured;
             if (head != null) measured = (head.position.y - go.transform.position.y) / 0.88f;
@@ -71,10 +66,17 @@ namespace TycoWorld.Gameplay
             if (measured > 0.3f) go.transform.localScale *= height / measured;
         }
 
-        static void Dress(GameObject go, ulong seed, Palette palette, bool ghost)
+        /// <summary>Hair, eyebrows and moustaches; Women_Formal's braid is a material named only "Red".</summary>
+        static bool IsHair(string model, string material) =>
+            material.Contains("hair") || material.Contains("eyebrow") || material.Contains("moustache") ||
+            (material == "red" && model.Equals("Women_Formal", System.StringComparison.OrdinalIgnoreCase));
+
+        static void Dress(GameObject go, string model, ulong seed, Palette palette, bool ghost)
         {
             if (palette == null) return;
             var skin = SkinTone(seed);
+            var shade = (Color32)Color.Lerp(skin, Color.black, 0.18f);
+            var hair = HairTone(seed);
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))
             {
                 var mats = r.sharedMaterials;
@@ -88,7 +90,9 @@ namespace TycoWorld.Gameplay
                     }
                     if (m == null || m.mainTexture != null) continue;
                     string n = m.name.ToLowerInvariant();
-                    if (n.Contains("skin") || n.Contains("m_main")) mats[i] = palette.Get(skin);
+                    if (n.Contains("skin_dark")) mats[i] = palette.Get(shade);
+                    else if (n.Contains("skin") || n.Contains("m_main")) mats[i] = palette.Get(skin);
+                    else if (IsHair(model, n)) mats[i] = palette.Get(hair);
                 }
                 r.sharedMaterials = mats;
                 if (r is SkinnedMeshRenderer smr) smr.updateWhenOffscreen = false;
