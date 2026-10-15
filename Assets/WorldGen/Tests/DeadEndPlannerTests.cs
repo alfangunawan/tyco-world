@@ -31,7 +31,7 @@ namespace TycoWorld.WorldGen.Tests
             var world = new FeatureClassifier(settings, report).Classify(osm.Data);
             var network = new RoadNetwork(world.Roads, new List<Polygon>(), settings.roadEdges);
             var street = StreetContext.From(world, settings);
-            return DeadEndPlanner.Plan(network, world, street, settings.deadEnds, settings.frontage.kosExclusionRadius, report);
+            return DeadEndPlanner.Plan(network, world, street, settings.deadEnds, settings.deadEnds.kosRadius, report);
         }
 
         static void Street(TestOsm o) => o.Way(1, new[] { new Vector2(-100f, 0f), new Vector2(100f, 0f) }, false, ("highway", "residential"));
@@ -105,6 +105,20 @@ namespace TycoWorld.WorldGen.Tests
                 o.Rect(60, -15f, 25f, 30f, 20f, ("amenity", "parking"));
             });
             Assert.IsFalse(ends.Any(e => e.RoadId == 2));
+        }
+
+        [Test]
+        public void EndInFrontOfTheKos_StaysOpen()
+        {
+            settings.frontage.kosBuildingId = 77;
+            var ends = Plan(o =>
+            {
+                Street(o);
+                o.Way(2, new[] { new Vector2(0f, 0f), new Vector2(0f, 8f) }, false, ("highway", "residential"));
+                o.Rect(77, -5f, 20f, 10f, 10f, ("building", "house"));
+            });
+            Assert.IsFalse(ends.Any(e => e.RoadId == 2), "the gang ends at the kos gate: no wall in the way out");
+            Assert.AreEqual(20f, settings.deadEnds.kosRadius, 1e-6f);
         }
 
         [Test]

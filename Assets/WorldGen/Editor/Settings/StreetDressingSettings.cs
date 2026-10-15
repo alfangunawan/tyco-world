@@ -224,6 +224,8 @@ namespace TycoWorld.WorldGen.Authoring
         public float joinMargin = 0.5f;
         /// <summary>A building this close past the end already closes it.</summary>
         public float buildingAhead = 2f;
+        /// <summary>No barrier within this distance of the kos (its gate must stay open to the road).</summary>
+        public float kosRadius = 20f;
         public float wallHeight = 0.9f;
         public float wallThickness = 0.2f;
         /// <summary>Wall atlas band (plaster) the low walls use.</summary>

@@ -105,7 +105,7 @@ namespace TycoWorld.WorldGen.Authoring
             Lap("meshes.infill");
             var walls = AddFrontage(built, FrontagePlanner.Plan(network, street, settings), settings, report);
             Lap("meshes.frontage2");
-            var deadEnds = DeadEndPlanner.Plan(network, world, street, settings.deadEnds, settings.frontage.kosExclusionRadius, report);
+            var deadEnds = DeadEndPlanner.Plan(network, world, street, settings.deadEnds, settings.deadEnds.kosRadius, report);
             var barriers = BarrierBuilder.Build(deadEnds, settings.deadEnds, settings.frontage, built.ChunkSize);
             AddChunkFeatures(built, barriers.Render, barriers.Collider, FeatureKind.Barrier, FeatureGroups.Barriers, BarrierBuilder.Name,
                 new[] { settings.frontage.wallAtlas, settings.roadEdges.concrete, settings.deadEnds.stripe }, report);
