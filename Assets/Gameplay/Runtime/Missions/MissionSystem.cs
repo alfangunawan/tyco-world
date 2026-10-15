@@ -25,8 +25,10 @@ namespace TycoWorld.Gameplay
         GameObject beacon;
         GameObject pakRt, pakRtPost;
         bool wasPakRtHours;
-        float time;
+        float time, routeTimer;
         int started;
+        List<Vector2> route;
+        Vector2 routeFrom, routeTo;
 
         public int Order => 50;
         public IReadOnlyList<Mission> Missions => missions;
@@ -34,6 +36,8 @@ namespace TycoWorld.Gameplay
         public MissionContext Context => context;
         public GameObject Beacon => beacon;
         public GameObject PakRt => pakRt;
+        /// <summary>The way along the roads to the current target, refreshed about once a second; null without a target.</summary>
+        public IReadOnlyList<Vector2> Route => route;
         /// <summary>The lantern and kentongan at his post, shown with him.</summary>
         public GameObject PakRtPost => pakRtPost;
         /// <summary>Raised when a job ends either way (tests, sounds later).</summary>
@@ -72,6 +76,7 @@ namespace TycoWorld.Gameplay
             beacon = MissionProps.Beacon(root, owner.Palette);
             beacon.SetActive(false);
             owner.Jobs = Listings;
+            owner.RouteSource = () => route;
             owner.MarkerSources.Add(Markers);
             if (owner.Phone != null) owner.Phone.JobRequested += Toggle;
         }
@@ -85,6 +90,7 @@ namespace TycoWorld.Gameplay
                 if (director.Phone != null) director.Phone.JobRequested -= Toggle;
                 director.MarkerSources.Remove(Markers);
                 director.Jobs = null;
+                director.RouteSource = null;
             }
             if (root != null)
             {
@@ -158,6 +164,7 @@ namespace TycoWorld.Gameplay
                 if (Active.Status != MissionStatus.Running) Finish(Active);
             }
             TickPakRt();
+            UpdateRoute(dt);
             Render();
         }
 
@@ -213,6 +220,37 @@ namespace TycoWorld.Gameplay
             hud.SetCompass(text, Mathf.DeltaAngle(heading, bearing));
         }
 
+        /// <summary>
+        /// Re-plans the way to the target when it moved, the player strayed, or a second passed; the start is cut to
+        /// where the player now is so the line always begins at their feet.
+        /// </summary>
+        void UpdateRoute(float dt)
+        {
+            var target = Active != null ? Active.Target : null;
+            if (!target.HasValue)
+            {
+                route = null;
+                return;
+            }
+            var to = new Vector2(target.Value.x, target.Value.z);
+            var me = context.PlayerPosition;
+            var from = new Vector2(me.x, me.z);
+            routeTimer -= dt;
+            bool stale = route == null || (to - routeTo).sqrMagnitude > 4f || (from - routeFrom).sqrMagnitude > 64f || routeTimer <= 0f;
+            if (!stale) return;
+            routeTimer = 1f;
+            routeFrom = from;
+            routeTo = to;
+            route = director.Roads.Route(from, to);
+            if (route != null) route.Insert(0, from);
+        }
+
+        public void RefreshRoute()
+        {
+            route = null;
+            UpdateRoute(0f);
+        }
+
         static string Clock(float seconds)
         {
             int s = Mathf.CeilToInt(seconds);
@@ -223,9 +261,9 @@ namespace TycoWorld.Gameplay
         {
             var target = Active != null ? Active.Target : null;
             if (target.HasValue)
-                yield return new MapMarker { Position = new Vector2(target.Value.x, target.Value.z), Color = MapColors.Target, Size = 8f };
+                yield return new MapMarker { Position = new Vector2(target.Value.x, target.Value.z), Color = MapColors.Target, Size = 8f, Pin = true };
             if (pakRt != null && pakRt.activeSelf)
-                yield return new MapMarker { Position = new Vector2(pakRt.transform.position.x, pakRt.transform.position.z), Color = MapColors.PakRt, Size = 6f };
+                yield return new MapMarker { Position = new Vector2(pakRt.transform.position.x, pakRt.transform.position.z), Color = MapColors.PakRt, Size = 6f, Pin = Active == null };
         }
 
         // ---------- Pak RT ----------

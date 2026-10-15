@@ -84,7 +84,8 @@ namespace TycoWorld.Gameplay
             toastStack = new VisualElement { name = ToastsName, pickingMode = PickingMode.Ignore };
             toastStack.style.position = Position.Absolute;
             toastStack.style.left = 24f;
-            toastStack.style.bottom = 120f;
+            // Above the minimap (bottom left).
+            toastStack.style.bottom = MinimapView.Size + 40f;
             toastStack.style.flexDirection = FlexDirection.ColumnReverse;
             root.Add(toastStack);
 
@@ -102,6 +103,9 @@ namespace TycoWorld.Gameplay
             progressTrack.style.marginTop = 6f;
             progressBox.style.display = DisplayStyle.None;
             progressTrack.userData = progressBox;
+
+            Minimap = new MinimapView();
+            root.Add(Minimap);
 
             fade = new VisualElement { name = "gameplay-fade", pickingMode = PickingMode.Ignore };
             GameplayStyle.FullScreen(fade);
@@ -122,6 +126,8 @@ namespace TycoWorld.Gameplay
             parent.Add(row);
             return label;
         }
+
+        public MinimapView Minimap { get; }
 
         public bool Visible
         {

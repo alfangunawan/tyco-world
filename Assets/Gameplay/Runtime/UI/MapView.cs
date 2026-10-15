@@ -10,6 +10,8 @@ namespace TycoWorld.Gameplay
         public Vector2 Position;
         public Color Color;
         public float Size;
+        /// <summary>Kept on the minimap's rim when out of range (the job target, Pak RT, a taken vehicle).</summary>
+        public bool Pin;
     }
 
     /// <summary>
@@ -30,6 +32,7 @@ namespace TycoWorld.Gameplay
 
     public sealed class MapView : VisualElement
     {
+        readonly List<Vector2> route = new List<Vector2>();
         static readonly float[] Zooms = { 0.35f, 0.6f, 1f, 1.6f };
 
         KampungData data;
@@ -62,8 +65,10 @@ namespace TycoWorld.Gameplay
             MarkDirtyRepaint();
         }
 
-        public void Show(KampungData kampung, Vector2 player, float yawDegrees, IEnumerable<MapMarker> extra)
+        public void Show(KampungData kampung, Vector2 player, float yawDegrees, IEnumerable<MapMarker> extra, IReadOnlyList<Vector2> gpsRoute = null)
         {
+            route.Clear();
+            if (gpsRoute != null) route.AddRange(gpsRoute);
             data = kampung;
             centre = player;
             heading = yawDegrees;
@@ -94,6 +99,15 @@ namespace TycoWorld.Gameplay
                 p.BeginPath();
                 p.MoveTo(ToScreen(road.points[0], rect));
                 for (int i = 1; i < road.points.Length; i++) p.LineTo(ToScreen(road.points[i], rect));
+                p.Stroke();
+            }
+            if (route.Count >= 2)
+            {
+                p.strokeColor = MapColors.Target;
+                p.lineWidth = 4f;
+                p.BeginPath();
+                p.MoveTo(ToScreen(route[0], rect));
+                for (int i = 1; i < route.Count; i++) p.LineTo(ToScreen(route[i], rect));
                 p.Stroke();
             }
             foreach (var m in markers) Dot(p, ToScreen(m.Position, rect), m.Size, m.Color);

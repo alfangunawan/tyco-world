@@ -60,6 +60,9 @@ namespace TycoWorld.Gameplay
         Action fadeAction;
         bool fadeActionDone, warnedHungry, warnedSleepy, holdsSprintLock, holdsModalLock, clockFromDayCycle, savedOnQuit;
         int ticks, shopOpenedTick = -1;
+        float minimapTimer, minimapIdle, minimapHeading;
+        List<MapMarker> fixedMarkers;
+        Vector2 minimapAt = new Vector2(float.MaxValue, float.MaxValue);
         Motorbike heldBike;
         readonly HoldBrakeIntentSource holdBrake = new HoldBrakeIntentSource();
         readonly object modalOwner = new object();
@@ -101,6 +104,18 @@ namespace TycoWorld.Gameplay
         }
 
         LaneGraph lanes;
+
+        /// <summary>The map roads joined into one network for GPS routes, built on first use.</summary>
+        public RoadGraph Roads
+        {
+            get
+            {
+                if (roads == null && data != null) roads = new RoadGraph(data.mapRoads);
+                return roads;
+            }
+        }
+
+        RoadGraph roads;
 
         public event Action Ready;
 
@@ -209,6 +224,7 @@ namespace TycoWorld.Gameplay
             if (ReadKeyboard) ReadKeys();
             foreach (var s in systems) s.Tick(dt);
             if (Hud != null) Hud.Render(State, dt);
+            UpdateMinimap(dt);
             if (Phone != null && Phone.IsOpen) RenderPhone();
         }
 
@@ -564,30 +580,75 @@ namespace TycoWorld.Gameplay
 
         /// <summary>Jobs shown in the phone's Kerjaan tab (the mission system fills it).</summary>
         public Func<IReadOnlyList<JobListing>> Jobs;
+        /// <summary>The GPS route to show on the maps (the mission system sets it); null or empty for none.</summary>
+        public Func<IReadOnlyList<Vector2>> RouteSource;
+        IReadOnlyList<Vector2> Route => RouteSource != null ? RouteSource() : null;
+
         /// <summary>Extra map markers, one source per system (the mission target, a stolen bike...).</summary>
         public readonly List<Func<IEnumerable<MapMarker>>> MarkerSources = new List<Func<IEnumerable<MapMarker>>>();
 
-        void RenderPhone()
+        /// <summary>Everything the maps show: shops (data sellers apart), the kos, and each system's markers.</summary>
+        List<MapMarker> CollectMarkers()
         {
-            var markers = new List<MapMarker>();
-            foreach (var site in data.shops)
+            if (fixedMarkers == null)
             {
-                bool sellsData = site.type == ShopType.Konter || site.type == ShopType.Minimarket;
-                markers.Add(new MapMarker
+                // Shops and the kos never move: gathered once (the spots list is thousands long).
+                fixedMarkers = new List<MapMarker>();
+                foreach (var site in data.shops)
                 {
-                    Position = new Vector2(site.counter.x, site.counter.z), Color = sellsData ? MapColors.DataShop : MapColors.Shop, Size = sellsData ? 5f : 4f
-                });
+                    bool sellsData = site.type == ShopType.Konter || site.type == ShopType.Minimarket;
+                    fixedMarkers.Add(new MapMarker
+                    {
+                        Position = new Vector2(site.counter.x, site.counter.z), Color = sellsData ? MapColors.DataShop : MapColors.Shop, Size = sellsData ? 5f : 4f
+                    });
+                }
+                foreach (var spot in data.spots)
+                    if (spot.kind == SpotKind.Kos) fixedMarkers.Add(new MapMarker { Position = new Vector2(spot.position.x, spot.position.z), Color = MapColors.Kos, Size = 6f });
             }
-            foreach (var spot in data.spots)
-                if (spot.kind == SpotKind.Kos) markers.Add(new MapMarker { Position = new Vector2(spot.position.x, spot.position.z), Color = MapColors.Kos, Size = 6f });
+            var markers = new List<MapMarker>(fixedMarkers);
             foreach (var source in MarkerSources)
             {
                 var extra = source();
                 if (extra != null) markers.AddRange(extra);
             }
+            return markers;
+        }
+
+        float HeadingDegrees => Player != null && Player.View != null ? Player.View.eulerAngles.y : 0f;
+
+        /// <summary>Redraws the HUD minimap at most every 0.05 s, and only when the player moved or turned, or 0.25 s passed.</summary>
+        void UpdateMinimap(float dt)
+        {
+            if (Hud == null || Hud.Minimap == null || Player == null) return;
+            minimapTimer -= dt;
+            minimapIdle += dt;
+            if (minimapTimer > 0f) return;
+            var p = Player.transform.position;
+            var flat = new Vector2(p.x, p.z);
+            float heading = HeadingDegrees;
+            bool moved = (flat - minimapAt).sqrMagnitude > 0.09f || Mathf.Abs(Mathf.DeltaAngle(heading, minimapHeading)) > 1.5f;
+            if (!moved && minimapIdle < 0.25f) return;
+            minimapTimer = 0.05f;
+            minimapIdle = 0f;
+            minimapAt = flat;
+            minimapHeading = heading;
+            Hud.Minimap.Show(data, flat, heading, RiddenBike != null, CollectMarkers(), Route);
+        }
+
+        /// <summary>Redraws the minimap now (tests and MCP read its cache).</summary>
+        public void RefreshMinimap()
+        {
+            minimapTimer = 0f;
+            minimapIdle = 1f;
+            UpdateMinimap(0f);
+        }
+
+        void RenderPhone()
+        {
+            var markers = CollectMarkers();
             var p = Player != null ? Player.transform.position : Vector3.zero;
             float yaw = Player != null && Player.View != null ? Player.View.eulerAngles.y : 0f;
-            Phone.Render(State, catalog, ClockText, Jobs != null ? Jobs() : null, data, new Vector2(p.x, p.z), yaw, markers);
+            Phone.Render(State, catalog, ClockText, Jobs != null ? Jobs() : null, data, new Vector2(p.x, p.z), yaw, markers, Route);
         }
 
         void Use(ItemDefinition item)

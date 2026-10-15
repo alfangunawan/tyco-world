@@ -158,6 +158,27 @@ Perubahannya:
   - Screenshot `pakrt_night.png`: dari 10 m di jalan, ia jelas terlihat di bawah lentera.
 - **Tes:** suite penuh 1092/0. Save milik user dicadangkan sebelum uji Play dan dipastikan tidak berubah setelahnya.
 
+## Masukan playtest: "tidak ada minimap, sulit tahu arah misi"
+
+**Minimap HUD ala GTA** (`MinimapView`): bulat 210 px di kiri bawah.
+- Peta berputar mengikuti arah hadap, jadi depan selalu ke atas. Huruf "U" menunjuk utara.
+- Isinya: jalan dari bake, panah pemain di tengah, toko, kos, dan pengejar saat panas.
+- Tujuan misi, Pak RT, dan kendaraan curian yang ditinggal tetap menempel di tepi minimap kalau berada di luar jangkauan.
+- Jangkauan 90 m saat jalan kaki dan 150 m saat berkendara.
+- Minimap digambar ulang maksimal 20 kali per detik, dan hanya kalau pemain bergerak atau berbelok.
+- Toast pindah ke atas minimap.
+
+**Rute GPS** (`RoadGraph`): garis oranye di minimap dan di Peta HP, menyusuri jalan sampai ke tujuan.
+- **Kenapa tidak lewat jalur jalan kaki:** grafnya terpecah menjadi 191 komponen, karena jalur diputus di mulut simpang.
+- **Cara graf dibangun:** dari garis jalan `mapRoads` saat runtime.
+  - Jalan yang bersilangan diberi titik temu.
+  - Ujung jalan yang berjarak kurang dari 6 m dari jalan lain disambungkan (simpang T).
+  - Titik yang berjarak kurang dari 0,75 m disatukan.
+- **Hasil di dunia nyata:** 2172 node dan 2407 segmen. 98% node ada dalam satu komponen (2126). Graf dibangun sekali dalam 8 ms, dan satu rute dihitung dalam 0,03 ms. Rute diperbarui tiap detik, atau saat pemain menyimpang 8 m.
+- **Contoh Antar Galon:** rute 160 m untuk jarak lurus 110 m, dan arahnya cocok dengan kompas (`minimap_route.png`).
+
+**Tes:** suite penuh 1101/0, termasuk matematika minimap, pin di tepi, persilangan, simpang T, rute terpendek di grid, dan rute di HUD.
+
 ## Catatan
 
 - Membobol kunci tidak mengunci kaki. Melangkah lebih dari 0,6 m membatalkannya. Kalau pemain tetap diam di depan saksi, ia pasti tertangkap: saksi 9 m sampai dalam ±1,7 s, sedangkan membobol butuh 3–4 s. Ini disengaja.

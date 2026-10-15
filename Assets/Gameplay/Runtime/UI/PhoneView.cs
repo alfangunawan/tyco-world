@@ -111,7 +111,7 @@ namespace TycoWorld.Gameplay
 
         /// <summary>Rebuilds the open tab when its content changed (a cheap signature keeps buttons clickable between frames).</summary>
         public void Render(GameState state, ItemCatalog catalog, string clock, IReadOnlyList<JobListing> jobs, KampungData data, Vector2 player,
-            float yaw, IEnumerable<MapMarker> markers)
+            float yaw, IEnumerable<MapMarker> markers, IReadOnlyList<Vector2> route = null)
         {
             if (!IsOpen) return;
             header.text = clock + "  ·  Hari " + state.Day + "  ·  " + (state.HasData ? "4G" : "tanpa paket data");
@@ -142,7 +142,7 @@ namespace TycoWorld.Gameplay
                     body.Add(map);
                     lastSignature = -2;
                 }
-                map.Show(data, player, yaw, markers);
+                map.Show(data, player, yaw, markers, route);
                 return;
             }
             int signature = Signature(state, jobs);

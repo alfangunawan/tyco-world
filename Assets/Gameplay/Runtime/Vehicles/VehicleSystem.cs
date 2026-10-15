@@ -503,7 +503,13 @@ namespace TycoWorld.Gameplay
         {
             foreach (var v in vehicles)
                 if (v.Active && v.Moved && !v.Body.IsMounted)
-                    yield return new MapMarker { Position = new Vector2(v.Position.x, v.Position.z), Color = MapColors.Stolen, Size = 6f };
+                    yield return new MapMarker { Position = new Vector2(v.Position.x, v.Position.z), Color = MapColors.Stolen, Size = 6f, Pin = true };
+            // Warga on your heels while the heat is on.
+            var crowd = People;
+            if (crowd != null && Heat.IsHot)
+                foreach (var p in crowd.Pool)
+                    if (p.Active && p.State == PedestrianState.Chase)
+                        yield return new MapMarker { Position = new Vector2(p.Position.x, p.Position.z), Color = MapColors.Stolen, Size = 3f };
         }
     }
 }
