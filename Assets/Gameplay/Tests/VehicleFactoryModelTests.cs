@@ -76,6 +76,31 @@ namespace TycoWorld.Gameplay.Tests
         }
 
         [Test]
+        public void IsCar_Holds_AfterRideAnchorsAreAskedForACar()
+        {
+            // A galon job asks RideAnchors.Of for whatever is ridden, cars included; that must not turn a car into a bike.
+            var catalog = AssetDatabase.LoadAssetAtPath<VehicleCatalog>(VehiclePaths.CatalogAsset);
+            var parent = new GameObject("Parked").transform;
+            var palette = new Palette(null);
+            var carTuning = VehicleFactory.CarTuning(null);
+            try
+            {
+                var sedan = Object.Instantiate(catalog.Get("sedan").prefab, parent).GetComponent<Motorbike>();
+                var code = VehicleFactory.Car(parent, carTuning, palette, new Color32(200, 0, 0, 255));
+                RideAnchors.Of(sedan);
+                RideAnchors.Of(code);
+                Assert.IsTrue(VehicleFactory.IsCar(sedan), "sedan");
+                Assert.IsTrue(VehicleFactory.IsCar(code), "code car");
+            }
+            finally
+            {
+                Object.DestroyImmediate(parent.gameObject);
+                Object.DestroyImmediate(carTuning);
+                palette.Dispose();
+            }
+        }
+
+        [Test]
         public void Noun_FollowsTheClass()
         {
             Assert.AreEqual("angkot", VehicleClasses.Noun(VehicleClass.Angkot));

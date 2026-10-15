@@ -16,8 +16,8 @@ Semua model di folder ini diunduh dari Sketchfab dalam format glTF Binary (.glb)
 | `pickup.glb` | Pickup Truck | Han66st | https://sketchfab.com/models/616761063ad845fe84e1d965bdce5595 | CC Attribution 4.0 |
 | `police.glb` | Han66st - Indonesian Police Car (Free) | Han66st | https://sketchfab.com/models/f548bd218ba94711b16cf1aeeee028ff | CC Attribution 4.0 |
 
-**Perubahan:** file tidak diubah. Skala, arah hadap, pivot roda, lampu, dan kotak benturan ditambahkan oleh
-`VehicleModelBuilder` saat membuat prefab (lihat `VehicleModelCatalog`). Dari `police.glb` hanya sedan polisi yang dipakai.
+**Perubahan:** file .glb tidak diubah. Di game modelnya diskala, diputar menghadap depan, diberi warna cat (tint), dan
+diberi pivot roda, lampu, dan kotak benturan oleh `VehicleModelBuilder` (lihat `VehicleModelCatalog`). Dari `police.glb` hanya sedan polisi yang dipakai (mesh dipotong).
 
 **Roda menyatu dengan bodi** (tidak berputar di game): `lmpv1.glb`, `l300.glb`, `police.glb`. `police.glb` berisi SUV dan sedan
 dalam satu mesh; builder memotong mesh dan hanya menyimpan sedan.

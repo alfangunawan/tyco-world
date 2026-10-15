@@ -33,6 +33,7 @@ namespace TycoWorld.Vehicles.Tests
             Assert.AreEqual(yawLow, t.yawRateLow, 1e-4f);
             Assert.AreEqual(yawHigh, t.yawRateHigh, 1e-4f);
             Assert.AreEqual(leans, t.maxLean > 0f);
+            Assert.AreEqual(!leans, t.isCar, "cars sit inside, bikes are ridden");
         }
 
         [Test]

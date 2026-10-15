@@ -20,9 +20,19 @@ namespace TycoWorld.Vehicles.Authoring
         public const string OwnWork = "buatan proyek ini";
         /// <summary>Starts the note of a candidate that was looked at and turned down (not in the game).</summary>
         public const string Rejected = "Ditolak";
+        /// <summary>Starts a SOURCES.md paragraph that says how the files were changed for the game.</summary>
+        public const string ChangesMark = "**Perubahan:**";
 
         static readonly string[] SkippedColumns = { "File", "Perubahan", "Dipakai untuk" };
         static readonly Regex Link = new Regex(@"\[([^\]]+)\]\(([^)]+)\)");
+
+        /// <summary>Licence names as the SOURCES.md files write them → the licence text, listed once at the end.</summary>
+        static readonly (string[] names, string label, string url)[] Licences =
+        {
+            (new[] { "CC Attribution 4.0", "CC-BY-4.0", "CC BY 4.0" }, "CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/"),
+            (new[] { "CC-BY 3.0", "CC BY 3.0" }, "CC BY 3.0", "https://creativecommons.org/licenses/by/3.0/"),
+            (new[] { "CC0" }, "CC0 1.0", "https://creativecommons.org/publicdomain/zero/1.0/")
+        };
 
         [MenuItem("Tyco World/Write Credits")]
         public static void Write()
@@ -59,9 +69,34 @@ namespace TycoWorld.Vehicles.Authoring
                 if (entries.Count == 0) continue;
                 sb.Append(title).Append('\n');
                 foreach (var e in entries) sb.Append("  • ").Append(e).Append('\n');
+                // CC BY asks to say how the material was changed; SOURCES.md does not ship with the game.
+                string changes = Changes(lines);
+                if (changes.Length > 0) sb.Append("  Perubahan: ").Append(changes).Append('\n');
                 sb.Append('\n');
             }
+            string body = sb.ToString();
+            var used = Licences.Where(l => l.names.Any(n => body.Contains(n))).ToList();
+            if (used.Count > 0)
+            {
+                sb.Append("Lisensi\n");
+                foreach (var l in used) sb.Append("  • ").Append(l.label).Append(": ").Append(l.url).Append('\n');
+            }
             return sb.ToString();
+        }
+
+        /// <summary>The "**Perubahan:**" paragraph of a SOURCES.md, on one line; empty when the file has none.</summary>
+        static string Changes(IReadOnlyList<string> lines)
+        {
+            var parts = new List<string>();
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (!lines[i].StartsWith(ChangesMark)) continue;
+                parts.Add(lines[i].Substring(ChangesMark.Length).Trim());
+                for (int j = i + 1; j < lines.Count && lines[j].Trim().Length > 0 && !lines[j].StartsWith("|") && !lines[j].StartsWith("#"); j++)
+                    parts.Add(lines[j].Trim());
+                break;
+            }
+            return Plain(string.Join(" ", parts));
         }
 
         /// <summary>The data rows of every markdown table in <paramref name="lines"/>, as trimmed cells.</summary>

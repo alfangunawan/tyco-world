@@ -34,6 +34,20 @@ namespace TycoWorld.Vehicles.Tests
         }
 
         [Test]
+        public void Credits_SayWhatWasChanged_AndLinkTheLicences()
+        {
+            // CC BY 4.0 §3(a)(1)(B): say the material was modified; SOURCES.md does not ship, so the credits must carry it.
+            string text = CreditsBuilder.Collect();
+            foreach (var file in Directory.GetFiles("Assets", "SOURCES.md", SearchOption.AllDirectories))
+            {
+                var change = File.ReadAllLines(file).FirstOrDefault(l => l.StartsWith(CreditsBuilder.ChangesMark));
+                if (change != null) StringAssert.Contains(CreditsBuilder.Plain(change.Substring(CreditsBuilder.ChangesMark.Length).Trim()), text, file);
+            }
+            StringAssert.Contains("https://creativecommons.org/licenses/by/4.0/", text);
+            StringAssert.Contains("https://creativecommons.org/publicdomain/zero/1.0/", text);
+        }
+
+        [Test]
         public void Plain_WritesLinksAndCodeOut()
         {
             Assert.AreEqual("Universal Animation Library (https://opengameart.org/x)", CreditsBuilder.Plain("[Universal Animation Library](https://opengameart.org/x)"));

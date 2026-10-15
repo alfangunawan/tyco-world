@@ -54,11 +54,10 @@ namespace TycoWorld.Gameplay
         }
 
         /// <summary>
-        /// A car (sit inside, no body shown) rather than a bike. Cars carry a hull; model bikes do too (spec vehicles-3a §4)
-        /// but also their own ride anchors, which no car has.
+        /// A car (sit inside, no body shown) rather than a bike, from its tuning: both carry a hull since the model vehicles
+        /// (spec vehicles-3a §4), and RideAnchors.Of adds anchors to whatever it is asked about.
         /// </summary>
-        public static bool IsCar(Motorbike body) =>
-            body.transform.Find("Hull") != null && body.GetComponentInChildren<RideAnchors>(true) == null;
+        public static bool IsCar(Motorbike body) => body.Tuning != null && body.Tuning.isCar;
 
         /// <summary>Parked vehicles past the shadow range cast none (spec vehicles-3a §8), like far pedestrians.</summary>
         public static void SetShadows(GameObject vehicle, bool cast)
@@ -84,6 +83,7 @@ namespace TycoWorld.Gameplay
             t.yawRateLow = 70f;
             t.yawRateHigh = 28f;
             t.maxLean = 0f;
+            t.isCar = true;
             t.bodyRadius = 0.85f;
             t.bodyHeight = 1.7f;
             t.blockHalfExtents = new Vector3(0.82f, 0.55f, 1.95f);

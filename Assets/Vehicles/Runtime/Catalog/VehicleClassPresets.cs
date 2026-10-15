@@ -54,6 +54,7 @@ namespace TycoWorld.Vehicles
             t.yawRateLow = r.YawLow;
             t.yawRateHigh = r.YawHigh;
             t.maxLean = r.Leans ? 25f : 0f;
+            t.isCar = !VehicleClasses.IsBike(c);
             t.chaseDistance = r.Chase;
             t.chaseHeight = r.ChaseHeight;
         }

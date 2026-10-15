@@ -26,6 +26,10 @@ namespace TycoWorld.Vehicles
         public float turnInSpeed = 1.5f;
         public float maxSteerAngle = 25f;
 
+        [Header("Kind")]
+        [Tooltip("A car: sit inside (no body shown, no pillion), third-person camera only (spec vehicles-3a §5).")]
+        public bool isCar;
+
         [Header("Lean (visual only)")]
         public float maxLean = 25f;
         public float fullLeanSpeed = 8f;

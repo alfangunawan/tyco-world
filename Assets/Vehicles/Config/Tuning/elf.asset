@@ -25,6 +25,7 @@ MonoBehaviour:
   yawRateHigh: 20
   turnInSpeed: 1.5
   maxSteerAngle: 25
+  isCar: 1
   maxLean: 0
   fullLeanSpeed: 8
   leanSmoothing: 6
