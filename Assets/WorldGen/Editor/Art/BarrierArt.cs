@@ -17,18 +17,19 @@ namespace TycoWorld.WorldGen.Authoring
         public const float PotHeight = 0.7f, ConcreteHeight = 0.8f, BarricadeHeight = 0.9f;
 
         /// <param name="boardMaterial">The board's face behind the text; a plain white one when null.</param>
-        public static GameObject[] BuildPrefabs(Material boardMaterial)
+        /// <param name="folder">Where the prefabs go; tests pass a scratch folder so the project's prefabs stay as built.</param>
+        public static GameObject[] BuildPrefabs(Material boardMaterial, string folder = PrefabFolder)
         {
-            AssetFolders.Ensure(PrefabFolder);
+            AssetFolders.Ensure(folder);
             return new[]
             {
-                Prefab("Barrier_Pot", "Kenney_PottedPlant.obj", PotHeight, null),
-                Prefab("Barrier_Concrete", "Quaternius_BarrierSingle.obj", ConcreteHeight, null),
-                Prefab("Barrier_RoadClosed", "Quaternius_TrafficBarrier.obj", BarricadeHeight, root => AddSign(root, boardMaterial))
+                Prefab(folder, "Barrier_Pot", "Kenney_PottedPlant.obj", PotHeight, null),
+                Prefab(folder, "Barrier_Concrete", "Quaternius_BarrierSingle.obj", ConcreteHeight, null),
+                Prefab(folder, "Barrier_RoadClosed", "Quaternius_TrafficBarrier.obj", BarricadeHeight, root => AddSign(root, boardMaterial))
             };
         }
 
-        static GameObject Prefab(string name, string model, float height, System.Action<GameObject> extra)
+        static GameObject Prefab(string folder, string name, string model, float height, System.Action<GameObject> extra)
         {
             var source = AssetDatabase.LoadAssetAtPath<GameObject>(ModelsFolder + model);
             if (source == null)
@@ -50,7 +51,7 @@ namespace TycoWorld.WorldGen.Authoring
                 var box = root.AddComponent<BoxCollider>();
                 box.center = b.center;
                 box.size = b.size;
-                return PrefabUtility.SaveAsPrefabAsset(root, PrefabFolder + "/" + name + ".prefab");
+                return PrefabUtility.SaveAsPrefabAsset(root, folder + "/" + name + ".prefab");
             }
             finally
             {

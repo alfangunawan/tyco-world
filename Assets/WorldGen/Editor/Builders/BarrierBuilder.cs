@@ -26,6 +26,8 @@ namespace TycoWorld.WorldGen.Authoring
         /// <summary>The road-closed line is about this tall.</summary>
         public const float BoundaryHeight = 1.0f;
         const float Coping = 0.06f;
+        /// <summary>Open width a line of blocks may leave in all; less than a person needs.</summary>
+        public const float MaxBlockGap = 0.6f;
 
         public static BarrierBuildResult Build(IReadOnlyList<DeadEnd> ends, DeadEndSettings s, FrontageSettings f, float chunkSize)
         {
@@ -67,7 +69,8 @@ namespace TycoWorld.WorldGen.Authoring
                     default:
                     {
                         top = BoundaryHeight;
-                        int blocks = Mathf.Max(1, Mathf.FloorToInt(end.Width / s.blockSpacing));
+                        // Enough blocks that the gaps left are narrower than a person (they may overlap a little instead).
+                        int blocks = Mathf.Max(1, Mathf.CeilToInt((end.Width - MaxBlockGap) / s.blockSpacing));
                         for (int i = 0; i < blocks; i++)
                             r.Props.Add(new PropPlacement
                             {

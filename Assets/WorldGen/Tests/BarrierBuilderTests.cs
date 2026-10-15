@@ -64,6 +64,18 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Boundary_BlocksCoverTheWholeRoad()
+        {
+            Assert.Less(BarrierBuilder.MaxBlockGap, 0.7f, "narrower than a person");
+            foreach (float width in new[] { 2.5f, 3.7f, 5f, 6f, 7.7f })
+            {
+                int blocks = One(DeadEndKind.Boundary, width).Props.Count(p => p.Variant == BarrierBuilder.ConcreteVariant);
+                Assert.GreaterOrEqual(blocks * settings.deadEnds.blockSpacing, width - BarrierBuilder.MaxBlockGap - 1e-3f,
+                    "no gap a person fits through beside the blocks at width " + width);
+            }
+        }
+
+        [Test]
         public void Props_FaceTheRoad_PerVariant()
         {
             var wall = One(DeadEndKind.Wall);

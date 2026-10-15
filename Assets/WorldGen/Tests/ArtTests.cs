@@ -147,7 +147,29 @@ namespace TycoWorld.WorldGen.Tests
         [Test]
         public void BarrierPrefabs_AreBuilt_Solid_AndOfASensibleSize()
         {
-            var prefabs = BarrierArt.BuildPrefabs(null);
+            const string folder = "Assets/WorldGen/Tests/_TmpBarrierPrefabs";
+            try
+            {
+                CheckBarrierPrefabs(BarrierArt.BuildPrefabs(null, folder));
+            }
+            finally
+            {
+                UnityEditor.AssetDatabase.DeleteAsset(folder);
+            }
+        }
+
+        [Test]
+        public void SavedRoadClosedPrefab_BoardUsesTheBoardMaterial()
+        {
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(BarrierArt.PrefabFolder + "/Barrier_RoadClosed.prefab");
+            Assert.IsNotNull(prefab);
+            var board = prefab.transform.Find("Board").GetComponent<MeshRenderer>();
+            Assert.AreSame(UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(WorldGenPaths.MaterialsFolder + "/Barrier_Board.mat"), board.sharedMaterial,
+                "the white board, not the default material a test build would leave behind");
+        }
+
+        static void CheckBarrierPrefabs(GameObject[] prefabs)
+        {
             Assert.AreEqual(3, prefabs.Length);
             float[,] height = { { 0.5f, 0.9f }, { 0.6f, 1.0f }, { 1.2f, 2.0f } };
             for (int i = 0; i < 3; i++)

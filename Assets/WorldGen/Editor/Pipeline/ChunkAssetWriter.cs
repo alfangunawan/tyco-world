@@ -29,7 +29,7 @@ namespace TycoWorld.WorldGen.Authoring
             AssetFolders.Ensure(folder);
             var result = new Dictionary<BuiltFeature, MeshAsset>();
             var groups = world.Features
-                .Where(f => f.Mesh != null && !f.Mesh.IsEmpty)
+                .Where(f => Draws(f) || (f.ColliderMesh != null && !f.ColliderMesh.IsEmpty))
                 .GroupBy(f => f.Chunk)
                 .OrderBy(g => g.Key.x).ThenBy(g => g.Key.y);
 
@@ -44,23 +44,34 @@ namespace TycoWorld.WorldGen.Authoring
                     Mesh main = null;
                     foreach (var feature in group.OrderBy(f => f.Kind).ThenBy(f => f.OsmId))
                     {
-                        var mesh = feature.Mesh.ToMesh(feature.Group + "_" + feature.OsmId.ToString(CultureInfo.InvariantCulture), out var used);
-                        if (main == null)
+                        string name = feature.Group + "_" + feature.OsmId.ToString(CultureInfo.InvariantCulture);
+                        Mesh mesh = null;
+                        var used = new int[0];
+                        if (Draws(feature))
                         {
-                            AssetDatabase.CreateAsset(mesh, path);
-                            main = mesh;
-                        }
-                        else
-                        {
-                            AssetDatabase.AddObjectToAsset(mesh, main);
+                            mesh = feature.Mesh.ToMesh(name, out used);
+                            Add(mesh);
                         }
                         Mesh collider = null;
                         if (feature.ColliderMesh != null && !feature.ColliderMesh.IsEmpty)
                         {
-                            collider = feature.ColliderMesh.ToMesh(mesh.name + "_Collider", out _);
-                            AssetDatabase.AddObjectToAsset(collider, main);
+                            collider = feature.ColliderMesh.ToMesh(name + "_Collider", out _);
+                            Add(collider);
                         }
                         result[feature] = new MeshAsset(mesh, used, collider);
+                    }
+
+                    void Add(Mesh m)
+                    {
+                        if (main == null)
+                        {
+                            AssetDatabase.CreateAsset(m, path);
+                            main = m;
+                        }
+                        else
+                        {
+                            AssetDatabase.AddObjectToAsset(m, main);
+                        }
                     }
                 }
             }
@@ -71,5 +82,7 @@ namespace TycoWorld.WorldGen.Authoring
             AssetDatabase.SaveAssets();
             return result;
         }
+
+        static bool Draws(BuiltFeature f) => f.Mesh != null && !f.Mesh.IsEmpty;
     }
 }

@@ -122,6 +122,43 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void EndThatLoopsBackOntoItsOwnRoad_IsNotADeadEnd()
+        {
+            var ends = Plan(o =>
+            {
+                Street(o);
+                // A "P": up from the street, round a block and back into its own stem at (0, 30).
+                o.Way(2, new[] { new Vector2(0f, 0f), new Vector2(0f, 60f), new Vector2(40f, 60f), new Vector2(40f, 30f), new Vector2(0f, 30f) }, false,
+                    ("highway", "residential"));
+            });
+            Assert.IsFalse(ends.Any(e => e.RoadId == 2), "the end meets the road's own stem: a junction, not a dead end");
+        }
+
+        [Test]
+        public void HouseBesideTheEnd_WithOpenGroundAhead_StillGetsAWall()
+        {
+            var ends = Plan(o =>
+            {
+                Street(o);
+                o.Way(2, new[] { new Vector2(0f, 0f), new Vector2(0f, 30f) }, false, ("highway", "residential"));
+                o.Rect(50, 3.2f, 20f, 10f, 10f, ("building", "house"));
+            });
+            Assert.AreEqual(DeadEndKind.Wall, ends.Single(e => e.RoadId == 2).Kind, "the house stands beside the end, not in front of it");
+        }
+
+        [Test]
+        public void OpenCanopyAhead_DoesNotCloseTheEnd()
+        {
+            var ends = Plan(o =>
+            {
+                Street(o);
+                o.Way(2, new[] { new Vector2(0f, 0f), new Vector2(0f, 30f) }, false, ("highway", "residential"));
+                o.Rect(50, -5f, 31f, 10f, 10f, ("building", "roof"));
+            });
+            Assert.AreEqual(DeadEndKind.Wall, ends.Single(e => e.RoadId == 2).Kind, "a roof on pillars is open below");
+        }
+
+        [Test]
         public void ClosedLoop_HasNoEnds()
         {
             var ends = Plan(o => o.Way(1, new[] { new Vector2(0f, 0f), new Vector2(40f, 0f), new Vector2(40f, 40f), new Vector2(0f, 40f), new Vector2(0f, 0f) },

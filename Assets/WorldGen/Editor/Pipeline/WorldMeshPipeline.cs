@@ -319,20 +319,24 @@ namespace TycoWorld.WorldGen.Authoring
         static void AddChunkFeatures(BuiltWorld built, IReadOnlyDictionary<Vector2Int, MeshData> meshes, IReadOnlyDictionary<Vector2Int, MeshData> colliders,
             FeatureKind kind, string group, string name, Material[] materials, GenerationReport report)
         {
+            // A chunk may hold only a collider (map-edge barriers are drawn by props): it still gets its feature.
             var chunks = new List<Vector2Int>(meshes.Keys);
+            if (colliders != null)
+                foreach (var chunk in colliders.Keys)
+                    if (!meshes.ContainsKey(chunk)) chunks.Add(chunk);
             chunks.Sort((a, b) => a.x != b.x ? a.x.CompareTo(b.x) : a.y.CompareTo(b.y));
             foreach (var chunk in chunks)
             {
-                var mesh = meshes[chunk];
-                if (mesh.IsEmpty) continue;
+                bool draws = meshes.TryGetValue(chunk, out var mesh) && !mesh.IsEmpty;
                 MeshData collider = null;
                 if (colliders != null && colliders.TryGetValue(chunk, out var c) && !c.IsEmpty) collider = c.SplitLongTriangles(MaxColliderEdge);
+                if (!draws && collider == null) continue;
                 built.Features.Add(new BuiltFeature
                 {
                     Kind = kind, OsmId = ChunkFeatureId(group, name, chunk), ElementType = OsmElementType.Way, Name = name,
                     Group = group, Chunk = chunk,
                     Anchor = new Vector2((chunk.x + 0.5f) * built.ChunkSize, (chunk.y + 0.5f) * built.ChunkSize),
-                    Mesh = mesh.SplitLongTriangles(MaxColliderEdge), ColliderMesh = collider,
+                    Mesh = draws ? mesh.SplitLongTriangles(MaxColliderEdge) : new MeshData(materials.Length), ColliderMesh = collider,
                     Materials = materials, AddCollider = true, HasOsmIdentity = false, Category = name
                 });
                 report.Count(name);

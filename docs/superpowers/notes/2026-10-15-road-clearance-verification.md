@@ -21,10 +21,10 @@
 
 | Hal | Hasil |
 |---|---|
-| Waktu generate | 35,9 s (budget 60 s) |
+| Waktu generate | 37,9 s (budget 60 s) |
 | Chunk | 281 |
 | Determinisme | Generate dua kali: `IDENTICAL chunks=281` |
-| Chunk yang punya pembatas | 98 |
+| Objek chunk pembatas | 154 (termasuk chunk yang hanya berisi collider pembatas batas peta) |
 
 **Counter report:**
 
@@ -33,10 +33,12 @@
 | `ClearanceShifted` | 558 |
 | `ClearanceDropped` | 377 |
 | `ClearanceRoadCuts` | 9 |
-| `DeadEndWalls` | 84 |
-| `DeadEndPortals` | 34 |
-| `DeadEndBarriers` | 54 |
-| `DeadEndSkipped` | 125 |
+| `DeadEndWalls` | 132 |
+| `DeadEndPortals` | 48 |
+| `DeadEndBarriers` | 70 |
+| `DeadEndSkipped` | 43 |
+
+Angka ini setelah perbaikan review akhir (lihat bagian di bawah). Sebelumnya 84 / 34 / 54 / 125: 82 ujung dilewati hanya karena ada rumah di samping ujung, dan 4 ujung lollipop dianggap buntu.
 
 `KampungData` di-bake ulang dari jalan yang sudah dipotong: `mapRoads` 593 → 597.
 
@@ -47,11 +49,11 @@ Metode sama dengan spec §1: titik sampel tiap 2 m di semua `mapRoads`, raycast 
 | | Sebelum | Sesudah |
 |---|---|---|
 | Titik sampel | 31.239 | 31.204 |
-| Titik tertutup | 274 | 120 |
+| Titik tertutup | 274 | 127 |
 | Kanopi terbuka di bawahnya | — | 61 |
-| Padat setinggi badan | — | 59 |
+| Padat setinggi badan | — | 66 |
 
-**Ke-59 titik padat:**
+**Ke-66 titik padat** (rincian di bawah dari pindaian sebelum review akhir, saat masih 59 titik; setelah review, pembatas bertambah, dan penyebab lainnya tetap sama):
 
 | Penyebab | Kena | Penjelasan |
 |---|---|---|
@@ -62,7 +64,7 @@ Metode sama dengan spec §1: titik sampel tiap 2 m di semua `mapRoads`, raycast 
 | Grha Wiyata A dan B | 2 | Sampel terakhir di ujung potongan jalan, masih dalam toleransi sampling 2 m |
 | Pohon | 1 | Pohon di tepi jalan |
 
-Kolom "Kena" dihitung per collider. Satu titik bisa kena lebih dari satu collider, jadi totalnya lebih dari 59. **Tidak ada lagi rumah OSM yang menutup jalan.**
+Kolom "Kena" dihitung per collider. Satu titik bisa kena lebih dari satu collider, jadi totalnya lebih dari jumlah titik. Setelah review akhir: prop pembatas 75, tembok/portal/collider pembatas 42, tembok tepi peta 40, frontage 2, Grha Wiyata 2, pohon 1. **Tidak ada lagi rumah OSM yang menutup jalan.**
 
 ## Bug yang ditemukan di Play
 
@@ -104,15 +106,35 @@ Rata-rata 300 frame, jam 10:00, preset sama dengan pengukuran sebelumnya. `none`
 | kos, none | 8133 / 8125 | 7630 / 7630 | −6,1% | 155,3 / 147,3 | 132,1 / 137,3 |
 | jalan, none | 6344 | 5525 | −12,9% | 162,8 | 149,9 |
 
+**Setelah review akhir** (pembatas bertambah ~80), batch: kos base 7742 / 8273, jalan base 5967. Masih di bawah angka sebelum perubahan. FPS di pengukuran ini 88–116, turun di semua titik termasuk `none`, sementara dua proses worker Unity sedang aktif. Karena itu angka FPS ini tidak dipakai.
+
 - **Kriteria batch ≤ +3% terpenuhi.** Batch justru turun, karena 377 rumah yang menutup jalan dihapus.
 - FPS editor berisik. Di jalan FPS `base` naik, di kos turun sekitar 10%, padahal batch dan segitiga `none` di kos juga turun. Spec tidak menetapkan kriteria FPS. Ini perlu dicek ulang di build player kalau terasa di playtest.
 
 ## Tes
 
-- Suite penuh: 1147/0.
+- Suite penuh: 1147/0 sebelum review akhir, 1154/0 sesudahnya.
 - `StreetLampSystemTests.Apply_NeverTouchesSharedHeadMaterial` gagal sekali, hanya jika suite dijalankan dalam perintah editor yang sama langsung setelah `ArtAssetBuilder.BuildAll`. Material kepala lampu masih ditandai dirty sampai update editor berikutnya. Dijalankan ulang di perintah berikutnya: 1147/0. Ini sensitivitas tes yang sudah ada sebelumnya, bukan dari perubahan ini.
 
 ## Sisa
 
 - Dua tembok frontage di badan jalan (lihat tabel pindai ulang): di luar lingkup sub-proyek ini.
 - Ke-61 titik kanopi (`building=roof`) sengaja dibiarkan. Jalan lewat di bawah atap terbuka.
+
+## Review akhir
+
+Reviewer membaca seluruh cabang (84cc08a..49413cf). Temuan yang diperbaiki, masing-masing dengan tes yang merah lebih dulu:
+
+| Temuan | Perbaikan | Tes |
+|---|---|---|
+| Ujung jalan yang kembali ke batangnya sendiri (bentuk lollipop atau "P") dianggap buntu, sehingga ada tembok di simpang yang masih dipakai rute GPS | Ujung juga dicek terhadap jalannya sendiri, di luar busur dekat ujung itu | `EndThatLoopsBackOntoItsOwnRoad_IsNotADeadEnd` |
+| Rumah di samping ujung dianggap menutup ujung. Gang yang berakhir ke tanah kosong tidak diberi pembatas | Sinar lurus ke depan dari selebar jalan. Ujung dianggap tertutup hanya jika bangunan menahan semua sinar, kecuali celah lebih sempit dari 0,7 m. Atap terbuka (`building=roof`) tidak dihitung | `HouseBesideTheEnd_WithOpenGroundAhead_StillGetsAWall`, `OpenCanopyAhead_DoesNotCloseTheEnd` |
+| Chunk yang hanya berisi pembatas batas peta kehilangan collider buatan kode, karena fitur chunk dibuat dari mesh render saja | Fitur chunk dibuat juga untuk chunk yang hanya punya collider. Writer dan factory membuat objek collider tanpa renderer | `MapEdgeBarrier_GetsItsCollider_InAChunkWithNothingElseBuilt`, `ColliderOnlyFeature_IsWritten_AndBecomesAnInvisibleCollider` |
+| Balok batas peta dihitung dengan `floor`, sehingga ada celah ±0,9 m di samping satu balok pada jalan 3,7 m | Jumlah balok `ceil((lebar − 0,6) / 1,9)`. Celah total paling lebar 0,6 m | `Boundary_BlocksCoverTheWholeRoad` |
+| Tes art menimpa prefab proyek dengan papan bermaterial default (abu-abu) | Tes membangun prefab di folder sementara | `SavedRoadClosedPrefab_BoardUsesTheBoardMaterial` |
+
+Pengecekan di dunia setelah perbaikan:
+
+- Dua simpang lollipop yang ditunjuk reviewer, (166, −563) dan (280, −1034), tidak lagi punya collider atau prop pembatas dalam radius 6 m.
+- Tembok baru di (−658.6, −741.0): jalan dulu berakhir ke rumput dengan rumah di sampingnya. Sekarang ditutup tembok + pot (`new_wall_0.png`).
+- Generate dua kali: `IDENTICAL chunks=281`.

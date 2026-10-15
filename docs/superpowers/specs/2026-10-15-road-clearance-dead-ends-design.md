@@ -44,10 +44,10 @@ Pindaian di dunia hasil generate: titik sampel tiap 2 m di semua `mapRoads`, lal
 
 `Assets/WorldGen/Editor/Builders/DeadEndPlanner.cs`.
 
-- **Ujung buntu:** ujung chain jalan yang tidak bertemu jalan lain dalam radius sambung RoadNetwork.
+- **Ujung buntu:** ujung chain jalan yang tidak bertemu jalan lain dalam radius sambung RoadNetwork, dan juga tidak bertemu jalannya sendiri lebih jauh di sepanjang chain (jalan yang kembali ke batangnya, berbentuk lollipop atau "P").
 - **Dilewati jika:**
   - di dalam area parkir (jalan servis yang masuk lahan parkir);
-  - ada footprint bangunan dalam 2 m di depan ujungnya (bangunannya sendiri sudah menutup);
+  - ada bangunan dalam setengah lebar jalan + 2 m di depan ujungnya yang menutup seluruh lebar jalan; celah yang lebih sempit dari 0,7 m dianggap tertutup. Bangunan di samping ujung tidak dihitung, begitu juga atap terbuka (`building=roof`);
   - ujungnya dalam 20 m dari kos (`DeadEndSettings.kosRadius`). Radius ini sengaja lebih besar dari zona larangan frontage (8 m), supaya jalan di depan gerbang kos tidak tertutup.
 - **Jenis pembatas:**
 

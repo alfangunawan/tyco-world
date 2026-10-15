@@ -129,6 +129,34 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void ColliderOnlyFeature_IsWritten_AndBecomesAnInvisibleCollider()
+        {
+            const string folder = "Assets/WorldGen/Tests/_TmpChunkWriterColliderOnly";
+            try
+            {
+                var settings = DefaultSettingsFactory.CreateInMemory();
+                createdObjects.Add(settings);
+                var block = Feature(FeatureKind.Barrier, FeatureGroups.Barriers, -3, new MeshData(1), Quad(1f));
+                var world = new BuiltWorld { Bounds = new Rect(0f, 0f, 100f, 100f), ChunkSize = 100f, Ground = Quad(0f) };
+                world.Features.Add(block);
+                var assets = ChunkAssetWriter.Write(world, folder, out var groundMesh);
+                Assert.IsTrue(assets.ContainsKey(block), "written although it draws nothing");
+                Assert.IsNotNull(assets[block].Collider);
+                var root = SceneObjectFactory.Populate(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), world, assets, groundMesh, settings,
+                    new GenerationReport(), null);
+                created.Add(root);
+                var go = root.transform.Find(FeatureGroups.Barriers + "/" + WorldMeshPipeline.ChunkName(Vector2Int.zero)).GetChild(0).gameObject;
+                Assert.AreSame(assets[block].Collider, go.GetComponent<MeshCollider>().sharedMesh);
+                Assert.IsNull(go.GetComponent<MeshRenderer>());
+                Assert.IsNull(go.GetComponent<MeshFilter>());
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(folder);
+            }
+        }
+
+        [Test]
         public void ChunkAssetWriter_WritesTheColliderAsASecondSubAsset()
         {
             const string folder = "Assets/WorldGen/Tests/_TmpChunkWriter";
