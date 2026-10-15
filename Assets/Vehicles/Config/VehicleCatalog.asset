@@ -1,0 +1,97 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2dbb1fb9eda342d4da8c5596e18da5a6, type: 3}
+  m_Name: VehicleCatalog
+  m_EditorClassIdentifier: TycoWorld.Vehicles::TycoWorld.Vehicles.VehicleCatalog
+  entries:
+  - id: vario
+    vehicleClass: 0
+    prefab: {fileID: 2121070557122733845, guid: ee460e5e02e97a7479acc6c739a9e23f, type: 3}
+    paintMaterials:
+    - material
+    paintStrength: 0.6
+  - id: supra
+    vehicleClass: 1
+    prefab: {fileID: 4976771497837315213, guid: a32b22d5de37a884d864aae224b4543c, type: 3}
+    paintMaterials:
+    - chassis.002
+    paintStrength: 0.6
+  - id: sedan
+    vehicleClass: 2
+    prefab: {fileID: 2188353653691467625, guid: 0acaeeb3560cf7143ae5bebaca677d4e, type: 3}
+    paintMaterials:
+    - Material.004
+    paintStrength: 0.6
+  - id: hatch
+    vehicleClass: 2
+    prefab: {fileID: 2858926840689664664, guid: 6d09e94ae1a90ae45b15815e4f0b2889, type: 3}
+    paintMaterials:
+    - hatchback1
+    paintStrength: 0.6
+  - id: lmpv1
+    vehicleClass: 3
+    prefab: {fileID: 1443977260618966157, guid: 95716e5ab058ffb49918fdbbae06c6aa, type: 3}
+    paintMaterials:
+    - mpv1
+    paintStrength: 0.6
+  - id: lmpv2
+    vehicleClass: 3
+    prefab: {fileID: 3623770460369215345, guid: 10bed2e06f6c18748aa515f3b22499bc, type: 3}
+    paintMaterials:
+    - body.001
+    paintStrength: 1
+  - id: mpv2
+    vehicleClass: 3
+    prefab: {fileID: 5939148111899355839, guid: d6bb4d1c7ef2e54408e4ed85f714389c, type: 3}
+    paintMaterials:
+    - color
+    paintStrength: 1
+  - id: van
+    vehicleClass: 4
+    prefab: {fileID: 7583339100808886600, guid: 3c662f037a469fa44aed259859d4cb5b, type: 3}
+    paintMaterials:
+    - material
+    paintStrength: 0.6
+  - id: l300
+    vehicleClass: 6
+    prefab: {fileID: 3722712035109576443, guid: e305f9fa776c75d4ca789af9d4fe378a, type: 3}
+    paintMaterials:
+    - Material
+    paintStrength: 1
+  - id: pickup
+    vehicleClass: 6
+    prefab: {fileID: 8198473706186509971, guid: 7c4bb976662061543840392946de7814, type: 3}
+    paintMaterials:
+    - pickup1_body
+    paintStrength: 1
+  - id: police
+    vehicleClass: 8
+    prefab: {fileID: 7807524737926024569, guid: f1ef9b7ac8eca1f4eb3e0a3567501668, type: 3}
+    paintMaterials: []
+    paintStrength: 1
+  - id: angkot
+    vehicleClass: 5
+    prefab: {fileID: 2702240699320220600, guid: 11733744b2e949d4ab8fbccdafbfac68, type: 3}
+    paintMaterials: []
+    paintStrength: 1
+  - id: carry
+    vehicleClass: 6
+    prefab: {fileID: 914857475990786345, guid: 664bc437acbdc904eb4d26e35be5b98d, type: 3}
+    paintMaterials:
+    - suzuki
+    paintStrength: 0.6
+  - id: elf
+    vehicleClass: 7
+    prefab: {fileID: 4722026977731062706, guid: f04979ecd3d51b943902f4bb96f58c3b, type: 3}
+    paintMaterials:
+    - lambert3
+    paintStrength: 1

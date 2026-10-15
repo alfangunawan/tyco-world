@@ -5,6 +5,7 @@ namespace TycoWorld.GameSettings
         Closed,
         Main,
         Settings,
-        ConfirmQuit
+        ConfirmQuit,
+        Credits
     }
 }

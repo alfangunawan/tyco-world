@@ -40,6 +40,8 @@ namespace TycoWorld.Gameplay
         [SerializeField] Material baseMaterial;
         [Tooltip("Parked warga bikes are copies of this (the Motorbike prefab); empty builds plain code bikes.")]
         [SerializeField] GameObject bikePrefab;
+        [Tooltip("Warga vehicle models (spec vehicles-3a §6); empty builds plain code vehicles.")]
+        [SerializeField] VehicleCatalog vehicles;
         [Tooltip("Downloaded people, animations and props (spec #7); empty keeps the primitive figures.")]
         [SerializeField] CharacterLibrary characters;
 
@@ -74,6 +76,7 @@ namespace TycoWorld.Gameplay
         public KampungData Data => data;
         public ItemCatalog Catalog => catalog;
         public GameObject BikePrefab => bikePrefab;
+        public VehicleCatalog Vehicles => vehicles;
         public CharacterLibrary Characters => characters;
         public Palette Palette => palette;
         public GameState State { get; } = new GameState();
@@ -124,8 +127,10 @@ namespace TycoWorld.Gameplay
 
         public event Action Ready;
 
-        public void Configure(KampungData kampung, ItemCatalog items, Material template, GameObject bike = null, CharacterLibrary people = null)
+        public void Configure(KampungData kampung, ItemCatalog items, Material template, GameObject bike = null, CharacterLibrary people = null,
+            VehicleCatalog vehicleCatalog = null)
         {
+            vehicles = vehicleCatalog;
             data = kampung;
             catalog = items;
             baseMaterial = template;

@@ -92,6 +92,9 @@ namespace TycoWorld.Vehicles
             }
             body = GetComponent<CharacterController>();
             ConfigureBody(body, tuning);
+            // A model vehicle's hull (box collider) must not push its own CharacterController.
+            foreach (var c in GetComponentsInChildren<Collider>(true))
+                if (c != body) Physics.IgnoreCollision(body, c, true);
             model = new BikeModel(tuning);
             rideCamera = new RideCamera(tuning);
             homePosition = transform.position;

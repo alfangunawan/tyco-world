@@ -691,6 +691,7 @@ MonoBehaviour:
   catalog: {fileID: 11400000, guid: 1a11559e9f6673e4bac7de004c3c3e26, type: 2}
   baseMaterial: {fileID: 2100000, guid: 78ce2e8e33afcb446863394f6f170337, type: 2}
   bikePrefab: {fileID: 6314233979463167641, guid: 8d5a4751e29f3fe42b59857aff7aab0f, type: 3}
+  vehicles: {fileID: 11400000, guid: 524bec63aebcccf429c9d0fa75b5f3f5, type: 2}
   characters: {fileID: 11400000, guid: de146618f9ddb8946813bdac770bf330, type: 2}
 --- !u!114 &1136399293
 MonoBehaviour:

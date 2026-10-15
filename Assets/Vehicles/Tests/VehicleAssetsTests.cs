@@ -37,6 +37,17 @@ namespace TycoWorld.Vehicles.Tests
         }
 
         [Test]
+        public void KosBike_IsTheVario_AndKeepsItsInteraction()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(VehiclePaths.MotorbikePrefab);
+            Assert.IsNotNull(prefab.transform.Find(VehicleModelBuilder.LeanName + "/" + VehicleModelBuilder.ModelName), "the Vario model");
+            Assert.IsNull(prefab.transform.Find(MotorbikeBuilder.LeanPivotName + "/" + MotorbikeBuilder.BodyName), "no code-built body left");
+            Assert.AreEqual(MotorbikeBuilder.InteractionId, prefab.GetComponent<MotorbikeInteractable>().InteractionId);
+            Assert.AreSame(AssetDatabase.LoadAssetAtPath<BikeTuning>(VehiclePaths.TuningAsset), prefab.GetComponent<Motorbike>().Tuning);
+            Assert.IsNotNull(prefab.GetComponentInChildren<RideAnchors>(true));
+        }
+
+        [Test]
         public void LightMaterials_AreEmissive()
         {
             var visuals = Prefab().GetComponent<MotorbikeVisuals>();

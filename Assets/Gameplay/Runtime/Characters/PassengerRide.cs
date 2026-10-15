@@ -58,7 +58,7 @@ namespace TycoWorld.Gameplay
             return car ? t.position - t.right * 1.4f : t.position - t.forward * 0.45f - t.right * 0.7f;
         }
 
-        static bool IsCar(Motorbike b) => b.transform.Find("Hull") != null;
+        static bool IsCar(Motorbike b) => VehicleFactory.IsCar(b);
 
         public void Tick(float dt, bool wantOff)
         {

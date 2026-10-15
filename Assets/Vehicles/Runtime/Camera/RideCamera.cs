@@ -28,9 +28,10 @@ namespace TycoWorld.Vehicles
             ClearOffsets();
         }
 
+        /// <summary>Third person ↔ rider's head; a car stays in third person (its model has no interior, spec vehicles-3a §5).</summary>
         public void Toggle()
         {
-            Mode = Mode == RideCameraMode.ThirdPerson ? RideCameraMode.FirstPerson : RideCameraMode.ThirdPerson;
+            Mode = Mode == RideCameraMode.ThirdPerson && !t.isCar ? RideCameraMode.FirstPerson : RideCameraMode.ThirdPerson;
             ClearOffsets();
         }
 

@@ -145,5 +145,14 @@ namespace TycoWorld.Vehicles.Tests
             var desired = pivot + new Vector3(0f, 0f, -5f);
             AssertNear(desired, RideCamera.PullIn(pivot, desired, 0.25f));
         }
+
+        [Test]
+        public void Car_StaysInThirdPerson()
+        {
+            // The PSX car models have no interior (spec vehicles-3a §5).
+            tuning.isCar = true;
+            cam.Toggle();
+            Assert.AreEqual(RideCameraMode.ThirdPerson, cam.Mode);
+        }
     }
 }

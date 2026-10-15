@@ -85,6 +85,10 @@ namespace TycoWorld.GameSettings
             pauseView.QuitCancelled += CancelQuit;
             pauseView.QuitConfirmed += ConfirmQuit;
             settingsView.BackClicked += BackFromSettings;
+            pauseView.CreditsClicked += () => navigator.Go(MenuPage.Credits);
+            pauseView.CreditsBackClicked += () => navigator.Go(MenuPage.Main);
+            var credits = Resources.Load<TextAsset>("Credits");
+            pauseView.SetCredits(credits != null ? credits.text : "");
             pauseView.Show(navigator.Page);
         }
 

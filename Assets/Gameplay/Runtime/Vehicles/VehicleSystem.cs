@@ -21,6 +21,8 @@ namespace TycoWorld.Gameplay
         public const float WitnessRadius = PedestrianSystem.WitnessRadius, HoodedFactor = 0.7f, AlarmFactor = 2f;
         public const long Fine = 100000;
         public const float CheckEvery = 0.5f;
+        /// <summary>Parked vehicles farther than this from the player cast no shadow (spec vehicles-3a §8).</summary>
+        public const float ShadowRange = 40f;
         public const float RepaintRadius = 15f;
         /// <summary>Stepping further than this from where the break-in started gives it up (so a seen thief can still run).</summary>
         public const float HotwireDrift = 0.6f;
@@ -43,6 +45,7 @@ namespace TycoWorld.Gameplay
         KampungDirector director;
         Transform root;
         BikeTuning carTuning;
+        readonly VehicleTint tint = new VehicleTint();
         PedestrianSystem people;
         float spawnTimer, checkTimer, witnessTimer;
         WorldVehicle hotwiring;
@@ -88,6 +91,7 @@ namespace TycoWorld.Gameplay
             }
             if (root != null) DestroyNow(root.gameObject);
             if (carTuning != null) DestroyNow(carTuning);
+            tint.Dispose();
             vehicles.Clear();
             bySpot.Clear();
         }
@@ -170,8 +174,15 @@ namespace TycoWorld.Gameplay
             {
                 // A taken vehicle that has left its spot frees it.
                 if (v.Active && v.Moved && v.Spot >= 0 && MissionContext.Flat(v.Position, spots[v.Spot].position) > SpotRelease) ReleaseSpot(v);
-                if (!v.Active || v.Body.IsMounted || v == hotwiring) continue;
+                if (!v.Active) continue;
                 float d = MissionContext.Flat(v.Position, viewer);
+                bool cast = d <= ShadowRange;
+                if (cast != v.CastsShadow)
+                {
+                    VehicleFactory.SetShadows(v.Root, cast);
+                    v.CastsShadow = cast;
+                }
+                if (v.Body.IsMounted || v == hotwiring) continue;
                 if (v.Moved ? d > ReturnBeyond : d > RangeOf(v.Kind) + Hysteresis) Despawn(v);
             }
             candidates.Clear();
@@ -240,19 +251,21 @@ namespace TycoWorld.Gameplay
         {
             var spot = director.Data.spots[spotIndex];
             WorldVehicle v = null;
+            string modelId = VehicleFactory.ParkedModelId(spotIndex, kind);
+            var entry = director.Vehicles != null ? director.Vehicles.Get(modelId) : null;
+            bool model = entry != null && entry.prefab != null;
             foreach (var pooled in vehicles)
-                if (!pooled.Active && pooled.Kind == kind)
+                if (!pooled.Active && pooled.Kind == kind && pooled.ModelId == (model ? modelId : null))
                 {
                     v = pooled;
                     break;
                 }
             int colour = (int)(SeededRandom.Mix((ulong)spotIndex, 0xC0105UL) % 6UL);
+            var colourValue = kind == VehicleKind.Bike ? VehicleFactory.BikeColour(colour) : VehicleFactory.CarColour(colour);
             if (v == null)
             {
-                var body = kind == VehicleKind.Bike
-                    ? VehicleFactory.Bike(root, director.BikePrefab, director.Palette, VehicleFactory.BikeColour(colour))
-                    : VehicleFactory.Car(root, carTuning, director.Palette, VehicleFactory.CarColour(colour));
-                v = new WorldVehicle(kind, body, this);
+                var body = VehicleFactory.FromCatalog(root, director.Vehicles, modelId, tint, colourValue, director.Palette, carTuning, director.BikePrefab);
+                v = model ? new WorldVehicle(kind, body, this, modelId, entry.vehicleClass) : new WorldVehicle(kind, body, this);
                 vehicles.Add(v);
             }
             else
@@ -262,7 +275,7 @@ namespace TycoWorld.Gameplay
             v.Spot = spotIndex;
             v.Unlocked = v.Moved = v.Hot = false;
             v.Colour = colour;
-            VehicleFactory.Paint(v.Root, director.Palette, kind == VehicleKind.Bike ? VehicleFactory.BikeColour(colour) : VehicleFactory.CarColour(colour));
+            Repaint(v, colourValue);
             var at = spot.position;
             at.y = Ground(at);
             v.Body.Teleport(at, spot.yaw);
@@ -270,6 +283,14 @@ namespace TycoWorld.Gameplay
             v.Body.enabled = false;
             v.Idle = 0f;
             bySpot[spotIndex] = v;
+        }
+
+        /// <summary>A model vehicle is tinted through its catalog entry, a code-built one recoloured part by part.</summary>
+        void Repaint(WorldVehicle v, Color32 colour)
+        {
+            var entry = v.ModelId != null && director.Vehicles != null ? director.Vehicles.Get(v.ModelId) : null;
+            if (entry != null) tint.Apply(v.Root, entry, colour);
+            else VehicleFactory.Paint(v.Root, director.Palette, colour);
         }
 
         float Ground(Vector3 p)
@@ -492,7 +513,7 @@ namespace TycoWorld.Gameplay
             if (v != null)
             {
                 v.Colour = (v.Colour + 1 + (int)(SeededRandom.Mix((ulong)v.Colour, 7UL) % 4UL)) % 6;
-                VehicleFactory.Paint(v.Root, director.Palette, v.Kind == VehicleKind.Bike ? VehicleFactory.BikeColour(v.Colour) : VehicleFactory.CarColour(v.Colour));
+                Repaint(v, v.Kind == VehicleKind.Bike ? VehicleFactory.BikeColour(v.Colour) : VehicleFactory.CarColour(v.Colour));
                 v.Hot = false;
             }
             Heat.Clear();

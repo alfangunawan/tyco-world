@@ -24,6 +24,49 @@ namespace TycoWorld.Gameplay
             new Color32(180, 40, 40, 255), new Color32(230, 190, 40, 255)
         };
 
+        static readonly string[] ParkedBikes = { "vario", "supra" };
+        static readonly string[] ParkedCars = { "sedan", "hatch", "lmpv1", "lmpv2", "mpv2", "van", "l300", "pickup", "carry", "angkot" };
+
+        /// <summary>Which model stands on a parking spot: bikes alternate, cars spread over the ten parked models (spec vehicles-3a §6).</summary>
+        public static string ParkedModelId(int spotIndex, VehicleKind kind) => kind == VehicleKind.Bike
+            ? ParkedBikes[((spotIndex % 2) + 2) % 2]
+            : ParkedCars[(int)(SeededRandom.Mix((ulong)spotIndex, 0xCA7A10UL) % (ulong)ParkedCars.Length)];
+
+        /// <summary>
+        /// A warga vehicle from the model catalog (spec vehicles-3a §4, §6), painted by <paramref name="tint"/>; the code-built
+        /// bike or car when the model or its prefab is missing.
+        /// </summary>
+        public static Motorbike FromCatalog(Transform parent, VehicleCatalog catalog, string id, VehicleTint tint, Color32 colour, Palette palette,
+            BikeTuning carTuning, GameObject bikePrefab)
+        {
+            var entry = catalog != null ? catalog.Get(id) : null;
+            if (entry == null || entry.prefab == null)
+            {
+                // No catalog at all (tests, or setup not run: GameplaySceneSetup warns once) is quiet; a hole in one is not.
+                if (catalog != null) Debug.LogWarning("[Gameplay] Model kendaraan '" + id + "' tidak ada; memakai bentuk sederhana.");
+                return id == "vario" || id == "supra" ? Bike(parent, bikePrefab, palette, colour) : Car(parent, carTuning, palette, colour);
+            }
+            var go = Object.Instantiate(entry.prefab, parent, false);
+            go.name = VehicleClasses.IsBike(entry.vehicleClass) ? "WargaBike" : "WargaCar";
+            tint.Apply(go, entry, colour);
+            Activate(go);
+            return go.GetComponent<Motorbike>();
+        }
+
+        /// <summary>
+        /// A car (sit inside, no body shown) rather than a bike, from its tuning: both carry a hull since the model vehicles
+        /// (spec vehicles-3a §4), and RideAnchors.Of adds anchors to whatever it is asked about.
+        /// </summary>
+        public static bool IsCar(Motorbike body) => body.Tuning != null && body.Tuning.isCar;
+
+        /// <summary>Parked vehicles past the shadow range cast none (spec vehicles-3a §8), like far pedestrians.</summary>
+        public static void SetShadows(GameObject vehicle, bool cast)
+        {
+            var mode = cast ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+            foreach (var r in vehicle.GetComponentsInChildren<Renderer>(true))
+                if (r.shadowCastingMode != mode) r.shadowCastingMode = mode;
+        }
+
         public static Color32 BikeColour(int i) => BikeColours[((i % BikeColours.Length) + BikeColours.Length) % BikeColours.Length];
         public static Color32 CarColour(int i) => CarColours[((i % CarColours.Length) + CarColours.Length) % CarColours.Length];
 
@@ -40,6 +83,7 @@ namespace TycoWorld.Gameplay
             t.yawRateLow = 70f;
             t.yawRateHigh = 28f;
             t.maxLean = 0f;
+            t.isCar = true;
             t.bodyRadius = 0.85f;
             t.bodyHeight = 1.7f;
             t.blockHalfExtents = new Vector3(0.82f, 0.55f, 1.95f);

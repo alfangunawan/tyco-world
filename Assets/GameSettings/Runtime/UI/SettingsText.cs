@@ -10,6 +10,7 @@ namespace TycoWorld.GameSettings
         public const string PauseTitle = "Jeda";
         public const string Resume = "Lanjutkan";
         public const string OpenSettings = "Pengaturan";
+        public const string Credits = "Kredit";
         public const string Quit = "Keluar";
         public const string QuitQuestion = "Keluar dari game?";
         public const string QuitYes = "Ya, keluar";

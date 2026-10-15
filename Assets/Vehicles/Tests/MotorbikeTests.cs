@@ -484,5 +484,25 @@ namespace TycoWorld.Vehicles.Tests
             Assert.DoesNotThrow(() => bare.Tick(Dt));
             LogAssert.NoUnexpectedReceived();
         }
+
+        [Test]
+        public void Initialize_IgnoresItsOwnHull()
+        {
+            var go = new GameObject("HullBike");
+            try
+            {
+                var controller = go.AddComponent<CharacterController>();
+                var hull = new GameObject("Hull").AddComponent<BoxCollider>();
+                hull.transform.SetParent(go.transform, false);
+                hull.size = new Vector3(1f, 1f, 3f);
+                var bike = go.AddComponent<Motorbike>();
+                bike.Initialize();
+                Assert.IsTrue(Physics.GetIgnoreCollision(controller, hull));
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
     }
 }

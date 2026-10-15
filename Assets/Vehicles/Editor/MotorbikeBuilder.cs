@@ -69,15 +69,10 @@ namespace TycoWorld.Vehicles.Authoring
             rider.gameObject.SetActive(false);
 
             var seat = Child(SeatName, root.transform, SeatPosition);
-            var audioGo = Child(AudioName, root.transform, new Vector3(0f, 0.5f, 0f)).gameObject;
-            var sources = audioGo.GetComponents<AudioSource>();
-            var engine = Configure3DSource(sources.Length > 0 ? sources[0] : audioGo.AddComponent<AudioSource>(), true);
-            var oneShot = Configure3DSource(sources.Length > 1 ? sources[1] : audioGo.AddComponent<AudioSource>(), false);
 
             var visuals = GetOrAdd<MotorbikeVisuals>(root);
             visuals.Configure(lean, bar, front, rear, rider, headlight, tail.GetComponent<Renderer>(), lens.GetComponent<Renderer>());
-            var sound = GetOrAdd<MotorbikeAudio>(root);
-            sound.Configure(engine, oneShot, clips.Engine, clips.Starter, clips.Horn, clips.Bump);
+            var sound = BuildAudio(root, clips);
             GetOrAdd<Motorbike>(root).Configure(tuning, seat, visuals, sound);
             GetOrAdd<MotorbikeInteractable>(root).SetInteractionId(InteractionId);
         }
@@ -162,6 +157,18 @@ namespace TycoWorld.Vehicles.Authoring
         }
 
         /// <summary>Finds (also inactive) or creates the named child and resets its local pose.</summary>
+        /// <summary>The engine loop and one-shot sources under an "Audio" child, wired to MotorbikeAudio (shared by model vehicles).</summary>
+        public static MotorbikeAudio BuildAudio(GameObject root, VehicleClipSet clips)
+        {
+            var audioGo = Child(AudioName, root.transform, new Vector3(0f, 0.5f, 0f)).gameObject;
+            var sources = audioGo.GetComponents<AudioSource>();
+            var engine = Configure3DSource(sources.Length > 0 ? sources[0] : audioGo.AddComponent<AudioSource>(), true);
+            var oneShot = Configure3DSource(sources.Length > 1 ? sources[1] : audioGo.AddComponent<AudioSource>(), false);
+            var sound = GetOrAdd<MotorbikeAudio>(root);
+            sound.Configure(engine, oneShot, clips.Engine, clips.Starter, clips.Horn, clips.Bump);
+            return sound;
+        }
+
         static Transform Child(string name, Transform parent, Vector3 localPosition)
         {
             var t = parent.Find(name);
