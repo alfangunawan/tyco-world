@@ -23,9 +23,12 @@ namespace TycoWorld.WorldGen.Authoring
             MoveHouses(world, s, report);
         }
 
-        /// <summary>An unnamed, non-campus, non-key building small enough to be someone's house.</summary>
+        /// <summary>An unnamed, non-campus, non-key building small enough to be someone's house (open canopies are not).</summary>
         public static bool IsHouse(BuildingFeature b, RoadClearanceSettings s) =>
-            !b.IsCampus && b.Key == null && string.IsNullOrEmpty(b.Name) && HasFootprint(b) && b.Spec.Footprint.Area < s.houseMaxArea;
+            !b.IsCampus && b.Key == null && string.IsNullOrEmpty(b.Name) && HasFootprint(b) && !b.Spec.RoofOnly && b.Spec.Footprint.Area < s.houseMaxArea;
+
+        /// <summary>A roof on posts (building=roof): roads run under it, so it neither moves nor cuts them.</summary>
+        static bool IsCanopy(BuildingFeature b) => b.Spec != null && b.Spec.RoofOnly;
 
         static bool HasFootprint(BuildingFeature b) => b.Spec != null && b.Spec.Footprint != null && b.Spec.Footprint.Outer.Count >= 3;
 
@@ -41,7 +44,7 @@ namespace TycoWorld.WorldGen.Authoring
             int count = 0;
             foreach (var b in world.Buildings.OrderBy(b => b.Id))
             {
-                if (!HasFootprint(b) || IsHouse(b, s)) continue;
+                if (!HasFootprint(b) || IsHouse(b, s) || IsCanopy(b)) continue;
                 solid.Insert(b.Spec.Footprint.Bounds, b);
                 count++;
             }

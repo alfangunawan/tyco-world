@@ -163,6 +163,30 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void RoadUnderARoofOnlyCanopy_IsNotCut()
+        {
+            var w = World(o =>
+            {
+                Street(o);
+                o.Rect(20, -20f, -15f, 40f, 30f, ("building", "roof"));
+            });
+            Assert.AreEqual(1, w.Roads.First(r => r.Id == 1).Pieces.Count, "an open canopy is driven under");
+            Assert.AreEqual(0, report.GetCount(RoadClearance.RoadCuts));
+        }
+
+        [Test]
+        public void SmallCanopyOverTheRoad_StaysPut()
+        {
+            var w = World(o =>
+            {
+                Street(o);
+                o.Rect(10, -4f, 1.8f, 8f, 8f, ("building", "roof"));
+            });
+            Assert.IsNotNull(Building(w, 10), "a carport roof over the road edge is not a house in the way");
+            Assert.AreEqual(1.8f, Front(w, 10), 0.01f);
+        }
+
+        [Test]
         public void KeyBuildings_AreNeverMoved()
         {
             settings.keyBuildings.Add(new KeyBuilding(10, "Kos Uji"));
