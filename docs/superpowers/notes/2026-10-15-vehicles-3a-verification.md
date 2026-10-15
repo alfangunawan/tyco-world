@@ -146,3 +146,27 @@ berat lain (hanya shader compiler yang menganggur).
 - Setang Vario tidak berbelok (menyatu dengan fairing); roda depan angkot berputar tapi tidak berbelok.
 - `elf.prefab` menulis urutan objek berbeda tiap build (dua node bernama `pasted__pCube3`), tanpa perubahan isi.
 - Kredit suara player menulis paket Kenney dua kali (sekali dari tabel paket, sekali dari tabel file).
+
+## Review akhir
+
+Reviewer membaca seluruh cabang (384340d..5af8387). Tidak ada temuan kritis. Tiga temuan penting diperbaiki, masing-masing
+dengan tes yang merah lebih dulu (suite 1206/0):
+
+| Temuan | Perbaikan | Tes |
+|---|---|---|
+| Saat misi galon, `RideAnchors.Of` menambah anchor ke mobil curian, sehingga aturan "Hull dan tanpa RideAnchors" membuat mobil itu dianggap motor selama sesi | Mobil ditandai `BikeTuning.isCar` (diisi preset kelas dan `CarTuning`) | `IsCar_Holds_AfterRideAnchorsAreAskedForACar`, `Apply_MatchesTheSpecTable` |
+| Mobil masih bisa kamera orang pertama (spec §5) | `RideCamera.Toggle` menahan mobil di orang ketiga | `Car_StaysInThirdPerson` |
+| Kredit belum menyebut perubahan materi dan tautan lisensi (CC BY 4.0) | Kredit memuat catatan "Perubahan" tiap `SOURCES.md` dan daftar tautan lisensi | `Credits_SayWhatWasChanged_AndLinkTheLicences` |
+
+Temuan minor yang ditunda (untuk 3B):
+
+- Vario hilang: motor kos jadi campuran.
+- Sumbu belok motor tegak di as roda depan.
+- Bayangan badan pemain ikut dimatikan.
+- Kunci cache tint memakai hash warna.
+- Pickup ditint penuh di atas atlas.
+- Node roda hilang menggagalkan build.
+- Turun mobil di kiri dulu.
+- Motor warga cadangan tidak dicat.
+- Parser tabel kredit rapuh.
+- Teks "Mobilnya" untuk angkot dan pikap.
