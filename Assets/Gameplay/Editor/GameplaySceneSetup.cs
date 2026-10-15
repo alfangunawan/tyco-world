@@ -67,7 +67,9 @@ namespace TycoWorld.Gameplay.Authoring
             var director = root.GetComponent<KampungDirector>();
             if (director == null) director = root.AddComponent<KampungDirector>();
             var bike = AssetDatabase.LoadAssetAtPath<GameObject>(TycoWorld.Vehicles.Authoring.VehiclePaths.MotorbikePrefab);
-            director.Configure(data, catalog, material, bike);
+            var people = CharacterArtSetup.Run(out string artError);
+            if (people == null) Debug.LogWarning("[Gameplay] " + artError + " Orang memakai figur primitif.");
+            director.Configure(data, catalog, material, bike, people);
             EditorUtility.SetDirty(director);
             EditorUtility.SetDirty(root);
             return root;

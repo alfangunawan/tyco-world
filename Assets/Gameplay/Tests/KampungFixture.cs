@@ -22,7 +22,7 @@ namespace TycoWorld.Gameplay.Tests
 
         public static Vector3 Origin => VehicleFixture.Origin;
 
-        public KampungFixture(Action<KampungData> fill = null, bool begin = true)
+        public KampungFixture(Action<KampungData> fill = null, bool begin = true, CharacterLibrary characters = null)
         {
             Fx.Floor();
             Player = Fx.CreatePlayer(Vector3.zero);
@@ -34,7 +34,7 @@ namespace TycoWorld.Gameplay.Tests
             var document = go.AddComponent<UIDocument>();
             document.panelSettings = Fx.Track(ScriptableObject.CreateInstance<PanelSettings>());
             Director = go.AddComponent<KampungDirector>();
-            Director.Configure(Data, null, null);
+            Director.Configure(Data, null, null, null, characters);
             Director.SaveBackend = Save;
             Director.ReadKeyboard = false;
             Director.CreateDefaultSystems = false;

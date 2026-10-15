@@ -79,7 +79,7 @@ namespace TycoWorld.Gameplay.Tests
         MissionSystem jobs;
 
         /// <summary>A 480 m grid of lanes 30 m apart with gates, two shops and the landmarks the jobs ask for.</summary>
-        static void World(KampungData d)
+        public static void World(KampungData d)
         {
             KampungFixture.StreetGrid(d, 16, 30f);
             var spots = new List<Spot>
@@ -243,6 +243,20 @@ namespace TycoWorld.Gameplay.Tests
             return bike;
         }
 
+        /// <summary>Ticks until the condition holds (or the time is up); returns the time it took.</summary>
+        float TickUntil(System.Func<bool> condition, float seconds)
+        {
+            float t = 0f;
+            while (!condition() && t < seconds)
+            {
+                fx.Director.Tick(0.05f);
+                fx.Player.Tick(0.02f);
+                fx.Fx.Sync();
+                t += 0.05f;
+            }
+            return t;
+        }
+
         void Ride(Motorbike bike, Vector3 to)
         {
             bike.Teleport(to, 0f);
@@ -261,17 +275,33 @@ namespace TycoWorld.Gameplay.Tests
             Assert.AreEqual(OjekMission.BaseFare + OjekMission.PerMetre * Mathf.RoundToInt(trip) / 500 * 500, ojek.Reward);
 
             Go(ojek.Pickup + new Vector3(1f, 0f, 0f));
+            Tick(20);
             Assert.AreEqual(0, ojek.StepIndex, "walking up does not count: it is an ojek");
+            Assert.AreEqual(PassengerRide.Phase.Waiting, ojek.Ride.State);
             var bike = Bike();
             Assert.IsTrue(bike.Mount(fx.Player));
-            Ride(bike, ojek.Pickup + new Vector3(1.5f, 0f, 0f));
-            Assert.AreEqual(1, ojek.StepIndex);
-            Assert.IsFalse(ojek.Passenger.activeSelf, "the fare is on the back");
+            Ride(bike, ojek.Pickup + new Vector3(2.5f, 0f, 0f));
+            Assert.AreEqual(PassengerRide.Phase.Approaching, ojek.Ride.State, "the fare walks over to the stopped bike");
+            Assert.AreEqual(0, ojek.StepIndex);
+            float waited = TickUntil(() => ojek.StepIndex == 1, 8f);
+            Assert.AreEqual(1, ojek.StepIndex, "on the pillion after walking over and sitting down");
+            Assert.Greater(waited, PassengerRide.MountSeconds, "not in an instant");
+            Assert.IsTrue(ojek.Passenger.activeSelf, "visible, riding along");
+            Assert.IsTrue(ojek.Passenger.transform.IsChildOf(bike.transform), "sits on the bike");
+            Assert.Less(Vector3.Distance(ojek.Passenger.transform.position, bike.transform.position), 1.2f);
+            Assert.IsFalse(ojek.Passenger.GetComponent<Collider>().enabled, "no capsule in the bike's way");
             Assert.Greater(ojek.TimeLeft, 0f);
             long before = fx.Director.State.Wallet.Balance;
             Ride(bike, ojek.Drop + new Vector3(2f, 0f, 0f));
+            Assert.AreEqual(MissionStatus.Running, ojek.Status, "getting off takes a moment");
+            TickUntil(() => ojek.Status != MissionStatus.Running, 4f);
             Assert.AreEqual(MissionStatus.Succeeded, ojek.Status);
             Assert.AreEqual(before + ojek.Reward, fx.Director.State.Wallet.Balance);
+            Assert.IsNotNull(ojek.Passenger, "walks away instead of vanishing");
+            Assert.IsFalse(ojek.Passenger.transform.IsChildOf(bike.transform));
+            Assert.AreEqual(1, jobs.LeaverCount);
+            TickUntil(() => jobs.LeaverCount == 0, 10f);
+            Assert.IsTrue(ojek.Passenger == null, "gone after walking off");
         }
 
         [Test]
@@ -281,7 +311,8 @@ namespace TycoWorld.Gameplay.Tests
             Assert.IsTrue(jobs.StartJob(ojek));
             var bike = Bike();
             Assert.IsTrue(bike.Mount(fx.Player));
-            Ride(bike, ojek.Pickup);
+            Ride(bike, ojek.Pickup + new Vector3(2f, 0f, 0f));
+            TickUntil(() => ojek.StepIndex == 1, 8f);
             float limit = ojek.TimeLeft;
             for (float t = 0f; t < limit + 1f; t += 0.5f) fx.Director.Tick(0.5f);
             Assert.AreEqual(MissionStatus.Failed, ojek.Status);

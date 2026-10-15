@@ -113,6 +113,9 @@ namespace TycoWorld.Gameplay
             return obj;
         }
 
+        /// <summary>The object is no longer the mission's to clean up (it walks off on its own).</summary>
+        protected void Release(GameObject go) => spawned.Remove(go);
+
         public void Tick(float dt)
         {
             if (Status != MissionStatus.Running) return;

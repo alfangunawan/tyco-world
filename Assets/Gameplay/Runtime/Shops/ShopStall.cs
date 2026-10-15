@@ -13,14 +13,16 @@ namespace TycoWorld.Gameplay
         public const float CounterHeight = 0.95f;
 
         ShopSite site;
-        PersonFigure keeper;
+        Transform keeper;
         Light lamp;
         Renderer[] renderers;
         bool visible = true, open = true;
 
         public ShopSite Site => site;
         public ShopCounterInteractable Counter { get; private set; }
-        public bool KeeperVisible => keeper != null && keeper.Root.gameObject.activeSelf;
+        public bool KeeperVisible => keeper != null && keeper.gameObject.activeSelf;
+        /// <summary>The keeper's animated body (null with the primitive figure).</summary>
+        public CharacterRig KeeperRig { get; private set; }
 
         static Color32 Awning(ShopType type)
         {
@@ -94,10 +96,13 @@ namespace TycoWorld.Gameplay
                 label.GetComponent<MeshRenderer>().sharedMaterial = font.material;
             }
             // The keeper.
-            stall.keeper = PersonFigure.Build(t, "Keeper", PersonLook.From(SeededRandom.Hash(site.id + ":keeper")), palette);
+            ulong keeperSeed = SeededRandom.Hash(site.id + ":keeper");
+            var rig = CharacterFactory.Spawn(director != null ? director.Characters : null, t, "Keeper", keeperSeed, palette, woman: (keeperSeed & 1UL) == 0UL);
+            stall.KeeperRig = rig;
+            stall.keeper = rig != null ? rig.Root : PersonFigure.Build(t, "Keeper", PersonLook.From(keeperSeed), palette).Root;
             // Beside the counter, turned toward the customer: flush fronts leave no room behind it.
-            stall.keeper.Root.localPosition = new Vector3(1.2f, 0f, 0.15f);
-            stall.keeper.Root.localRotation = Quaternion.Euler(0f, -25f, 0f);
+            stall.keeper.localPosition = new Vector3(1.2f, 0f, 0.15f);
+            stall.keeper.localRotation = Quaternion.Euler(0f, -25f, 0f);
             if (site.type == ShopType.Minimarket)
             {
                 var lampGo = new GameObject("Lamp");
@@ -118,7 +123,7 @@ namespace TycoWorld.Gameplay
         public void SetOpen(bool isOpen, bool dark)
         {
             open = isOpen;
-            if (keeper != null) keeper.Root.gameObject.SetActive(isOpen && visible);
+            if (keeper != null) keeper.gameObject.SetActive(isOpen && visible);
             if (lamp != null) lamp.enabled = isOpen && dark && visible;
         }
 
@@ -129,7 +134,7 @@ namespace TycoWorld.Gameplay
             visible = show;
             foreach (var r in renderers)
                 if (r != null) r.enabled = show;
-            if (keeper != null) keeper.Root.gameObject.SetActive(open && show);
+            if (keeper != null) keeper.gameObject.SetActive(open && show);
             if (lamp != null && !show) lamp.enabled = false;
         }
     }

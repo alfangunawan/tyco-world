@@ -19,6 +19,7 @@ namespace TycoWorld.Gameplay
 
         readonly List<Mission> missions = new List<Mission>();
         readonly List<JobListing> listings = new List<JobListing>();
+        readonly List<(GameObject person, Vector3 direction, float left)> leavers = new List<(GameObject, Vector3, float)>();
         KampungDirector director;
         Transform root;
         MissionContext context;
@@ -73,6 +74,12 @@ namespace TycoWorld.Gameplay
             root = new GameObject("Missions").transform;
             root.SetParent(owner.ObjectsRoot, false);
             context = new MissionContext(owner, root, Seed(0));
+            context.LeaveHandler = (person, direction, seconds) =>
+            {
+                person.transform.SetParent(root, true);
+                direction.y = 0f;
+                leavers.Add((person, direction.sqrMagnitude > 1e-4f ? direction.normalized : person.transform.forward, seconds));
+            };
             beacon = MissionProps.Beacon(root, owner.Palette);
             beacon.SetActive(false);
             owner.Jobs = Listings;
@@ -164,6 +171,7 @@ namespace TycoWorld.Gameplay
                 if (Active.Status != MissionStatus.Running) Finish(Active);
             }
             TickPakRt();
+            TickLeavers(dt);
             UpdateRoute(dt);
             Render();
         }
@@ -250,6 +258,34 @@ namespace TycoWorld.Gameplay
             route = null;
             UpdateRoute(0f);
         }
+
+        /// <summary>People done with a job walk away and are removed after a few seconds.</summary>
+        void TickLeavers(float dt)
+        {
+            for (int i = leavers.Count - 1; i >= 0; i--)
+            {
+                var (person, direction, left) = leavers[i];
+                left -= dt;
+                if (person == null || left <= 0f)
+                {
+                    if (person != null)
+                    {
+                        if (Application.isPlaying) UnityEngine.Object.Destroy(person);
+                        else UnityEngine.Object.DestroyImmediate(person);
+                    }
+                    leavers.RemoveAt(i);
+                    continue;
+                }
+                var next = person.transform.position + direction * (PassengerRide.WalkSpeed * dt);
+                next.y = context.Ground(next);
+                person.transform.SetPositionAndRotation(next, Quaternion.LookRotation(direction));
+                var rig = MissionContext.RigOf(person);
+                if (rig != null) rig.Move(PassengerRide.WalkSpeed);
+                leavers[i] = (person, direction, left);
+            }
+        }
+
+        public int LeaverCount => leavers.Count;
 
         static string Clock(float seconds)
         {

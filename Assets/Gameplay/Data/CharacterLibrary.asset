@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bf82d7f47ee2b14ca4174298d3d7611, type: 3}
+  m_Name: CharacterLibrary
+  m_EditorClassIdentifier: TycoWorld.Gameplay::TycoWorld.Gameplay.CharacterLibrary
+  controller: {fileID: 9100000, guid: 9cf22e06ea8b4bc4d93dee828d4852ad, type: 2}
+  bodies:
+  - {fileID: 919132149155446097, guid: 1a93d331f4c972b46ba6bdca0cf50104, type: 3}
+  womenBodies: []
+  galon: {fileID: 919132149155446097, guid: d6fe4da18956cb04d824984ba052c122, type: 3}
+  galonMaterial: {fileID: 2100000, guid: c64758da8a0523c4da2923ede767f63a, type: 2}
+  dispenser: {fileID: 919132149155446097, guid: ebce2f98b5cf8b940949f23a6113e520, type: 3}
+  targetHeight: 1.66

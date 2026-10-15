@@ -20,7 +20,10 @@ namespace TycoWorld.Gameplay
         public const float RunSpeed = 4.2f, ChaseSpeed = 5.3f;
 
         public readonly GameObject Root;
+        /// <summary>The primitive figure (when no character library is set up), else null.</summary>
         public readonly PersonFigure Figure;
+        /// <summary>The animated downloaded body, else null.</summary>
+        public readonly CharacterRig Rig;
         public readonly bool IsSosok;
         public readonly TalkInteractable Talk;
         public int Lane = -1;
@@ -43,7 +46,10 @@ namespace TycoWorld.Gameplay
             IsSosok = sosok;
             Root = new GameObject(sosok ? "Sosok" : "Pedestrian_" + index);
             Root.transform.SetParent(parent, false);
-            Figure = PersonFigure.Build(Root.transform, "Figure", look, palette, sosok);
+            var library = system.Director != null ? system.Director.Characters : null;
+            ulong seed = SeededRandom.Mix(0xFACEUL, (ulong)index);
+            Rig = CharacterFactory.Spawn(library, Root.transform, "Body", seed, palette, woman: look.Hijab || (seed & 2UL) != 0UL, ghost: sosok);
+            if (Rig == null) Figure = PersonFigure.Build(Root.transform, "Figure", look, palette, sosok);
             // Torso, head and legs make the shadow; arms and hair would only add shadow casters.
             foreach (var r in Root.GetComponentsInChildren<MeshRenderer>(true))
                 if (r.name.StartsWith("Arm", System.StringComparison.Ordinal) || r.name == "Hair" || r.name == "Hijab" || r.name == "Drape")
@@ -63,6 +69,23 @@ namespace TycoWorld.Gameplay
         }
 
         public bool Active => Root.activeSelf;
+
+        /// <summary>Plays walking at <paramref name="speed"/> (and talking) on whichever body this person has.</summary>
+        public void Animate(float speed, float dt)
+        {
+            if (Rig != null)
+            {
+                Rig.Move(speed);
+                Rig.Talk(State == PedestrianState.Talk);
+            }
+            else Figure.Animate(speed, dt);
+        }
+
+        /// <summary>Far people keep their pose: the animator only runs near the player (or for a chase).</summary>
+        public void SetDetail(bool near)
+        {
+            if (Rig != null && Rig.Animator.enabled != near) Rig.Animator.enabled = near;
+        }
         public Vector3 Position => Root.transform.position;
 
         public void Place(Vector3 position, Vector3 forward)

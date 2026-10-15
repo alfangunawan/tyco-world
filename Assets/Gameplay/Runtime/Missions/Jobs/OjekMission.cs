@@ -13,6 +13,7 @@ namespace TycoWorld.Gameplay
         public const float TripSpeed = 6.5f, TripMargin = 45f;
 
         GameObject passenger;
+        PassengerRide ride;
         Vector3 pickup, drop;
         string dropName = "";
 
@@ -26,6 +27,7 @@ namespace TycoWorld.Gameplay
         public Vector3 Pickup => pickup;
         public Vector3 Drop => drop;
         public GameObject Passenger => passenger;
+        public PassengerRide Ride => ride;
 
         protected override bool Build(MissionContext c)
         {
@@ -37,22 +39,19 @@ namespace TycoWorld.Gameplay
             Reward = BaseFare + PerMetre * Mathf.RoundToInt(trip) / 500 * 500;
             var look = PersonLook.From((ulong)c.Range(1, 1 << 20));
             passenger = Own(c.Person("Penumpang", pickup, c.FacePlayer(pickup), look));
+            ride = new PassengerRide(c, passenger);
             Add(new MissionStep
             {
-                Objective = "Jemput penumpang di pinggir jalan (naik motor)",
+                Objective = "Jemput penumpang (naik motor, berhenti di dekatnya)",
                 Target = () => pickup,
-                Done = () => c.IsRiding && c.Near(pickup, PickupRadius)
+                Done = () => ride.Boarded
             });
             Add(new MissionStep
             {
                 Objective = "Antar penumpang ke " + dropName,
                 Target = () => drop,
-                Enter = () =>
-                {
-                    if (passenger != null) passenger.SetActive(false);
-                    c.Toast("Penumpang naik: \"Ke " + dropName + " ya, a. Agak buru-buru.\"");
-                },
-                Done = () => c.IsRiding && c.Near(drop, DropRadius),
+                Enter = () => c.Toast("Penumpang naik: \"Ke " + dropName + " ya, a. Agak buru-buru.\""),
+                Done = () => ride.IsOff,
                 TimeLimit = trip / TripSpeed + TripMargin
             });
             return true;
@@ -95,6 +94,31 @@ namespace TycoWorld.Gameplay
             drop = c.OnGround(p);
             dropName = name;
             return true;
+        }
+
+        protected override void OnTick(float dt)
+        {
+            if (ride == null) return;
+            // Off at the drop-off once the bike stops there.
+            bool atDrop = StepIndex == 1 && Context.IsRiding && Context.Near(drop, DropRadius);
+            ride.Tick(dt, atDrop);
+        }
+
+        protected override void OnSucceeded() => WalkOff();
+
+        protected override void OnFailed()
+        {
+            if (ride != null) ride.ForceOff();
+            WalkOff();
+        }
+
+        /// <summary>The fare walks away from the road instead of vanishing.</summary>
+        void WalkOff()
+        {
+            if (passenger == null) return;
+            Release(passenger);
+            var away = passenger.transform.position - Context.PlayerPosition;
+            Context.Leave(passenger, away.sqrMagnitude > 0.01f ? away : passenger.transform.forward, 6f);
         }
 
         protected override string TimeoutText => "Penumpang turun di jalan: \"Telat, a. Saya jalan kaki aja.\"";

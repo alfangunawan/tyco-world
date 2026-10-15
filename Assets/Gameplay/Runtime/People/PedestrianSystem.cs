@@ -58,6 +58,7 @@ namespace TycoWorld.Gameplay
         int serial, frame;
 
         public int Order => 10;
+        public KampungDirector Director => director;
         /// <summary>Fills the streets by the hour (and lets the figure appear); tests turn it off and place people themselves.</summary>
         public bool AutoSpawn { get; set; } = true;
         float GroundLevel => director != null ? director.GroundLevel : 0f;
@@ -258,7 +259,8 @@ namespace TycoWorld.Gameplay
                     break;
                 case PedestrianState.Chase: Chase(p, dt, viewer); break;
             }
-            if (animate) p.Figure.Animate(p.CurrentSpeed, dt);
+            p.SetDetail(animate);
+            if (animate) p.Animate(p.CurrentSpeed, dt);
         }
 
         static bool Blocked(Pedestrian p, Vector3 viewer)

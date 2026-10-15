@@ -15,6 +15,7 @@ namespace TycoWorld.Gameplay
         Spot door;
         GameObject customer;
         bool delivered, locked, carrying;
+        CarriedGalon galon;
         FirstPersonPlayer lockedPlayer;
 
         public override string Id => "galon";
@@ -28,6 +29,8 @@ namespace TycoWorld.Gameplay
         public GameObject Customer => customer;
         /// <summary>The galon is in the player's arms (mission state: never in the saved bag).</summary>
         public bool Carrying => carrying;
+        /// <summary>The galon model being carried (null before pick-up, or without the downloaded art).</summary>
+        public CarriedGalon Galon => galon;
 
         protected override bool Build(MissionContext c)
         {
@@ -54,6 +57,10 @@ namespace TycoWorld.Gameplay
                 Enter = () =>
                 {
                     carrying = true;
+                    // The keeper reaches under the counter and hands it over; it lands on your shoulder.
+                    foreach (var stall in c.Director.Stalls)
+                        if (stall != null && stall.Site == shop && stall.KeeperRig != null) stall.KeeperRig.PickUp();
+                    galon = new CarriedGalon(c);
                     Lock(c, true);
                     c.Toast("Galon diangkat. Berat! Tidak bisa lari.");
                 },
@@ -67,6 +74,15 @@ namespace TycoWorld.Gameplay
             if (!carrying) return;
             carrying = false;
             delivered = true;
+            if (galon != null && galon.Exists)
+            {
+                galon.GiveTo(customer);
+                var rig = MissionContext.RigOf(customer);
+                if (rig != null) rig.PickUp();
+                // In through the gate with it.
+                Release(customer);
+                Context.Leave(customer, -customer.transform.forward, 2.5f);
+            }
             Lock(Context, false);
             Context.Toast("Pemesan: \"Makasih, a. Pas banget galonnya habis.\"");
         }
@@ -88,9 +104,16 @@ namespace TycoWorld.Gameplay
             }
         }
 
+        protected override void OnTick(float dt)
+        {
+            if (carrying && galon != null) galon.Tick(dt);
+        }
+
         protected override void OnCleanup()
         {
-            // A failed job: the galon goes back to the warung.
+            // A failed job: the galon goes back to the warung (a handed-over one goes in with the customer).
+            if (carrying && galon != null) galon.Destroy();
+            galon = null;
             carrying = false;
             Lock(Context, false);
         }

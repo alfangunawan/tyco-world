@@ -35,6 +35,15 @@ namespace TycoWorld.Gameplay
         public PedestrianSystem People => director.GetSystem<PedestrianSystem>();
 
         public void Reseed(ulong seed) => rng = new SeededRandom(seed);
+
+        /// <summary>Set by the mission system: walks a person off and removes them a little later.</summary>
+        public Action<GameObject, Vector3, float> LeaveHandler;
+
+        /// <summary>The person walks along <paramref name="direction"/> for <paramref name="seconds"/>, then is gone.</summary>
+        public void Leave(GameObject person, Vector3 direction, float seconds)
+        {
+            if (person != null && LeaveHandler != null) LeaveHandler(person, direction, seconds);
+        }
         public float Random01() => rng.Next01();
         public int Range(int min, int max) => rng.Range(min, max);
         public float Range(float min, float max) => rng.Range(min, max);
@@ -181,7 +190,9 @@ namespace TycoWorld.Gameplay
             go.transform.SetParent(root, false);
             facing.y = 0f;
             go.transform.SetPositionAndRotation(at, facing.sqrMagnitude > 1e-6f ? Quaternion.LookRotation(facing) : Quaternion.identity);
-            PersonFigure.Build(go.transform, "Figure", look, Palette, ghost);
+            var rig = CharacterFactory.Spawn(director.Characters, go.transform, "Body", SeededRandom.Mix(SeededRandom.Hash(name), (ulong)look.Shirt.r * 31UL + look.Shirt.g),
+                Palette, woman: look.Hijab, ghost: ghost);
+            if (rig == null) PersonFigure.Build(go.transform, "Figure", look, Palette, ghost);
             var capsule = go.AddComponent<CapsuleCollider>();
             capsule.center = new Vector3(0f, 0.9f, 0f);
             capsule.height = 1.8f;
@@ -206,6 +217,9 @@ namespace TycoWorld.Gameplay
             interactable.SetInteractionId("mission:" + prop.name);
             return interactable;
         }
+
+        /// <summary>The animated body of a person made by <see cref="Person"/> (null with a primitive figure).</summary>
+        public static CharacterRig RigOf(GameObject person) => person != null ? person.GetComponentInChildren<CharacterRig>(true) : null;
 
         public Vector3 FacePlayer(Vector3 from)
         {

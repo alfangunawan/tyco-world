@@ -8,6 +8,7 @@ namespace TycoWorld.Gameplay
             director.AddSystem(new PedestrianSystem());
             director.AddSystem(new VehicleSystem());
             director.AddSystem(new MissionSystem());
+            director.AddSystem(new RiderBodySystem());
         }
     }
 }

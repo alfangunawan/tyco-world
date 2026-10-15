@@ -40,6 +40,8 @@ namespace TycoWorld.Gameplay
         [SerializeField] Material baseMaterial;
         [Tooltip("Parked warga bikes are copies of this (the Motorbike prefab); empty builds plain code bikes.")]
         [SerializeField] GameObject bikePrefab;
+        [Tooltip("Downloaded people, animations and props (spec #7); empty keeps the primitive figures.")]
+        [SerializeField] CharacterLibrary characters;
 
         public Func<FirstPersonPlayer> FindPlayer = () => FindAnyObjectByType<FirstPersonPlayer>();
         public Func<DayCycleDirector> FindDayCycle = () => FindAnyObjectByType<DayCycleDirector>();
@@ -70,6 +72,7 @@ namespace TycoWorld.Gameplay
         public KampungData Data => data;
         public ItemCatalog Catalog => catalog;
         public GameObject BikePrefab => bikePrefab;
+        public CharacterLibrary Characters => characters;
         public Palette Palette => palette;
         public GameState State { get; } = new GameState();
         public FirstPersonPlayer Player { get; private set; }
@@ -119,12 +122,13 @@ namespace TycoWorld.Gameplay
 
         public event Action Ready;
 
-        public void Configure(KampungData kampung, ItemCatalog items, Material template, GameObject bike = null)
+        public void Configure(KampungData kampung, ItemCatalog items, Material template, GameObject bike = null, CharacterLibrary people = null)
         {
             data = kampung;
             catalog = items;
             baseMaterial = template;
             bikePrefab = bike;
+            characters = people;
         }
 
         public void AddSystem(IKampungSystem system)
