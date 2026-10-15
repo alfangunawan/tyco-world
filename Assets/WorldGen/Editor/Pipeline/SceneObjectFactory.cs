@@ -100,6 +100,7 @@ namespace TycoWorld.WorldGen.Authoring
             PlaceProps(scene, world.Trees, settings.treePrefabs, WorldMeshPipeline.TreesGroup, world.ChunkSize, Container, report, "pohon");
             var lampPrefabs = settings.lampPrefab != null ? new[] { settings.lampPrefab } : new GameObject[0];
             PlaceProps(scene, world.Lamps, lampPrefabs, WorldMeshPipeline.LampsGroup, world.ChunkSize, Container, report, "lampu");
+            PlaceProps(scene, world.Barriers, settings.barrierPrefabs, WorldMeshPipeline.BarrierPropsGroup, world.ChunkSize, Container, report, "pembatas");
             return root;
         }
 

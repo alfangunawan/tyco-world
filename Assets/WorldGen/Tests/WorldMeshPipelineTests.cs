@@ -107,6 +107,19 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void DeadEndGang_GetsABarrierChunk_WithACollider()
+        {
+            var report = new GenerationReport();
+            var built = BuildStreet(report, o => o.Way(9001, new[] { new Vector2(150f, 0f), new Vector2(150f, 70f) }, false, ("highway", "residential")));
+            var barriers = built.Features.Where(f => f.Kind == FeatureKind.Barrier).ToList();
+            Assert.IsNotEmpty(barriers);
+            Assert.IsTrue(barriers.All(f => f.ColliderMesh != null && f.Group == FeatureGroups.Barriers && f.AddCollider));
+            Assert.Greater(report.GetCount(DeadEndPlanner.Walls) + report.GetCount(DeadEndPlanner.Portals) + report.GetCount(DeadEndPlanner.Boundaries), 0);
+            Assert.AreEqual(report.GetCount(DeadEndPlanner.Walls) * 2 + report.GetCount(DeadEndPlanner.Boundaries) > 0, built.Barriers.Count > 0,
+                "walls bring pots, map-edge barriers bring blocks and the sign");
+        }
+
+        [Test]
         public void Street_EdgesAreChunkObjectsWithoutOsmIdentity()
         {
             var report = new GenerationReport();

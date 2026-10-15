@@ -15,6 +15,7 @@ namespace TycoWorld.WorldGen.Authoring
         public const string RoadEdges = "RoadEdges";
         public const string Frontage = "Frontage";
         public const string KeyBuildings = "KeyBuildings";
+        public const string Barriers = "Barriers";
     }
 
     public sealed class BuiltFeature
@@ -48,6 +49,8 @@ namespace TycoWorld.WorldGen.Authoring
         public readonly List<BuiltFeature> Features = new List<BuiltFeature>();
         public List<PropPlacement> Trees = new List<PropPlacement>();
         public List<PropPlacement> Lamps = new List<PropPlacement>();
+        /// <summary>Pots, concrete blocks and road-closed signs at dead ends (spec road-clearance §3).</summary>
+        public List<PropPlacement> Barriers = new List<PropPlacement>();
         public readonly List<InfillHouse> Infill = new List<InfillHouse>();
     }
 
@@ -59,6 +62,7 @@ namespace TycoWorld.WorldGen.Authoring
         /// <summary>Prop containers under the generated root; WorldChunkIndex culls by these names.</summary>
         public const string TreesGroup = "Props/Trees";
         public const string LampsGroup = "Props/Lamps";
+        public const string BarrierPropsGroup = "Props/Barriers";
         static readonly IReadOnlyDictionary<string, string> InfillTags = new Dictionary<string, string> { { "generated", "infill" } };
 
         public static Vector2Int ChunkOf(Vector2 p, float chunkSize) =>
@@ -101,10 +105,17 @@ namespace TycoWorld.WorldGen.Authoring
             Lap("meshes.infill");
             var walls = AddFrontage(built, FrontagePlanner.Plan(network, street, settings), settings, report);
             Lap("meshes.frontage2");
+            var deadEnds = DeadEndPlanner.Plan(network, world, street, settings.deadEnds, settings.frontage.kosExclusionRadius, report);
+            var barriers = BarrierBuilder.Build(deadEnds, settings.deadEnds, settings.frontage, built.ChunkSize);
+            AddChunkFeatures(built, barriers.Render, barriers.Collider, FeatureKind.Barrier, FeatureGroups.Barriers, BarrierBuilder.Name,
+                new[] { settings.frontage.wallAtlas, settings.roadEdges.concrete, settings.deadEnds.stripe }, report);
+            built.Barriers = barriers.Props;
+            Lap("meshes.barriers");
             foreach (var feature in built.Features) feature.Surface = SurfaceRules.For(feature);
 
             var placer = new PropPlacer(world.Buildings, world.Roads, network, settings.roadEdges);
             placer.AddWalls(walls);
+            placer.AddWalls(barriers.Blockers);
             placer.AddBuildings(houses.Select(h => h.AsBuildingFeature()));
             int treeVariants = settings.treePrefabs != null ? settings.treePrefabs.Length : 0;
             var waterShapes = world.WaterAreas.Select(w => w.Shape).ToList();
@@ -396,6 +407,7 @@ namespace TycoWorld.WorldGen.Authoring
             }
             foreach (var t in built.Trees) Mix(ChunkOf(t.Position, built.ChunkSize), Quantize(t));
             foreach (var l in built.Lamps) Mix(ChunkOf(l.Position, built.ChunkSize), Quantize(l));
+            foreach (var p in built.Barriers) Mix(ChunkOf(p.Position, built.ChunkSize), Quantize(p));
 
             report.ChunkHashes.Clear();
             foreach (var kv in hashes) report.ChunkHashes[kv.Key] = kv.Value.ToString("x16", CultureInfo.InvariantCulture);
