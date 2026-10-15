@@ -55,7 +55,7 @@ namespace TycoWorld.Gameplay
         {
             if (body == null) return;
             var bike = Ridden;
-            bool show = bike != null && bike.transform.Find("Hull") == null && bike.CameraState != null && bike.CameraState.Mode == RideCameraMode.ThirdPerson;
+            bool show = bike != null && !VehicleFactory.IsCar(bike) && bike.CameraState != null && bike.CameraState.Mode == RideCameraMode.ThirdPerson;
             if (!show)
             {
                 if (body.Root.gameObject.activeSelf)

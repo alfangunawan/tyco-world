@@ -1,6 +1,8 @@
 using System.Linq;
 using NUnit.Framework;
 using TycoWorld.Vehicles;
+using TycoWorld.Vehicles.Authoring;
+using UnityEditor;
 using UnityEngine;
 
 namespace TycoWorld.Gameplay.Tests
@@ -43,6 +45,32 @@ namespace TycoWorld.Gameplay.Tests
                 Object.DestroyImmediate(catalog);
                 Object.DestroyImmediate(carTuning);
                 tint.Dispose();
+                palette.Dispose();
+            }
+        }
+
+        [Test]
+        public void IsCar_TellsCarsFromBikes_ModelAndCodeBuilt()
+        {
+            // Model bikes carry a hull too (spec vehicles-3a §4), so a hull alone no longer means a car.
+            var catalog = AssetDatabase.LoadAssetAtPath<VehicleCatalog>(VehiclePaths.CatalogAsset);
+            Assert.IsNotNull(catalog, "run VehicleAssetsBuilder.BuildAll");
+            var parent = new GameObject("Parked").transform;
+            var palette = new Palette(null);
+            var carTuning = VehicleFactory.CarTuning(null);
+            try
+            {
+                Assert.IsFalse(VehicleFactory.IsCar(Object.Instantiate(catalog.Get("vario").prefab, parent).GetComponent<Motorbike>()), "Vario");
+                Assert.IsFalse(VehicleFactory.IsCar(Object.Instantiate(catalog.Get("supra").prefab, parent).GetComponent<Motorbike>()), "Supra");
+                Assert.IsTrue(VehicleFactory.IsCar(Object.Instantiate(catalog.Get("sedan").prefab, parent).GetComponent<Motorbike>()), "sedan");
+                Assert.IsTrue(VehicleFactory.IsCar(VehicleFactory.Car(parent, carTuning, palette, new Color32(200, 0, 0, 255))), "code car");
+                Assert.IsFalse(VehicleFactory.IsCar(VehicleFactory.Bike(parent, null, palette, new Color32(200, 0, 0, 255))), "code bike");
+                Assert.IsFalse(VehicleFactory.IsCar(AssetDatabase.LoadAssetAtPath<GameObject>(VehiclePaths.MotorbikePrefab).GetComponent<Motorbike>()), "kos Vario");
+            }
+            finally
+            {
+                Object.DestroyImmediate(parent.gameObject);
+                Object.DestroyImmediate(carTuning);
                 palette.Dispose();
             }
         }

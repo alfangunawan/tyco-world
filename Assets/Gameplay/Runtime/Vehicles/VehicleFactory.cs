@@ -53,6 +53,13 @@ namespace TycoWorld.Gameplay
             return go.GetComponent<Motorbike>();
         }
 
+        /// <summary>
+        /// A car (sit inside, no body shown) rather than a bike. Cars carry a hull; model bikes do too (spec vehicles-3a §4)
+        /// but also their own ride anchors, which no car has.
+        /// </summary>
+        public static bool IsCar(Motorbike body) =>
+            body.transform.Find("Hull") != null && body.GetComponentInChildren<RideAnchors>(true) == null;
+
         /// <summary>Parked vehicles past the shadow range cast none (spec vehicles-3a §8), like far pedestrians.</summary>
         public static void SetShadows(GameObject vehicle, bool cast)
         {
