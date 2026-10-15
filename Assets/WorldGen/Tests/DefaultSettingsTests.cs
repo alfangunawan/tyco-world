@@ -242,6 +242,44 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Defaults_RoadClearanceAndDeadEnds_MatchTheSpec()
+        {
+            var s = DefaultSettingsFactory.CreateInMemory();
+            try
+            {
+                Assert.IsTrue(s.clearance.enabled);
+                Assert.AreEqual(0.3f, s.clearance.margin, 1e-6f);
+                Assert.AreEqual(2.0f, s.clearance.maxShift, 1e-6f);
+                Assert.AreEqual(0.05f, s.clearance.shiftExtra, 1e-6f);
+                Assert.AreEqual(300f, s.clearance.houseMaxArea, 1e-6f);
+                Assert.AreEqual(3f, s.clearance.minPieceLength, 1e-6f);
+                Assert.IsTrue(s.deadEnds.enabled);
+                Assert.AreEqual(20f, s.deadEnds.boundaryDistance, 1e-6f);
+                Assert.AreEqual(0.3f, s.deadEnds.endInset, 1e-6f);
+                Assert.AreEqual(1.2f, s.deadEnds.minWidth, 1e-6f);
+                Assert.AreEqual(0.9f, s.deadEnds.wallHeight, 1e-6f);
+                Assert.AreEqual(2f, s.deadEnds.buildingAhead, 1e-6f);
+                CollectionAssert.AreEquivalent(new[] { "service", "track" }, s.deadEnds.portalHighways);
+                Assert.IsNotNull(s.barrierPrefabs);
+            }
+            finally
+            {
+                Object.DestroyImmediate(s);
+            }
+        }
+
+        [Test]
+        public void SavedAsset_HasRoadClearanceAndDeadEnds()
+        {
+            var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset);
+            Assert.IsNotNull(asset);
+            Assert.IsNotNull(asset.clearance);
+            Assert.IsNotNull(asset.deadEnds);
+            Assert.AreEqual(0.9f, asset.deadEnds.wallHeight, 1e-6f, "an asset saved before the field existed gets the initializer defaults");
+            Assert.AreEqual(0.3f, asset.clearance.margin, 1e-6f);
+        }
+
+        [Test]
         public void SavedAsset_HasStreetDressing()
         {
             var asset = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset);

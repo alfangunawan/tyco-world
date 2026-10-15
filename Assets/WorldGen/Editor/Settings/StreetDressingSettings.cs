@@ -188,4 +188,51 @@ namespace TycoWorld.WorldGen.Authoring
         public float clearance = 0.5f;
         public int maxInfill = 2500;
     }
+
+    /// <summary>
+    /// Roads clear of buildings (spec road-clearance §2). Field initializers are the defaults, so settings assets saved
+    /// before this class existed pick them up when they load.
+    /// </summary>
+    [Serializable]
+    public sealed class RoadClearanceSettings
+    {
+        public bool enabled = true;
+        /// <summary>Clear distance from a road's centreline = half its width + this.</summary>
+        public float margin = 0.3f;
+        /// <summary>A house further into the road than this is dropped, not moved.</summary>
+        public float maxShift = 2.0f;
+        public float shiftExtra = 0.05f;
+        /// <summary>Unnamed, non-campus, non-key buildings smaller than this (m²) count as houses.</summary>
+        public float houseMaxArea = 300f;
+        /// <summary>Step along a road when finding where it runs into a building.</summary>
+        public float sampleStep = 0.5f;
+        /// <summary>Road pieces left shorter than this after a cut are dropped.</summary>
+        public float minPieceLength = 3f;
+    }
+
+    /// <summary>Barriers at dead ends (spec road-clearance §3). Field initializers are the defaults.</summary>
+    [Serializable]
+    public sealed class DeadEndSettings
+    {
+        public bool enabled = true;
+        /// <summary>An end nearer the map edge than this gets the road-closed barrier.</summary>
+        public float boundaryDistance = 20f;
+        /// <summary>The barrier stands this far back from the end of the road.</summary>
+        public float endInset = 0.3f;
+        public float minWidth = 1.2f;
+        /// <summary>An end within another road's half width + this is a junction, not a dead end.</summary>
+        public float joinMargin = 0.5f;
+        /// <summary>A building this close past the end already closes it.</summary>
+        public float buildingAhead = 2f;
+        public float wallHeight = 0.9f;
+        public float wallThickness = 0.2f;
+        /// <summary>Wall atlas band (plaster) the low walls use.</summary>
+        public int wallBand = 1;
+        public float portalHeight = 1.0f;
+        public float portalPost = 0.1f;
+        /// <summary>Spacing of the concrete blocks across a road at the map edge.</summary>
+        public float blockSpacing = 1.4f;
+        public string[] portalHighways = { "service", "track" };
+        public Material stripe;
+    }
 }
