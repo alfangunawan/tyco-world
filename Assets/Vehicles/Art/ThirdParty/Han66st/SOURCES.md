@@ -18,3 +18,6 @@ Semua model di folder ini diunduh dari Sketchfab dalam format glTF Binary (.glb)
 
 **Perubahan:** file tidak diubah. Skala, arah hadap, pivot roda, lampu, dan kotak benturan ditambahkan oleh
 `VehicleModelBuilder` saat membuat prefab (lihat `VehicleModelCatalog`). Dari `police.glb` hanya sedan polisi yang dipakai.
+
+**Roda menyatu dengan bodi** (tidak berputar di game): `lmpv1.glb`, `l300.glb`, `police.glb`. `police.glb` berisi SUV dan sedan
+dalam satu mesh; builder memotong mesh dan hanya menyimpan sedan.

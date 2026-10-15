@@ -9,3 +9,5 @@ Model di folder ini diunduh dari Sketchfab dalam format glTF Binary (.glb). Lise
 
 **Perubahan:** file tidak diubah. Skala, arah hadap, pivot roda, lampu, dan kotak benturan ditambahkan oleh
 `VehicleModelBuilder` saat membuat prefab (lihat `VehicleModelCatalog`).
+
+**Roda menyatu dengan bodi** (tidak berputar di game).
