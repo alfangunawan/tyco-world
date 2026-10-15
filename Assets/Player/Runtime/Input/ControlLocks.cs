@@ -11,7 +11,9 @@ namespace TycoWorld.Player
         Look = 2,
         Interact = 4,
         Flashlight = 8,
-        All = Move | Look | Interact | Flashlight
+        /// <summary>Running (gameplay needs block it when the player is starving).</summary>
+        Sprint = 16,
+        All = Move | Look | Interact | Flashlight | Sprint
     }
 
     /// <summary>Owner-keyed ability locks: a vehicle, cutscene or spawner can only release its own lock.</summary>

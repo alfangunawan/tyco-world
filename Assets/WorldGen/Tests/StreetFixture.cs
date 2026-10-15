@@ -18,7 +18,7 @@ namespace TycoWorld.WorldGen.Tests
     ///                H2 flush house x 60..70 (front z -4.2), driveway D1 at x 150,
     ///                park x 160..200 z -40..-4, shed x 180..185 z -10..-3 (over R1's south edge band).
     /// </summary>
-    internal sealed class StreetFixture
+    public sealed class StreetFixture
     {
         public const long Residential = 1001, Tertiary = 1002, Service = 1003, Driveway = 1004, Footway = 1005;
         public const long Campus = 1010, Park = 1011, SetbackHouse = 1020, FlushHouse = 1021, Shed = 1022, Drain = 1030;

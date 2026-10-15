@@ -107,6 +107,40 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void DeadEndGang_GetsABarrierChunk_WithACollider()
+        {
+            var report = new GenerationReport();
+            var built = BuildStreet(report, o => o.Way(9001, new[] { new Vector2(150f, 0f), new Vector2(150f, 70f) }, false, ("highway", "residential")));
+            var barriers = built.Features.Where(f => f.Kind == FeatureKind.Barrier).ToList();
+            Assert.IsNotEmpty(barriers);
+            Assert.IsTrue(barriers.All(f => f.ColliderMesh != null && f.Group == FeatureGroups.Barriers && f.AddCollider));
+            Assert.Greater(report.GetCount(DeadEndPlanner.Walls) + report.GetCount(DeadEndPlanner.Portals) + report.GetCount(DeadEndPlanner.Boundaries), 0);
+            Assert.AreEqual(report.GetCount(DeadEndPlanner.Walls) * 2 + report.GetCount(DeadEndPlanner.Boundaries) > 0, built.Barriers.Count > 0,
+                "walls bring pots, map-edge barriers bring blocks and the sign");
+        }
+
+        [Test]
+        public void MapEdgeBarrier_GetsItsCollider_InAChunkWithNothingElseBuilt()
+        {
+            var report = new GenerationReport();
+            var osm = new TestOsm();
+            osm.Way(1, new[] { new Vector2(0f, 0f), new Vector2(5000f, 0f) }, false, ("highway", "residential"));
+            var built = WorldMeshPipeline.Build(new FeatureClassifier(settings, report).Classify(osm.Data), settings, report);
+            var blocks = built.Barriers.Where(p => p.Variant == BarrierBuilder.ConcreteVariant).Select(p => p.Position).ToList();
+            Assert.IsNotEmpty(blocks, "the road is clipped at the map edge");
+            // One line of blocks per map-edge end; its middle is the end, whose chunk holds the barrier.
+            while (blocks.Count > 0)
+            {
+                var line = blocks.Where(p => Vector2.Distance(p, blocks[0]) < 10f).ToList();
+                blocks.RemoveAll(p => Vector2.Distance(p, line[0]) < 10f);
+                var middle = new Vector2(line.Average(p => p.x), line.Average(p => p.y));
+                var chunk = WorldMeshPipeline.ChunkOf(middle, built.ChunkSize);
+                Assert.IsTrue(built.Features.Any(f => f.Kind == FeatureKind.Barrier && f.Chunk == chunk && f.ColliderMesh != null && !f.ColliderMesh.IsEmpty),
+                    "the code-built collider across the road in " + chunk + ", which has no code-built barrier mesh");
+            }
+        }
+
+        [Test]
         public void Street_EdgesAreChunkObjectsWithoutOsmIdentity()
         {
             var report = new GenerationReport();

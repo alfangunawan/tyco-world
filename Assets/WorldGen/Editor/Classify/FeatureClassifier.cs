@@ -86,6 +86,8 @@ namespace TycoWorld.WorldGen.Authoring
                 if (!classifiedIds.Contains(key.osmId))
                     report.Warn("Gedung kunci '" + key.label + "' (OSM id " + key.osmId.ToString(System.Globalization.CultureInfo.InvariantCulture) +
                                 ") tidak ditemukan atau dilewati; KeyBuildingMarker tidak dibuat.");
+            // Roads clear of buildings, here so the world, the gameplay bake and the kos planner all see it.
+            RoadClearance.Apply(world, settings.clearance, report);
             return world;
         }
 

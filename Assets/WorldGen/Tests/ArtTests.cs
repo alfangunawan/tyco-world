@@ -122,6 +122,87 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void BarrierStripes_AreYellowAndBlackDiagonals()
+        {
+            var a = StreetTextureGenerator.BarrierStripes();
+            var b = StreetTextureGenerator.BarrierStripes();
+            try
+            {
+                CollectionAssert.AreEqual(a.GetPixels32(), b.GetPixels32());
+                Color yellow = a.GetPixel(4, 4), black = a.GetPixel(4 + a.width / 4, 4);
+                Assert.Greater(yellow.r, 0.7f);
+                Assert.Greater(yellow.g, 0.55f);
+                Assert.Less(yellow.b, 0.3f);
+                Assert.Less(black.grayscale, 0.15f);
+                var along = a.GetPixel(4 + a.width / 4, 4 - a.width / 4 + a.width);
+                Assert.IsTrue(along.r > 0.7f && along.b < 0.3f, "diagonal: the same yellow band one step along x and back along y");
+            }
+            finally
+            {
+                Object.DestroyImmediate(a);
+                Object.DestroyImmediate(b);
+            }
+        }
+
+        [Test]
+        public void BarrierPrefabs_AreBuilt_Solid_AndOfASensibleSize()
+        {
+            const string folder = "Assets/WorldGen/Tests/_TmpBarrierPrefabs";
+            try
+            {
+                CheckBarrierPrefabs(BarrierArt.BuildPrefabs(null, folder));
+            }
+            finally
+            {
+                UnityEditor.AssetDatabase.DeleteAsset(folder);
+            }
+        }
+
+        [Test]
+        public void SavedRoadClosedPrefab_BoardUsesTheBoardMaterial()
+        {
+            var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(BarrierArt.PrefabFolder + "/Barrier_RoadClosed.prefab");
+            Assert.IsNotNull(prefab);
+            var board = prefab.transform.Find("Board").GetComponent<MeshRenderer>();
+            Assert.AreSame(UnityEditor.AssetDatabase.LoadAssetAtPath<Material>(WorldGenPaths.MaterialsFolder + "/Barrier_Board.mat"), board.sharedMaterial,
+                "the white board, not the default material a test build would leave behind");
+        }
+
+        static void CheckBarrierPrefabs(GameObject[] prefabs)
+        {
+            Assert.AreEqual(3, prefabs.Length);
+            float[,] height = { { 0.5f, 0.9f }, { 0.6f, 1.0f }, { 1.2f, 2.0f } };
+            for (int i = 0; i < 3; i++)
+            {
+                var p = prefabs[i];
+                Assert.IsNotNull(p, "prefab " + i);
+                Assert.IsNotNull(p.GetComponent<Collider>(), p.name + " is solid");
+                var renderers = p.GetComponentsInChildren<Renderer>();
+                Assert.IsNotEmpty(renderers, p.name);
+                var b = renderers[0].bounds;
+                foreach (var r in renderers) b.Encapsulate(r.bounds);
+                Assert.That(b.size.y, Is.InRange(height[i, 0], height[i, 1]), p.name + " height");
+                Assert.AreEqual(0f, b.min.y, 0.02f, p.name + " stands on the ground");
+            }
+            var signs = prefabs[BarrierBuilder.RoadClosedVariant].GetComponentsInChildren<TextMesh>();
+            Assert.AreEqual(1, signs.Length, "one line of text: the text shader draws both sides, two would overlap mirrored");
+            Assert.AreEqual("JALAN DITUTUP", signs[0].text);
+            Assert.Greater(Vector3.Dot(signs[0].transform.forward, Vector3.back), 0.99f,
+                "readable from the prefab's +Z side, which BarrierBuilder turns toward the road");
+        }
+
+        [Test]
+        public void SavedSettings_UseTheBarrierPrefabs_AndTheStripeMaterial()
+        {
+            var s = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset);
+            Assert.IsNotNull(s);
+            Assert.AreEqual(3, s.barrierPrefabs.Length);
+            Assert.IsTrue(s.barrierPrefabs.All(p => p != null));
+            Assert.IsNotNull(s.deadEnds.stripe);
+            Assert.IsNotNull(s.deadEnds.stripe.GetTexture("_BaseMap"));
+        }
+
+        [Test]
         public void KerbStripes_AreDarkThenLightAlongU()
         {
             var a = StreetTextureGenerator.KerbStripes();

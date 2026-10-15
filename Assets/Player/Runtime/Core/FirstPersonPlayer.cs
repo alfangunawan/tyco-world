@@ -165,7 +165,7 @@ namespace TycoWorld.Player
             if (body.enabled)
             {
                 bool grounded = body.isGrounded;
-                IsSprinting = Intent.Sprint && !crouch.Crouched && Intent.Move.sqrMagnitude > 0.01f && Stamina.CanSprint;
+                IsSprinting = Intent.Sprint && !crouch.Crouched && Intent.Move.sqrMagnitude > 0.01f && Stamina.CanSprint && Locks.Allows(PlayerAbility.Sprint);
                 bool jump = Intent.Jump && movement.CanJump(grounded, crouch.Crouched) && Stamina.TrySpend(tuning.stamina.jumpCost);
                 var input = new MoveInput
                 {

@@ -5,7 +5,7 @@ using UnityEngine;
 namespace TycoWorld.Vehicles.Tests
 {
     /// <summary>Physics scratch objects far outside the world (and away from the player tests' fixture), destroyed on Dispose.</summary>
-    internal sealed partial class VehicleFixture : IDisposable
+    public sealed partial class VehicleFixture : IDisposable
     {
         public static readonly Vector3 Origin = new Vector3(7000f, 1000f, 7000f);
         readonly List<UnityEngine.Object> created = new List<UnityEngine.Object>();

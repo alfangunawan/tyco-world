@@ -5,7 +5,7 @@ using UnityEngine;
 namespace TycoWorld.WorldGen.Tests
 {
     /// <summary>Builds OsmData from local-meter coordinates around the spec origin.</summary>
-    internal sealed class TestOsm
+    public sealed class TestOsm
     {
         public readonly OsmData Data = new OsmData();
         readonly GeoProjection projection = new GeoProjection(-6.97265, 107.63400);

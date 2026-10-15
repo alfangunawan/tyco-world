@@ -1,0 +1,207 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a189d003ea3ae248a11da6823b2c519, type: 3}
+  m_Name: ItemCatalog
+  m_EditorClassIdentifier: TycoWorld.Gameplay::TycoWorld.Gameplay.ItemCatalog
+  items:
+  - id: air-mineral
+    displayName: Air mineral
+    category: 1
+    price: 4000
+    lapar: 2
+    energi: 4
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: teh-kemasan
+    displayName: Teh kemasan
+    category: 1
+    price: 5000
+    lapar: 3
+    energi: 6
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: kopi-sachet
+    displayName: Kopi sachet
+    category: 1
+    price: 3000
+    lapar: 0
+    energi: 15
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: roti
+    displayName: Roti
+    category: 2
+    price: 6000
+    lapar: 15
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: mi-instan
+    displayName: Mi instan
+    category: 0
+    price: 4000
+    lapar: 25
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: gorengan
+    displayName: Gorengan
+    category: 2
+    price: 2000
+    lapar: 6
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: galon
+    displayName: Galon isi ulang
+    category: 7
+    price: 20000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: nasi-telur
+    displayName: Nasi telur
+    category: 0
+    price: 12000
+    lapar: 55
+    energi: 0
+    consumeOnPurchase: 1
+    wearable: 0
+  - id: nasi-goreng
+    displayName: Nasi goreng
+    category: 0
+    price: 15000
+    lapar: 65
+    energi: 0
+    consumeOnPurchase: 1
+    wearable: 0
+  - id: mi-ayam
+    displayName: Mi ayam
+    category: 0
+    price: 13000
+    lapar: 50
+    energi: 0
+    consumeOnPurchase: 1
+    wearable: 0
+  - id: es-teh
+    displayName: Es teh
+    category: 1
+    price: 4000
+    lapar: 3
+    energi: 5
+    consumeOnPurchase: 1
+    wearable: 0
+  - id: kopi-hitam
+    displayName: Kopi hitam
+    category: 1
+    price: 5000
+    lapar: 0
+    energi: 20
+    consumeOnPurchase: 1
+    wearable: 0
+  - id: kaos-polos
+    displayName: Kaos polos
+    category: 3
+    price: 45000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 1
+  - id: kemeja-flanel
+    displayName: Kemeja flanel
+    category: 3
+    price: 85000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 1
+  - id: jaket-parka
+    displayName: Jaket parka
+    category: 3
+    price: 150000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 1
+  - id: hoodie-hitam
+    displayName: Hoodie hitam
+    category: 3
+    price: 120000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 1
+  - id: sarung
+    displayName: Sarung
+    category: 3
+    price: 40000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 1
+  - id: paket-data
+    displayName: Paket data harian
+    category: 5
+    price: 10000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: vitamin-c
+    displayName: Vitamin C
+    category: 4
+    price: 8000
+    lapar: 0
+    energi: 20
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: jamu-anget
+    displayName: Jamu anget
+    category: 4
+    price: 6000
+    lapar: 0
+    energi: 25
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: minyak-kayu-putih
+    displayName: Minyak kayu putih
+    category: 4
+    price: 12000
+    lapar: 0
+    energi: 5
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: cat-ulang
+    displayName: Cat ulang motor
+    category: 6
+    price: 50000
+    lapar: 0
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: kopi-kaleng
+    displayName: Kopi kaleng
+    category: 1
+    price: 9000
+    lapar: 0
+    energi: 25
+    consumeOnPurchase: 0
+    wearable: 0
+  - id: nasi-kepal
+    displayName: Nasi kepal
+    category: 0
+    price: 10000
+    lapar: 35
+    energi: 0
+    consumeOnPurchase: 0
+    wearable: 0

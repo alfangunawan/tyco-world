@@ -180,6 +180,8 @@ namespace TycoWorld.WorldGen.Authoring
             EditorUtility.SetDirty(fence);
             m["Frontage_Fence"] = fence;
             m["Frontage_GateMetal"] = Mat("Frontage_GateMetal", null, null, Hex("2B2F33"), 1f, 0.45f);
+            m["Barrier_Stripe"] = Mat("Barrier_Stripe", StreetTexture(StreetTextureGenerator.StripeFile), null, Color.white, 1f, 0.3f);
+            m["Barrier_Board"] = Mat("Barrier_Board", null, null, Hex("F2F2EE"), 1f, 0.2f);
             m["Water"] = Mat("Water", null, null, Hex("10161A"), 1f, 0.9f);
             m["WorldGen_Fallback"] = Mat("WorldGen_Fallback", null, null, Hex("808080"), 1f);
 
@@ -245,6 +247,8 @@ namespace TycoWorld.WorldGen.Authoring
             f.wallAtlas = m["Frontage_WallAtlas"];
             f.fence = m["Frontage_Fence"];
             f.gateMetal = m["Frontage_GateMetal"];
+            s.deadEnds.stripe = m["Barrier_Stripe"];
+            s.barrierPrefabs = BarrierArt.BuildPrefabs(m["Barrier_Board"]);
             EditorUtility.SetDirty(s);
         }
     }

@@ -1,0 +1,20 @@
+{
+    "name": "TycoWorld.Gameplay",
+    "rootNamespace": "TycoWorld.Gameplay",
+    "references": [
+        "TycoWorld.WorldGen",
+        "TycoWorld.Player",
+        "TycoWorld.Vehicles",
+        "TycoWorld.DayCycle",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -27,6 +27,30 @@ namespace TycoWorld.WorldGen.Authoring
             return Finish(px, KerbWidth, KerbHeight, "KerbStripes");
         }
 
+        public const string StripeFile = "BarrierStripes.png";
+        public const int StripeSize = 128;
+
+        /// <summary>
+        /// The portal's paint (spec road-clearance §3): yellow and black diagonal bands, four across the tile, with a
+        /// little grime so a long bar does not look printed.
+        /// </summary>
+        public static Texture2D BarrierStripes()
+        {
+            var px = new Color32[StripeSize * StripeSize];
+            var rng = new SplitMix64(SplitMix64.Fnv1a64("barrier-stripes"));
+            int band = StripeSize / 4;
+            var yellow = new Color(0.9f, 0.72f, 0.08f, 1f);
+            var black = new Color(0.07f, 0.07f, 0.07f, 1f);
+            for (int y = 0; y < StripeSize; y++)
+                for (int x = 0; x < StripeSize; x++)
+                {
+                    var c = ((x + y) / band) % 2 == 0 ? yellow : black;
+                    float grime = 1f + ((float)rng.NextDouble() - 0.5f) * 0.08f;
+                    px[y * StripeSize + x] = new Color(Mathf.Clamp01(c.r * grime), Mathf.Clamp01(c.g * grime), Mathf.Clamp01(c.b * grime), 1f);
+                }
+            return Finish(px, StripeSize, StripeSize, "BarrierStripes");
+        }
+
         public const string WallAtlasFile = "WallAtlas.png", FenceFile = "FenceBars.png";
         public const string PlasterId = "Plaster001", BrickId = "Bricks059";
         public const int AtlasWidth = 256, BandHeight = 128, AtlasBands = 8, PixelsPerMeter = 64, FenceSize = 128;
@@ -133,6 +157,7 @@ namespace TycoWorld.WorldGen.Authoring
             var paths = new List<string>();
             Write(folder, KerbFile, KerbStripes(), paths);
             Write(folder, FenceFile, FenceBars(), paths);
+            Write(folder, StripeFile, BarrierStripes(), paths);
             var plaster = LoadReadable(Cc0ColorPath(PlasterId));
             var brick = LoadReadable(Cc0ColorPath(BrickId));
             try

@@ -23,6 +23,8 @@ namespace TycoWorld.WorldGen
             Add(root.Find("Water"), CullCategory.Structure, groups);
             Add(root.Find("Props/Trees"), CullCategory.Prop, groups);
             Add(root.Find("Props/Lamps"), CullCategory.Prop, groups);
+            Add(root.Find("Barriers"), CullCategory.Prop, groups);
+            Add(root.Find("Props/Barriers"), CullCategory.Prop, groups);
             Add(root.Find("RoadEdges"), CullCategory.Detail, groups);
             Add(root.Find("Frontage"), CullCategory.Detail, groups);
             return groups;

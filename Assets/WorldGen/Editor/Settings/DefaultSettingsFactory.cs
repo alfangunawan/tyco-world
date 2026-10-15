@@ -123,6 +123,8 @@ namespace TycoWorld.WorldGen.Authoring
             s.roadEdges = new RoadEdgeSettings();
             s.frontage = new FrontageSettings();
             s.infill = new InfillSettings();
+            s.clearance = new RoadClearanceSettings();
+            s.deadEnds = new DeadEndSettings();
 
             s.keyBuildings = new List<KeyBuilding>
             {

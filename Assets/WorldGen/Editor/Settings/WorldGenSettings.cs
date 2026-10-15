@@ -63,6 +63,10 @@ namespace TycoWorld.WorldGen.Authoring
         public RoadEdgeSettings roadEdges = new RoadEdgeSettings();
         public FrontageSettings frontage = new FrontageSettings();
         public InfillSettings infill = new InfillSettings();
+        public RoadClearanceSettings clearance = new RoadClearanceSettings();
+        public DeadEndSettings deadEnds = new DeadEndSettings();
+        [Tooltip("Dead-end props: 0 potted plant, 1 concrete block, 2 road-closed barricade with its sign.")]
+        public GameObject[] barrierPrefabs = new GameObject[0];
 
         [Header("Key buildings")]
         public List<KeyBuilding> keyBuildings = new List<KeyBuilding>();

@@ -45,7 +45,7 @@ namespace TycoWorld.WorldGen.Tests
                 var filter = new Filter
                 {
                     testMode = TestMode.EditMode,
-                    assemblyNames = new[] { "TycoWorld.WorldGen.Tests", "TycoWorld.Player.Tests", "TycoWorld.DayCycle.Tests", "TycoWorld.GameSettings.Tests", "TycoWorld.Vehicles.Tests" },
+                    assemblyNames = new[] { "TycoWorld.WorldGen.Tests", "TycoWorld.Player.Tests", "TycoWorld.DayCycle.Tests", "TycoWorld.GameSettings.Tests", "TycoWorld.Vehicles.Tests", "TycoWorld.Gameplay.Tests" },
                     groupNames = new[] { group }
                 };
                 api.Execute(new ExecutionSettings(filter) { runSynchronously = true });

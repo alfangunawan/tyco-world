@@ -66,19 +66,27 @@ namespace TycoWorld.WorldGen.Authoring
                         ? FeatureGroups.KeyBuildings
                         : feature.Group + "/" + WorldMeshPipeline.ChunkName(feature.Chunk);
                     go.transform.SetParent(Container(path), false);
-                    go.AddComponent<MeshFilter>().sharedMesh = asset.Mesh;
-                    var materials = new Material[asset.UsedSubmeshes.Length];
-                    for (int k = 0; k < materials.Length; k++)
+                    if (asset.Mesh == null)
                     {
-                        int sub = asset.UsedSubmeshes[k];
-                        var material = sub < feature.Materials.Length ? feature.Materials[sub] : null;
-                        materials[k] = Resolve(material, settings, report, feature.Group + "/" + feature.Category);
+                        // Collider only: drawn by props, or not at all.
+                        if (feature.AddCollider && asset.Collider != null) go.AddComponent<MeshCollider>().sharedMesh = asset.Collider;
                     }
-                    var renderer = go.AddComponent<MeshRenderer>();
-                    renderer.sharedMaterials = materials;
-                    // Kerb strips are at most ~0.2 m tall: their shadows are invisible but cost shadow-pass batches.
-                    if (feature.Kind == FeatureKind.RoadEdge) renderer.shadowCastingMode = ShadowCastingMode.Off;
-                    if (feature.AddCollider) go.AddComponent<MeshCollider>().sharedMesh = asset.Collider != null ? asset.Collider : asset.Mesh;
+                    else
+                    {
+                        go.AddComponent<MeshFilter>().sharedMesh = asset.Mesh;
+                        var materials = new Material[asset.UsedSubmeshes.Length];
+                        for (int k = 0; k < materials.Length; k++)
+                        {
+                            int sub = asset.UsedSubmeshes[k];
+                            var material = sub < feature.Materials.Length ? feature.Materials[sub] : null;
+                            materials[k] = Resolve(material, settings, report, feature.Group + "/" + feature.Category);
+                        }
+                        var renderer = go.AddComponent<MeshRenderer>();
+                        renderer.sharedMaterials = materials;
+                        // Kerb strips are at most ~0.2 m tall: their shadows are invisible but cost shadow-pass batches.
+                        if (feature.Kind == FeatureKind.RoadEdge) renderer.shadowCastingMode = ShadowCastingMode.Off;
+                        if (feature.AddCollider) go.AddComponent<MeshCollider>().sharedMesh = asset.Collider != null ? asset.Collider : asset.Mesh;
+                    }
                 }
 
                 if (feature.HasOsmIdentity)
@@ -100,6 +108,7 @@ namespace TycoWorld.WorldGen.Authoring
             PlaceProps(scene, world.Trees, settings.treePrefabs, WorldMeshPipeline.TreesGroup, world.ChunkSize, Container, report, "pohon");
             var lampPrefabs = settings.lampPrefab != null ? new[] { settings.lampPrefab } : new GameObject[0];
             PlaceProps(scene, world.Lamps, lampPrefabs, WorldMeshPipeline.LampsGroup, world.ChunkSize, Container, report, "lampu");
+            PlaceProps(scene, world.Barriers, settings.barrierPrefabs, WorldMeshPipeline.BarrierPropsGroup, world.ChunkSize, Container, report, "pembatas");
             return root;
         }
 
