@@ -71,8 +71,9 @@ namespace TycoWorld.WorldGen.Authoring
                         for (int i = 0; i < blocks; i++)
                             r.Props.Add(new PropPlacement
                             {
-                                // The block model runs along its local X: at the road's yaw it lies across the road.
-                                Position = Vector2.Lerp(a, b, (i + 0.5f) / blocks), YawDegrees = yaw, Scale = 1f, Variant = ConcreteVariant
+                                // The block runs along its local X (across the road) with its striped face on +Z: turned to face
+                                // back down the road.
+                                Position = Vector2.Lerp(a, b, (i + 0.5f) / blocks), YawDegrees = yaw + 180f, Scale = 1f, Variant = ConcreteVariant
                             });
                         r.Props.Add(new PropPlacement
                         {

@@ -162,9 +162,11 @@ namespace TycoWorld.WorldGen.Tests
                 Assert.That(b.size.y, Is.InRange(height[i, 0], height[i, 1]), p.name + " height");
                 Assert.AreEqual(0f, b.min.y, 0.02f, p.name + " stands on the ground");
             }
-            var sign = prefabs[BarrierBuilder.RoadClosedVariant].GetComponentInChildren<TextMesh>();
-            Assert.IsNotNull(sign, "the barricade carries its board");
-            Assert.AreEqual("JALAN DITUTUP", sign.text);
+            var signs = prefabs[BarrierBuilder.RoadClosedVariant].GetComponentsInChildren<TextMesh>();
+            Assert.AreEqual(1, signs.Length, "one line of text: the text shader draws both sides, two would overlap mirrored");
+            Assert.AreEqual("JALAN DITUTUP", signs[0].text);
+            Assert.Greater(Vector3.Dot(signs[0].transform.forward, Vector3.back), 0.99f,
+                "readable from the prefab's +Z side, which BarrierBuilder turns toward the road");
         }
 
         [Test]

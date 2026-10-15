@@ -58,7 +58,10 @@ namespace TycoWorld.WorldGen.Authoring
             }
         }
 
-        /// <summary>A white board above the barricade, red letters on the side facing down the road (-Z).</summary>
+        /// <summary>
+        /// A white board above the barricade, red letters on its +Z face (BarrierBuilder turns +Z toward the road). One
+        /// line only: the text shader draws both sides, so a second line on the back would show through mirrored.
+        /// </summary>
         static void AddSign(GameObject root, Material boardMaterial)
         {
             float top = BoundsOf(root).max.y;
@@ -70,21 +73,19 @@ namespace TycoWorld.WorldGen.Authoring
             board.transform.localScale = new Vector3(1.3f, 0.36f, 0.04f);
             var renderer = board.GetComponent<MeshRenderer>();
             if (boardMaterial != null) renderer.sharedMaterial = boardMaterial;
-            for (int side = -1; side <= 1; side += 2)
-            {
-                var text = new GameObject(side < 0 ? "TextFront" : "TextBack").AddComponent<TextMesh>();
-                text.transform.SetParent(root.transform, false);
-                text.transform.localPosition = new Vector3(0f, top + 0.24f, 0.025f * side);
-                text.transform.localRotation = Quaternion.Euler(0f, side < 0 ? 0f : 180f, 0f);
-                text.text = SignText;
-                text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                text.fontSize = 48;
-                text.characterSize = 0.022f;
-                text.anchor = TextAnchor.MiddleCenter;
-                text.alignment = TextAlignment.Center;
-                text.color = new Color(0.78f, 0.06f, 0.06f);
-                text.GetComponent<MeshRenderer>().sharedMaterial = text.font.material;
-            }
+            var text = new GameObject("Text").AddComponent<TextMesh>();
+            text.transform.SetParent(root.transform, false);
+            // A TextMesh reads from behind its forward: forward -Z reads from +Z.
+            text.transform.localPosition = new Vector3(0f, top + 0.24f, 0.025f);
+            text.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            text.text = SignText;
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 48;
+            text.characterSize = 0.022f;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.color = new Color(0.78f, 0.06f, 0.06f);
+            text.GetComponent<MeshRenderer>().sharedMaterial = text.font.material;
         }
 
         static Bounds BoundsOf(GameObject go)

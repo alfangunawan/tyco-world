@@ -70,7 +70,7 @@ namespace TycoWorld.WorldGen.Tests
             foreach (var p in wall.Props) Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 0f), 0.5f, "pot: outward +Z is yaw 0");
             var edge = One(DeadEndKind.Boundary);
             foreach (var p in edge.Props.Where(p => p.Variant == BarrierBuilder.ConcreteVariant))
-                Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 0f), 0.5f, "blocks (long along their local X) lie across the road");
+                Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 180f), 0.5f, "blocks lie across the road (long along local X), striped face (+Z) toward whoever comes up it");
             foreach (var p in edge.Props.Where(p => p.Variant == BarrierBuilder.RoadClosedVariant))
                 Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 180f), 0.5f, "the sign faces back down the road");
         }
