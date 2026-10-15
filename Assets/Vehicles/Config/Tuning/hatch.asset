@@ -31,15 +31,15 @@ MonoBehaviour:
   gravity: 20
   slopeLimit: 35
   stepOffset: 0.3
-  bodyRadius: 0.9266732
-  bodyHeight: 1.8533463
-  blockHalfExtents: {x: 0.9266732, y: 0.57350266, z: 1.9000001}
+  bodyRadius: 0.92667294
+  bodyHeight: 1.8533459
+  blockHalfExtents: {x: 0.92667294, y: 0.5735025, z: 1.8999999}
   headOnDot: 0.5
   bumpSpeed: 2.8
   glanceSpeedFactor: 0.8
   respawnBelowY: -20
   dismountMaxSpeed: 1.4
-  dismountSideOffset: 1.5266732
+  dismountSideOffset: 1.526673
   exitGuardSeconds: 0.3
   chaseDistance: 6.5
   chaseHeight: 2.6

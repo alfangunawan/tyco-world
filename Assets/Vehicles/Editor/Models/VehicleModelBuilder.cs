@@ -304,12 +304,26 @@ namespace TycoWorld.Vehicles.Authoring
             throw new System.ArgumentException("node not found: " + name);
         }
 
+        /// <summary>
+        /// Tight world bounds of the drawn meshes, from their vertices: Renderer.bounds boxes a node turned at an odd angle
+        /// loosely (the Vario's handlebar made it 10% too long and off-centre).
+        /// </summary>
         static Bounds DrawnBounds(GameObject go)
         {
-            var renderers = go.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length == 0) return new Bounds(go.transform.position, Vector3.zero);
-            var b = renderers[0].bounds;
-            foreach (var r in renderers) b.Encapsulate(r.bounds);
+            bool any = false;
+            var b = new Bounds(go.transform.position, Vector3.zero);
+            foreach (var f in go.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (f.sharedMesh == null || f.GetComponent<Renderer>() == null) continue;
+                var toWorld = f.transform.localToWorldMatrix;
+                foreach (var v in f.sharedMesh.vertices)
+                {
+                    var p = toWorld.MultiplyPoint3x4(v);
+                    if (!any) b = new Bounds(p, Vector3.zero);
+                    else b.Encapsulate(p);
+                    any = true;
+                }
+            }
             return b;
         }
 

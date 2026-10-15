@@ -33,7 +33,7 @@ MonoBehaviour:
   stepOffset: 0.3
   bodyRadius: 0.95
   bodyHeight: 1.9
-  blockHalfExtents: {x: 1.0302911, y: 0.6202505, z: 2.2000003}
+  blockHalfExtents: {x: 1.0302911, y: 0.6202503, z: 2.2000003}
   headOnDot: 0.5
   bumpSpeed: 2.8
   glanceSpeedFactor: 0.8
@@ -43,7 +43,7 @@ MonoBehaviour:
   exitGuardSeconds: 0.3
   chaseDistance: 7
   chaseHeight: 2.8
-  lookHeight: 1.2724009
+  lookHeight: 1.2724005
   orbitYawLimit: 120
   orbitPitchMin: -10
   orbitPitchMax: 35

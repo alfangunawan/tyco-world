@@ -33,11 +33,18 @@ namespace TycoWorld.Vehicles.Tests
             return VehicleModelBuilder.Build(root, spec, source, tuning, VehicleMaterials.LoadOrCreate(), new VehicleClipSet());
         }
 
+        /// <summary>
+        /// Tight bounds of the drawn model from its vertices (Renderer.bounds is a loose box around a node turned at an odd angle,
+        /// like the Vario's handlebar).
+        /// </summary>
         static Bounds RendererBounds(GameObject go)
         {
-            var rs = go.GetComponentsInChildren<Renderer>().Where(r => r.transform.IsChildOf(go.transform.Find(VehicleModelBuilder.LeanName))).ToArray();
-            var b = rs[0].bounds;
-            foreach (var r in rs) b.Encapsulate(r.bounds);
+            var lean = go.transform.Find(VehicleModelBuilder.LeanName);
+            var filters = lean.GetComponentsInChildren<MeshFilter>()
+                .Where(f => f.name != VehicleModelBuilder.TailName && f.name != VehicleModelBuilder.LensName).ToArray();
+            var points = filters.SelectMany(f => f.sharedMesh.vertices.Select(v => f.transform.TransformPoint(v))).ToList();
+            var b = new Bounds(points[0], Vector3.zero);
+            foreach (var p in points) b.Encapsulate(p);
             return b;
         }
 

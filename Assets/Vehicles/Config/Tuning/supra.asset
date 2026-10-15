@@ -31,9 +31,9 @@ MonoBehaviour:
   gravity: 20
   slopeLimit: 35
   stepOffset: 0.3
-  bodyRadius: 0.4910482
-  bodyHeight: 1.1600716
-  blockHalfExtents: {x: 0.34104818, y: 0.4050358, z: 0.945}
+  bodyRadius: 0.49104825
+  bodyHeight: 1.1600717
+  blockHalfExtents: {x: 0.34104824, y: 0.40503585, z: 0.94499993}
   headOnDot: 0.5
   bumpSpeed: 2.8
   glanceSpeedFactor: 0.8
