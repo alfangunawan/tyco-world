@@ -509,6 +509,7 @@ MonoBehaviour:
     minWidth: 1.2
     joinMargin: 0.5
     buildingAhead: 2
+    kosRadius: 20
     wallHeight: 0.9
     wallThickness: 0.2
     wallBand: 1

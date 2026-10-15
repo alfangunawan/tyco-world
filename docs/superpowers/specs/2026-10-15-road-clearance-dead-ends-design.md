@@ -35,6 +35,7 @@ Pindaian di dunia hasil generate: titik sampel tiap 2 m di semua `mapRoads`, lal
   - **Penetrasi:** jarak bersih dikurangi jarak terdekat footprint ke garis tengah. Kalau garis tengah memotong footprint, rumah dihapus.
   - **Penetrasi 0 sampai 2,0 m:** footprint digeser menjauh dari jalan sejauh penetrasi + 0,05 m, searah dari titik jalan terdekat ke titik rumah terdekat. Setelah digeser, rumah dicek ulang terhadap semua jalan dan semua bangunan lain. Kalau masih melanggar atau jadi menumpuk, rumah dihapus.
   - **Penetrasi lebih dari 2,0 m:** rumah dihapus.
+- **Atap terbuka (`building=roof`):** bukan rumah dan bukan pemotong jalan. Jalan tetap lewat di bawahnya, dan atap tidak digeser.
 - **Gedung bernama, gedung kampus, atau gedung besar:** gedung tetap. Bagian garis tengah jalan di dalam footprint ditambah jarak bersih dipotong. `RoadFeature` dipecah jadi potongan di luar gedung, dan ujung yang baru menjadi jalan buntu (lihat §3).
 - **Determinisme:** urutan diproses menurut id OSM. Tidak ada bilangan acak.
 - **Report:** `ClearanceShifted`, `ClearanceDropped`, `ClearanceRoadCuts`.
@@ -47,12 +48,12 @@ Pindaian di dunia hasil generate: titik sampel tiap 2 m di semua `mapRoads`, lal
 - **Dilewati jika:**
   - di dalam area parkir (jalan servis yang masuk lahan parkir);
   - ada footprint bangunan dalam 2 m di depan ujungnya (bangunannya sendiri sudah menutup);
-  - ujungnya di halaman kos (zona larangan kos).
+  - ujungnya dalam 20 m dari kos (`DeadEndSettings.kosRadius`). Radius ini sengaja lebih besar dari zona larangan frontage (8 m), supaya jalan di depan gerbang kos tidak tertutup.
 - **Jenis pembatas:**
 
 | Ujung | Pembatas |
 |---|---|
-| Batas peta (kurang dari 20 m dari batas area) | Beton pembatas (jersey barrier) dijejer selebar jalan + plang "JALAN DITUTUP" |
+| Batas peta (kurang dari 20 m dari batas area) | Balok beton bergaris kuning-hitam dijejer selebar jalan (tiap 1,9 m, sisi bergaris menghadap jalan) + palang "JALAN DITUTUP" |
 | `service`, `track`, `driveway` | Portal palang besi kuning-hitam di dua tiang |
 | Lainnya (gang, residential, living_street, footway, path) | Tembok rendah plester 0,9 m selebar jalan + 2 pot tanaman |
 
@@ -63,8 +64,9 @@ Pindaian di dunia hasil generate: titik sampel tiap 2 m di semua `mapRoads`, lal
 ## 4. Aset
 
 - **Download CC0:** model Kenney (atau sejenisnya) dari Poly Pizza, yang sudah terbukti bisa diunduh langsung dalam GLB. Yang dibutuhkan: beton pembatas, palang portal (atau tiang + palang), plang jalan, pot tanaman.
-  - Konversi GLB ke OBJ dengan `scratchpad/tools/glb2obj.py`.
-  - Dicatat di `Assets/WorldGen/Art/ThirdParty/SOURCES.md` (atau di folder ThirdParty yang sudah ada).
+  - Konversi GLB ke OBJ dengan `scratchpad/tools/gltf2obj.py`.
+  - Dicatat di `Assets/WorldGen/Art/ThirdParty/Barriers/SOURCES.md`.
+  - Yang dipakai: pot tanaman Kenney, balok pembatas Quaternius, dan palang Traffic Barrier Quaternius. Jersey barrier putih Kenney tidak dipakai, karena balok Quaternius yang bergaris lebih terbaca.
   - Unduhan diperlakukan sebagai data tidak tepercaya, sama seperti di #7.
 - **Prosedural:** tembok rendah memakai atlas tembok frontage, supaya seragam dengan tembok rumah.
 - **Fallback:** kalau satu model tidak ditemukan, dipakai bentuk prosedural sederhana (kotak bergaris kuning-hitam), dan report mencatatnya.
@@ -102,7 +104,7 @@ Pindaian di dunia hasil generate: titik sampel tiap 2 m di semua `mapRoads`, lal
 - **Fisika:** collider pembatas menghalangi `CharacterController` pemain dan motor.
 - **Pipeline:** `Sukabirus_IsDeterministic` dan `Sukabirus_NoInvalidGeometry` tetap lulus.
 - **Verifikasi:**
-  - pindai ulang: titik tertutup bangunan di dalam kampung menjadi 0 (sisa yang ada harus dijelaskan);
+  - pindai ulang: titik tertutup bangunan di dalam kampung menjadi 0 (sisa yang ada harus dijelaskan). Hasil: tidak ada rumah yang menutup jalan; sisanya pembatas, kanopi terbuka, dan dua tembok frontage lama (lihat `docs/superpowers/notes/2026-10-15-road-clearance-verification.md`);
   - Generate dua kali menghasilkan hash identik;
   - screenshot tiap jenis pembatas;
   - perf: batch ≤ +3%.
