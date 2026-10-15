@@ -16,6 +16,11 @@ namespace TycoWorld.Gameplay
         public readonly VehicleKind Kind;
         public readonly Motorbike Body;
         public readonly StealVehicleInteractable Lock;
+        /// <summary>Catalog model id (spec vehicles-3a §6); null for a code-built vehicle.</summary>
+        public readonly string ModelId;
+        public readonly VehicleClass Class;
+        /// <summary>Last shadow state set by the distance check (spec vehicles-3a §8).</summary>
+        public bool CastsShadow = true;
         /// <summary>Index of its parking spot in KampungData.spots.</summary>
         public int Spot = -1;
         /// <summary>The player broke the lock: E now simply gets on.</summary>
@@ -28,10 +33,12 @@ namespace TycoWorld.Gameplay
         /// <summary>Seconds standing still without a rider (it is put to sleep after a while).</summary>
         public float Idle;
 
-        public WorldVehicle(VehicleKind kind, Motorbike body, VehicleSystem system)
+        public WorldVehicle(VehicleKind kind, Motorbike body, VehicleSystem system, string modelId = null, VehicleClass cls = VehicleClass.MotorMatic)
         {
             Kind = kind;
             Body = body;
+            ModelId = modelId;
+            Class = cls;
             Lock = body.gameObject.AddComponent<StealVehicleInteractable>();
             Lock.Configure(system, this);
             Lock.SetInteractionId(kind == VehicleKind.Bike ? "warga-bike" : "warga-car");
@@ -40,7 +47,7 @@ namespace TycoWorld.Gameplay
         public GameObject Root => Body.gameObject;
         public Vector3 Position => Body.transform.position;
         public bool Active => Body != null && Body.gameObject.activeSelf;
-        public string Noun => Kind == VehicleKind.Bike ? "motor" : "mobil";
+        public string Noun => ModelId != null ? VehicleClasses.Noun(Class) : (Kind == VehicleKind.Bike ? "motor" : "mobil");
     }
 
     /// <summary>"[E] Bobol kunci motor/mobil" on a warga's vehicle, "[E] Naik motor/Masuk mobil" once the lock is broken.</summary>

@@ -69,7 +69,9 @@ namespace TycoWorld.Gameplay.Authoring
             var bike = AssetDatabase.LoadAssetAtPath<GameObject>(TycoWorld.Vehicles.Authoring.VehiclePaths.MotorbikePrefab);
             var people = CharacterArtSetup.Run(out string artError);
             if (people == null) Debug.LogWarning("[Gameplay] " + artError + " Orang memakai figur primitif.");
-            director.Configure(data, catalog, material, bike, people);
+            var vehicles = AssetDatabase.LoadAssetAtPath<TycoWorld.Vehicles.VehicleCatalog>(TycoWorld.Vehicles.Authoring.VehiclePaths.CatalogAsset);
+            if (vehicles == null) Debug.LogWarning("[Gameplay] Katalog kendaraan belum ada; kendaraan warga memakai bentuk sederhana.");
+            director.Configure(data, catalog, material, bike, people, vehicles);
             EditorUtility.SetDirty(director);
             EditorUtility.SetDirty(root);
             return root;
