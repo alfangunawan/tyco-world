@@ -61,7 +61,9 @@ namespace TycoWorld.Gameplay
         float lastHours = -1f, manualHours = WakeHours, cullTimer, fadeTimer;
         Action fadeAction;
         bool fadeActionDone, warnedHungry, warnedSleepy, holdsSprintLock, holdsModalLock, clockFromDayCycle, savedOnQuit;
-        int ticks, shopOpenedTick = -1;
+        int ticks;
+        // Set when the shop opens; the next key read ignores E (that press is the one that opened it).
+        bool shopOpenedSinceKeys;
         float minimapTimer, minimapIdle, minimapHeading;
         List<MapMarker> fixedMarkers;
         Vector2 minimapAt = new Vector2(float.MaxValue, float.MaxValue);
@@ -490,7 +492,7 @@ namespace TycoWorld.Gameplay
                 if (item != null) items.Add(item);
             }
             Shop.Open(stall.Site, items, State);
-            shopOpenedTick = ticks;
+            shopOpenedSinceKeys = true;
             AcquireModal();
         }
 
@@ -701,13 +703,16 @@ namespace TycoWorld.Gameplay
         }
 
         /// <summary>
-        /// Tab toggles the phone; E closes the shop, except on the tick the shop opened (that E press was the one that
-        /// opened it through the player's Interactor). Public for tests, which drive it without a keyboard.
+        /// Tab toggles the phone; E closes the shop, except on the first key read after the shop opened: the player's
+        /// Interactor (execution order 0) opens it on E earlier in the same frame, and the director (order 110) then
+        /// reads that same press. Public for tests, which drive it without a keyboard.
         /// </summary>
         public void HandleKeys(bool tab, bool e)
         {
+            bool openingPress = shopOpenedSinceKeys;
+            shopOpenedSinceKeys = false;
             if (tab) TogglePhone();
-            else if (e && Shop != null && Shop.IsOpen && ticks != shopOpenedTick) CloseShop();
+            else if (e && Shop != null && Shop.IsOpen && !openingPress) CloseShop();
         }
 
         public void Toast(string text)

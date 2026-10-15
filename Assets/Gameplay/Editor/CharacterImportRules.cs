@@ -19,7 +19,7 @@ namespace TycoWorld.Gameplay.Authoring
         public const string BodiesFolder = QuaterniusFolder + "Characters/";
 
         // Bumped when the rules change so Unity reimports the models.
-        public override uint GetVersion() => 3;
+        public override uint GetVersion() => 6;
 
         void OnPreprocessModel()
         {
@@ -32,6 +32,29 @@ namespace TycoWorld.Gameplay.Authoring
             importer.importLights = false;
             importer.importBlendShapes = false;
             importer.materialImportMode = ModelImporterMaterialImportMode.ImportViaMaterialDescription;
+            if (assetPath.StartsWith(BodiesFolder, System.StringComparison.Ordinal)) PointHipsAtThePelvis(importer);
+        }
+
+        /// <summary>
+        /// Unity's automatic mapping can take the ground-level Root as the hips (Women_Adventurer: its spine is named
+        /// Abdomen/Torso/Chest); the mapping kept from the last import is pointed at the Hips bone instead.
+        /// </summary>
+        static bool PointHipsAtThePelvis(ModelImporter importer)
+        {
+            var description = importer.humanDescription;
+            var human = description.human;
+            if (human == null) return false;
+            bool patched = false;
+            for (int i = 0; i < human.Length; i++)
+            {
+                if (human[i].humanName != "Hips" || human[i].boneName != "Root") continue;
+                human[i].boneName = "Hips";
+                patched = true;
+            }
+            if (!patched) return false;
+            description.human = human;
+            importer.humanDescription = description;
+            return true;
         }
 
         void OnPreprocessAnimation()
@@ -61,9 +84,43 @@ namespace TycoWorld.Gameplay.Authoring
             importer.clipAnimations = clips;
         }
 
+        /// <summary>
+        /// Before the avatar is built: in the Modular Women rigs the legs hang off Root (at the ground) beside Hips, so
+        /// Unity's humanoid mapping falls back to Root as the hips; the legs go under Hips, keeping their place.
+        /// </summary>
+        void OnPostprocessMeshHierarchy(GameObject root)
+        {
+            if (!assetPath.StartsWith(BodiesFolder, System.StringComparison.Ordinal)) return;
+            var hips = Find(root.transform, "Hips");
+            if (hips == null) return;
+            foreach (string leg in new[] { "UpperLeg.L", "UpperLeg.R" })
+            {
+                var t = Find(root.transform, leg);
+                if (t != null && t.parent == hips.parent) t.SetParent(hips, true);
+            }
+        }
+
+        static Transform Find(Transform t, string name)
+        {
+            if (t.name == name) return t;
+            foreach (Transform child in t)
+            {
+                var found = Find(child, name);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
         void OnPostprocessModel(GameObject root)
         {
             if (!assetPath.StartsWith(BodiesFolder, System.StringComparison.Ordinal)) return;
+            var animator = root.GetComponent<Animator>();
+            if (animator != null && animator.avatar != null && HipsAtRoot(animator.avatar))
+            {
+                // First import: the automatic mapping is only stored now; import once more so the preprocess fixes it.
+                string path = assetPath;
+                EditorApplication.delayCall += () => AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            }
             var merged = MergeParts(root, out string why);
             if (merged == null)
             {
@@ -162,6 +219,13 @@ namespace TycoWorld.Gameplay.Authoring
                 if (go.transform.childCount == 0 && go.GetComponents<Component>().Length == 1) Object.DestroyImmediate(go);
             }
             return merged;
+        }
+
+        static bool HipsAtRoot(Avatar avatar)
+        {
+            foreach (var bone in avatar.humanDescription.human)
+                if (bone.humanName == "Hips") return bone.boneName == "Root";
+            return false;
         }
 
         static bool Same(Matrix4x4 a, Matrix4x4 b)

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace TycoWorld.Gameplay
@@ -9,13 +10,20 @@ namespace TycoWorld.Gameplay
         public const long PerMetre = 6;
         public const float PickupMin = 60f, PickupMax = 220f, TripMin = 180f, TripMax = 650f;
         public const float PickupRadius = 4.5f, DropRadius = 7f;
-        /// <summary>Time for the trip: the straight distance at this speed plus a margin.</summary>
-        public const float TripSpeed = 6.5f, TripMargin = 45f;
+        /// <summary>
+        /// Time for the trip: the road route at this average (18 km/h, through turns and gang) plus a margin to stop, let
+        /// the fare on and find the way.
+        /// </summary>
+        public const float TripSpeed = 5f, TripMargin = 60f;
+        /// <summary>A new drop-off is at least this far from each of the last <see cref="RecentDrops"/>.</summary>
+        public const float RepeatRadius = 25f;
+        public const int RecentDrops = 3;
 
         GameObject passenger;
         PassengerRide ride;
         Vector3 pickup, drop;
         string dropName = "";
+        readonly List<Vector3> recent = new List<Vector3>();
 
         public override string Id => "ojek";
         public override string Title => "Ojek Kampus";
@@ -27,6 +35,10 @@ namespace TycoWorld.Gameplay
         public Vector3 Pickup => pickup;
         public Vector3 Drop => drop;
         public GameObject Passenger => passenger;
+        /// <summary>Metres along the roads from the pickup to the drop-off.</summary>
+        public float RouteLength { get; private set; }
+        /// <summary>Seconds allowed for the ride.</summary>
+        public float TripSeconds { get; private set; }
         public PassengerRide Ride => ride;
 
         protected override bool Build(MissionContext c)
@@ -35,8 +47,11 @@ namespace TycoWorld.Gameplay
             if (!from.HasValue) return false;
             pickup = from.Value;
             if (!PickDrop(c)) return false;
-            float trip = MissionContext.Flat(pickup, drop);
-            Reward = BaseFare + PerMetre * Mathf.RoundToInt(trip) / 500 * 500;
+            recent.Add(drop);
+            if (recent.Count > RecentDrops) recent.RemoveAt(0);
+            RouteLength = c.RouteLength(pickup, drop);
+            TripSeconds = RouteLength / TripSpeed + TripMargin;
+            Reward = BaseFare + PerMetre * Mathf.RoundToInt(RouteLength) / 500 * 500;
             var look = PersonLook.From((ulong)c.Range(1, 1 << 20));
             passenger = Own(c.Person("Penumpang", pickup, c.FacePlayer(pickup), look));
             ride = new PassengerRide(c, passenger);
@@ -52,41 +67,64 @@ namespace TycoWorld.Gameplay
                 Target = () => drop,
                 Enter = () => c.Toast("Penumpang naik: \"Ke " + dropName + " ya, a. Agak buru-buru.\""),
                 Done = () => ride.IsOff,
-                TimeLimit = trip / TripSpeed + TripMargin
+                TimeLimit = TripSeconds
             });
             return true;
         }
 
+        /// <summary>
+        /// Somewhere people go: any campus gate, mosque, shop, kos, pos ronda or house in range, the kind picked first
+        /// (so houses, the most numerous, do not crowd out the rest), never near the last few drop-offs; else any lane
+        /// point far enough.
+        /// </summary>
         bool PickDrop(MissionContext c)
         {
-            // Somewhere a student would go: the campus gate, the mosque, a shop; else any lane point far enough.
-            for (int attempt = 0; attempt < 12; attempt++)
+            var kinds = new List<List<(Vector3 at, string name)>>();
+            void Kind(IEnumerable<(Vector3 at, string name)> places)
             {
-                int kind = c.Range(0, 3);
-                if (kind == 0)
-                {
-                    var gate = c.NearestLandmark(SpotKind.CampusGate, pickup);
-                    if (gate != null && Within(gate.position)) return Set(c, gate.position, "gerbang kampus");
-                }
-                else if (kind == 1)
-                {
-                    var mosque = c.NearestLandmark(SpotKind.Mosque, pickup);
-                    if (mosque != null && Within(mosque.position)) return Set(c, mosque.position, "masjid");
-                }
-                else if (c.Data.shops.Length > 0)
-                {
-                    var shop = c.Data.shops[c.Range(0, c.Data.shops.Length)];
-                    if (Within(shop.counter)) return Set(c, shop.counter, shop.name);
-                }
+                var ok = new List<(Vector3 at, string name)>();
+                foreach (var p in places)
+                    if (Within(p.at) && Fresh(p.at)) ok.Add(p);
+                if (ok.Count > 0) kinds.Add(ok);
             }
-            var any = c.LanePoint(pickup, TripMin, TripMax);
-            return any.HasValue && Set(c, any.Value, "tujuan");
+            Kind(Spots(c, SpotKind.CampusGate, "gerbang kampus"));
+            Kind(Spots(c, SpotKind.Mosque, "masjid"));
+            Kind(Spots(c, SpotKind.Kos, "kos-kosan"));
+            Kind(Spots(c, SpotKind.PosRonda, "pos ronda"));
+            Kind(Spots(c, SpotKind.Door, "rumah warga"));
+            var shops = new List<(Vector3 at, string name)>();
+            foreach (var shop in c.Data.shops) shops.Add((shop.counter, shop.name));
+            Kind(shops);
+            if (kinds.Count > 0)
+            {
+                var pick = kinds[c.Range(0, kinds.Count)];
+                var place = pick[c.Range(0, pick.Count)];
+                return Set(c, place.at, place.name);
+            }
+            for (int attempt = 0; attempt < 8; attempt++)
+            {
+                var any = c.LanePoint(pickup, TripMin, TripMax);
+                if (any.HasValue && Fresh(any.Value)) return Set(c, any.Value, "tujuan");
+            }
+            return false;
+        }
+
+        static IEnumerable<(Vector3 at, string name)> Spots(MissionContext c, SpotKind kind, string name)
+        {
+            foreach (var s in c.Landmarks(kind)) yield return (s.position, name);
         }
 
         bool Within(Vector3 p)
         {
             float d = MissionContext.Flat(p, pickup);
             return d >= TripMin && d <= TripMax;
+        }
+
+        bool Fresh(Vector3 p)
+        {
+            foreach (var r in recent)
+                if (MissionContext.Flat(p, r) <= RepeatRadius) return false;
+            return true;
         }
 
         bool Set(MissionContext c, Vector3 p, string name)

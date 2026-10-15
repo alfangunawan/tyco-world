@@ -50,6 +50,21 @@ namespace TycoWorld.Gameplay.Tests
             for (float t = 0f; t < seconds && !condition(); t += 0.05f) Tick(1);
         }
 
+        /// <summary>Runs the animator (and its IK) and the director, which keeps the hips on the seat, a few times.</summary>
+        void Settle(CharacterRig rig)
+        {
+            var animator = rig.Animator;
+            var culling = animator.cullingMode;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            for (int i = 0; i < 6; i++)
+            {
+                animator.Update(0.2f);
+                fx.Director.Tick(0.02f);
+            }
+            animator.Update(0f);
+            animator.cullingMode = culling;
+        }
+
         void Go(Vector3 p, float yaw = 0f)
         {
             fx.Player.Teleport(p, yaw);
@@ -95,6 +110,20 @@ namespace TycoWorld.Gameplay.Tests
                 Assert.That(mesh.triangles.Length / 3, Is.InRange(4000, 9000), body.name + ": every part's triangles are kept");
                 Assert.AreEqual(mesh.vertexCount, mesh.boneWeights.Length, body.name + ": every vertex stays skinned");
                 Assert.That(mats.Select(m => m.name.ToLowerInvariant()), Has.Some.StartsWith("skin"), body.name);
+            }
+        }
+
+        [Test]
+        public void EveryBody_HasItsHumanoidHips_AtThePelvis_NotTheGroundRoot()
+        {
+            foreach (var body in library.bodies.Concat(library.womenBodies ?? new GameObject[0]))
+            {
+                var avatar = body.GetComponent<Animator>() != null ? body.GetComponent<Animator>().avatar : null;
+                if (avatar == null)
+                    foreach (var a in AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GetAssetPath(body)).OfType<Avatar>()) avatar = a;
+                Assert.IsNotNull(avatar, body.name);
+                string hips = avatar.humanDescription.human.First(h => h.humanName == "Hips").boneName;
+                Assert.AreEqual("Hips", hips, body.name + ": the legs hang under the pelvis (Modular Women's hang off Root, at the ground)");
             }
         }
 
@@ -202,6 +231,73 @@ namespace TycoWorld.Gameplay.Tests
             Assert.AreEqual(1, jobs.LeaverCount);
         }
 
+        /// <summary>A bare bike: just its <see cref="RideAnchors"/> at the code scooter's layout.</summary>
+        static RideAnchors BareBike(Transform parent)
+        {
+            var bike = new GameObject("BareBike");
+            bike.transform.SetParent(parent, false);
+            var a = bike.AddComponent<RideAnchors>();
+            Transform At(Vector3 local)
+            {
+                var t = new GameObject("Anchor").transform;
+                t.SetParent(bike.transform, false);
+                t.localPosition = local;
+                return t;
+            }
+            Vector3 Left(Vector3 v) => new Vector3(-v.x, v.y, v.z);
+            a.seat = At(RideAnchors.Seat);
+            a.gripRight = At(RideAnchors.BarOnBike + RideAnchors.GripOnBar);
+            a.gripLeft = At(Left(RideAnchors.BarOnBike + RideAnchors.GripOnBar));
+            a.footRight = At(RideAnchors.Foot);
+            a.footLeft = At(Left(RideAnchors.Foot));
+            a.pillion = At(RideAnchors.Pillion);
+            a.pillionFootRight = At(RideAnchors.PillionFoot);
+            a.pillionFootLeft = At(Left(RideAnchors.PillionFoot));
+            return a;
+        }
+
+        [Test]
+        public void OnABike_EveryBody_PutsItsFeetDown_AndARiderTakesTheGrips([Values(false, true)] bool asRider)
+        {
+            var parent = new GameObject("RideTest").transform;
+            try
+            {
+                foreach (var model in library.bodies.Concat(library.womenBodies ?? new GameObject[0]))
+                {
+                    var a = BareBike(parent);
+                    var one = ScriptableObject.CreateInstance<CharacterLibrary>();
+                    one.controller = library.controller;
+                    one.bodies = new[] { model };
+                    var rig = CharacterFactory.Spawn(one, a.transform, model.name, 0x51UL, fx.Director.Palette);
+                    Object.DestroyImmediate(one);
+                    rig.Animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                    rig.Ride(a, asRider);
+                    var seat = asRider ? a.seat : a.pillion;
+                    for (int i = 0; i < 12; i++)
+                    {
+                        rig.Animator.Update(0.2f);
+                        // As RiderBodySystem and PassengerRide do: hips held on the seat.
+                        var hipsLocal = a.transform.InverseTransformPoint(rig.Bone(HumanBodyBones.Hips).position) - rig.Root.localPosition;
+                        rig.Root.localPosition = a.transform.InverseTransformPoint(seat.position) - hipsLocal;
+                    }
+                    rig.Animator.Update(0f);
+                    Assert.Greater(rig.IkPasses, 0, model.name + ": the IK pass runs");
+                    Assert.Less(Vector3.Distance(rig.Bone(HumanBodyBones.LeftFoot).position, (asRider ? a.footLeft : a.pillionFootLeft).position), 0.06f, model.name + " left foot");
+                    Assert.Less(Vector3.Distance(rig.Bone(HumanBodyBones.RightFoot).position, (asRider ? a.footRight : a.pillionFootRight).position), 0.06f, model.name + " right foot");
+                    var knee = a.transform.InverseTransformPoint(rig.Bone(HumanBodyBones.LeftLowerLeg).position);
+                    var hips = a.transform.InverseTransformPoint(rig.Bone(HumanBodyBones.Hips).position);
+                    Assert.Greater(knee.z, hips.z, model.name + ": knees forward of the hips, legs folded over the footboard");
+                    if (!asRider) continue;
+                    Assert.Less(Vector3.Distance(rig.Bone(HumanBodyBones.LeftHand).position, a.gripLeft.position), 0.12f, model.name + " left hand on its grip");
+                    Assert.Less(Vector3.Distance(rig.Bone(HumanBodyBones.RightHand).position, a.gripRight.position), 0.12f, model.name + " right hand on its grip");
+                }
+            }
+            finally
+            {
+                Object.DestroyImmediate(parent.gameObject);
+            }
+        }
+
         [Test]
         public void TheOjekFare_SitsOnThePillion_AndGetsOff()
         {
@@ -215,6 +311,12 @@ namespace TycoWorld.Gameplay.Tests
             TickUntil(() => ojek.Ride.Boarded, 8f);
             Assert.IsTrue(ojek.Ride.Boarded);
             Assert.IsTrue(rig.IsSitting, "Sitting_Enter / Sitting_Idle_Loop");
+            var anchors = RideAnchors.Of(bike);
+            Assert.AreSame(anchors, rig.Riding);
+            Assert.IsFalse(rig.IsRider);
+            Settle(rig);
+            Assert.Less(Vector3.Distance(rig.Bone(HumanBodyBones.Hips).position, anchors.pillion.position), 0.12f, "hips on the pillion");
+
             bike.Teleport(ojek.Drop + new Vector3(2f, 0f, 0f), 0f);
             fx.Fx.Sync();
             Tick();
@@ -233,8 +335,17 @@ namespace TycoWorld.Gameplay.Tests
             if (bike.CameraState.Mode != RideCameraMode.ThirdPerson) bike.CameraState.Toggle();
             Tick();
             Assert.IsTrue(riders.Visible);
-            Assert.IsTrue(riders.Body.IsDriving, "Driving_Loop");
-            Assert.IsTrue(riders.Body.transform.IsChildOf(bike.transform));
+            var body = riders.Body;
+            var anchors = RideAnchors.Of(bike);
+            Assert.IsTrue(body.IsRider, "sitting astride, not the car's Driving_Loop");
+            Assert.IsFalse(body.IsDriving);
+            Assert.IsTrue(body.transform.IsChildOf(bike.transform));
+            Settle(body);
+            Assert.Less(Vector3.Distance(body.Bone(HumanBodyBones.Hips).position, anchors.seat.position), 0.12f, "hips on the front of the seat");
+            Assert.Less(Vector3.Distance(body.Bone(HumanBodyBones.LeftHand).position, anchors.gripLeft.position), 0.12f, "left hand on its grip");
+            Assert.Less(Vector3.Distance(body.Bone(HumanBodyBones.RightHand).position, anchors.gripRight.position), 0.12f, "right hand on its grip");
+            Assert.Less(Vector3.Distance(body.Bone(HumanBodyBones.LeftFoot).position, anchors.footLeft.position), 0.12f, "left foot on the footboard");
+            Assert.Less(Vector3.Distance(body.Bone(HumanBodyBones.RightFoot).position, anchors.footRight.position), 0.12f, "right foot on the footboard");
             bike.CameraState.Toggle();
             Tick();
             Assert.IsFalse(riders.Visible, "first person: hidden");

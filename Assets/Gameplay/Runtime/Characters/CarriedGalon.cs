@@ -58,8 +58,8 @@ namespace TycoWorld.Gameplay
                 {
                     holder = anchor;
                     galon.transform.SetParent(anchor, false);
-                    var seat = bike.Seat != null ? anchor.InverseTransformPoint(bike.Seat.position) : new Vector3(0f, 0.86f, -0.2f);
-                    galon.transform.localPosition = seat + new Vector3(0f, 0.02f, -PassengerRide.PillionBack - 0.05f);
+                    // Standing on the pillion, where a passenger would sit.
+                    galon.transform.localPosition = anchor.InverseTransformPoint(RideAnchors.Of(bike).pillion.position);
                     galon.transform.localRotation = Quaternion.identity;
                     Shadows(true);
                     Place = "bike";

@@ -4,9 +4,10 @@ using UnityEngine;
 namespace TycoWorld.Gameplay
 {
     /// <summary>
-    /// The player's own body on a bike (spec #7 §4): in the third-person ride camera the player is seen riding (the
-    /// Driving pose, hips on the seat) instead of the bike's built-in primitive rider; on foot or in first person the
-    /// body is hidden (the camera is the player's eyes). Cars hide their driver behind the hull.
+    /// The player's own body on a bike (spec #7 §4): in the third-person ride camera the player is seen riding (sitting,
+    /// hips on the front of the seat, hands on the grips and feet on the footboard; <see cref="RideAnchors"/>) instead
+    /// of the bike's built-in primitive rider; on foot or in first person the body is hidden (the camera is the player's
+    /// eyes). Cars hide their driver behind the hull.
     /// </summary>
     public sealed class RiderBodySystem : IKampungSystem
     {
@@ -15,6 +16,7 @@ namespace TycoWorld.Gameplay
         KampungDirector director;
         CharacterRig body;
         Motorbike riding;
+        RideAnchors anchors;
         Transform anchor;
         Vector3 seatLocal;
 
@@ -58,7 +60,7 @@ namespace TycoWorld.Gameplay
             {
                 if (body.Root.gameObject.activeSelf)
                 {
-                    body.Drive(false);
+                    body.StopRiding();
                     body.Root.gameObject.SetActive(false);
                 }
                 riding = null;
@@ -69,20 +71,21 @@ namespace TycoWorld.Gameplay
                 riding = bike;
                 var visuals = bike.Visuals;
                 anchor = visuals != null && visuals.LeanPivot != null ? visuals.LeanPivot : bike.transform;
+                anchors = RideAnchors.Of(bike);
                 body.Root.SetParent(anchor, false);
-                seatLocal = anchor.InverseTransformPoint(bike.Seat != null ? bike.Seat.position : bike.transform.position + Vector3.up * 0.86f);
+                seatLocal = anchor.InverseTransformPoint(anchors.seat.position);
                 // The bike's own primitive rider stays switched off while the real body rides.
                 if (visuals != null && visuals.Rider != null)
                     foreach (var r in visuals.Rider.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
             }
             if (!body.Root.gameObject.activeSelf) body.Root.gameObject.SetActive(true);
-            body.Drive(true);
+            if (body.Riding != anchors || !body.IsRider) body.Ride(anchors, true);
             body.Root.localRotation = Quaternion.identity;
             var hips = body.Bone(HumanBodyBones.Hips);
             if (hips != null)
             {
                 var hipsLocal = anchor.InverseTransformPoint(hips.position) - body.Root.localPosition;
-                body.Root.localPosition = seatLocal + new Vector3(0f, 0.05f, -0.04f) - hipsLocal;
+                body.Root.localPosition = seatLocal - hipsLocal;
             }
             else body.Root.localPosition = seatLocal + Vector3.down * 0.45f;
         }

@@ -82,6 +82,8 @@ namespace TycoWorld.Gameplay.Tests
         public static void World(KampungData d)
         {
             KampungFixture.StreetGrid(d, 16, 30f);
+            // The phone map's road lines, for routes (the GPS and the ojek's time).
+            d.mapRoads = d.walkLanes;
             var spots = new List<Spot>
             {
                 new Spot { kind = SpotKind.Kos, position = O + new Vector3(0f, 0f, -30f) },
@@ -272,7 +274,8 @@ namespace TycoWorld.Gameplay.Tests
             Assert.IsTrue(jobs.StartJob(ojek));
             float trip = MissionContext.Flat(ojek.Pickup, ojek.Drop);
             Assert.That(trip, Is.InRange(OjekMission.TripMin, OjekMission.TripMax));
-            Assert.AreEqual(OjekMission.BaseFare + OjekMission.PerMetre * Mathf.RoundToInt(trip) / 500 * 500, ojek.Reward);
+            Assert.AreEqual(OjekMission.BaseFare + OjekMission.PerMetre * Mathf.RoundToInt(ojek.RouteLength) / 500 * 500, ojek.Reward,
+                "the fare goes by the road distance");
 
             Go(ojek.Pickup + new Vector3(1f, 0f, 0f));
             Tick(20);
@@ -302,6 +305,40 @@ namespace TycoWorld.Gameplay.Tests
             Assert.AreEqual(1, jobs.LeaverCount);
             TickUntil(() => jobs.LeaverCount == 0, 10f);
             Assert.IsTrue(ojek.Passenger == null, "gone after walking off");
+        }
+
+        [Test]
+        public void Ojek_Time_FollowsTheRouteOnTheRoads_NotTheCrowFlight()
+        {
+            var ojek = jobs.Get<OjekMission>();
+            Assert.IsTrue(jobs.StartJob(ojek));
+            var route = fx.Director.Roads.Route(new Vector2(ojek.Pickup.x, ojek.Pickup.z), new Vector2(ojek.Drop.x, ojek.Drop.z));
+            Assert.IsNotNull(route);
+            float length = RoadGraph.Length(route);
+            Assert.AreEqual(length, ojek.RouteLength, 0.5f);
+            Assert.GreaterOrEqual(ojek.RouteLength, MissionContext.Flat(ojek.Pickup, ojek.Drop) - 0.5f, "roads are never shorter than the crow flies");
+            Assert.AreEqual(length / OjekMission.TripSpeed + OjekMission.TripMargin, ojek.TripSeconds, 0.01f);
+            Assert.LessOrEqual(OjekMission.TripSpeed, 5f, "an average a rider keeps through kampung turns and gang (18 km/h)");
+            Assert.GreaterOrEqual(OjekMission.TripMargin, 60f, "time to stop, let the fare on and find the way");
+        }
+
+        [Test]
+        public void Ojek_Destinations_Vary_AndNeverRepeatTheLastThree()
+        {
+            var ojek = jobs.Get<OjekMission>();
+            var drops = new List<Vector3>();
+            var names = new HashSet<string>();
+            for (int i = 0; i < 9; i++)
+            {
+                Assert.IsTrue(jobs.StartJob(ojek), "run " + i);
+                foreach (var earlier in drops.Skip(System.Math.Max(0, drops.Count - 3)))
+                    Assert.Greater(MissionContext.Flat(earlier, ojek.Drop), OjekMission.RepeatRadius, "run " + i + " goes somewhere new");
+                drops.Add(ojek.Drop);
+                names.Add(ojek.DropName);
+                jobs.Cancel();
+                Tick();
+            }
+            Assert.GreaterOrEqual(names.Count, 3, "gates, mosques, shops, houses...: " + string.Join(", ", names));
         }
 
         [Test]

@@ -22,14 +22,13 @@ namespace TycoWorld.Gameplay
 
         public const float ReachRadius = 6f, GiveUpRadius = 9f, MaxBoardSpeed = 1f, WalkSpeed = 1.3f;
         public const float MountSeconds = 0.8f, DismountSeconds = 1f;
-        /// <summary>The pillion sits this far behind the rider's seat.</summary>
-        public const float PillionBack = 0.42f;
 
         readonly MissionContext context;
         readonly GameObject person;
         readonly CharacterRig rig;
         readonly Collider body;
         Motorbike bike;
+        RideAnchors anchors;
         Transform anchor;
         bool inCar;
         Vector3 seatLocal, startLocal, startWorld, sidePoint;
@@ -123,8 +122,8 @@ namespace TycoWorld.Gameplay
             }
             var visuals = bike.Visuals;
             anchor = visuals != null && visuals.LeanPivot != null ? visuals.LeanPivot : bike.transform;
-            var seat = bike.Seat != null ? bike.Seat.position : bike.transform.position + Vector3.up * 0.86f;
-            seatLocal = anchor.InverseTransformPoint(seat - bike.transform.forward * PillionBack);
+            anchors = RideAnchors.Of(bike);
+            seatLocal = anchor.InverseTransformPoint(anchors.pillion.position);
             person.transform.SetParent(anchor, true);
             startLocal = person.transform.localPosition;
             startRotation = person.transform.localRotation;
@@ -143,7 +142,10 @@ namespace TycoWorld.Gameplay
             float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / MountSeconds));
             person.transform.localPosition = Vector3.Lerp(startLocal, SeatRoot(), k);
             person.transform.localRotation = Quaternion.Slerp(startRotation, Quaternion.identity, k);
-            if (t >= MountSeconds) State = Phase.Riding;
+            if (t < MountSeconds) return;
+            // Seated: feet onto the footrests.
+            if (rig != null) rig.Ride(anchors, false);
+            State = Phase.Riding;
         }
 
         /// <summary>Where the person's root goes so their hips rest on the pillion (from the current pose).</summary>
@@ -152,7 +154,7 @@ namespace TycoWorld.Gameplay
             var hips = rig != null ? rig.Bone(HumanBodyBones.Hips) : null;
             if (hips == null) return seatLocal + Vector3.down * 0.45f;
             var hipsLocal = anchor.InverseTransformPoint(hips.position) - person.transform.localPosition;
-            return seatLocal + Vector3.up * 0.06f - hipsLocal;
+            return seatLocal - hipsLocal;
         }
 
         void Ride(bool wantOff)
@@ -175,7 +177,7 @@ namespace TycoWorld.Gameplay
             person.transform.SetParent(context.Root, true);
             startWorld = person.transform.position;
             t = 0f;
-            if (rig != null) rig.Sit(false);
+            if (rig != null) rig.StopRiding();
             State = Phase.Dismounting;
         }
 
@@ -202,7 +204,7 @@ namespace TycoWorld.Gameplay
             if (person.transform.parent != context.Root) person.transform.SetParent(context.Root, true);
             if (bike != null && (State == Phase.Mounting || State == Phase.Riding)) person.transform.position = context.OnGround(MountPoint(bike, inCar));
             person.transform.rotation = Quaternion.Euler(0f, person.transform.eulerAngles.y, 0f);
-            if (rig != null) rig.Sit(false);
+            if (rig != null) rig.StopRiding();
             Finish();
         }
     }

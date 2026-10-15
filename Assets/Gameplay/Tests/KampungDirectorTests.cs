@@ -64,9 +64,13 @@ namespace TycoWorld.Gameplay.Tests
         public void E_OpensTheShop_AndTheSamePress_DoesNotCloseIt_TheNextOneDoes()
         {
             var counter = fx.Director.Stalls[0].Counter;
+            // One frame as Unity runs it: the player's Interactor (order 0) uses the counter on E, then the director
+            // (order 110) ticks and reads the same E press.
             Assert.IsTrue(counter.Interact(fx.Context));
+            fx.Director.Tick(1f / 60f);
             fx.Director.HandleKeys(false, true);
             Assert.IsTrue(fx.Director.Shop.IsOpen, "the opening press is not also a closing press");
+            // The next frame, a new press closes it.
             fx.Director.Tick(1f / 60f);
             fx.Director.HandleKeys(false, true);
             Assert.IsFalse(fx.Director.Shop.IsOpen);

@@ -123,6 +123,19 @@ namespace TycoWorld.Gameplay
             return null;
         }
 
+        /// <summary>
+        /// Metres along the roads from <paramref name="a"/> to <paramref name="b"/> (the GPS route); 1.4 times the straight
+        /// line when no road joins them. Never shorter than the straight line.
+        /// </summary>
+        public float RouteLength(Vector3 a, Vector3 b)
+        {
+            float straight = Flat(a, b);
+            var roads = director.Roads;
+            var route = roads != null ? roads.Route(new Vector2(a.x, a.z), new Vector2(b.x, b.z)) : null;
+            if (route == null || route.Count < 2) return straight * 1.4f;
+            return Mathf.Max(RoadGraph.Length(route), straight);
+        }
+
         /// <summary>A random house gate between min and max metres away; null when none.</summary>
         public Spot Door(Vector3 around, float min, float max)
         {

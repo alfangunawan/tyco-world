@@ -89,7 +89,7 @@ ModelImporter:
   humanDescription:
     serializedVersion: 3
     human:
-    - boneName: Root
+    - boneName: Hips
       humanName: Hips
       limit:
         min: {x: 0, y: 0, z: 0}
@@ -145,7 +145,7 @@ ModelImporter:
         value: {x: 0, y: 0, z: 0}
         length: 0
         modified: 0
-    - boneName: Hips
+    - boneName: Abdomen
       humanName: Spine
       limit:
         min: {x: 0, y: 0, z: 0}
@@ -153,7 +153,7 @@ ModelImporter:
         value: {x: 0, y: 0, z: 0}
         length: 0
         modified: 0
-    - boneName: Abdomen
+    - boneName: Torso
       humanName: Chest
       limit:
         min: {x: 0, y: 0, z: 0}
@@ -481,7 +481,7 @@ ModelImporter:
         value: {x: 0, y: 0, z: 0}
         length: 0
         modified: 0
-    - boneName: Torso
+    - boneName: Chest
       humanName: UpperChest
       limit:
         min: {x: 0, y: 0, z: 0}
@@ -726,35 +726,35 @@ ModelImporter:
       rotation: {x: 0.13467732, y: 0.23189344, z: 0.020468738, w: 0.96315545}
       scale: {x: 0.99999875, y: 0.9999999, z: 0.9999993}
     - name: UpperLeg.L
-      parentName: Root
-      position: {x: -0.0009685899, y: 0.010369303, z: -0.00027224826}
-      rotation: {x: 0.99903274, y: -0, z: -0, w: 0.04397282}
-      scale: {x: 1, y: 1.0000005, z: 0.99997264}
+      parentName: Hips
+      position: {x: -0.00097202766, y: 0.00038839362, z: -0.0002761141}
+      rotation: {x: 0.999675, y: -0, z: -0, w: -0.025495589}
+      scale: {x: 1, y: 1.0000005, z: 0.9999724}
     - name: LowerLeg.L
       parentName: UpperLeg.L
       position: {x: 7.4505804e-11, y: 0.004818153, z: 7.4505804e-11}
-      rotation: {x: 0.06759769, y: -0, z: -0, w: 0.99771273}
-      scale: {x: 1, y: 1.0000017, z: 1.0000011}
+      rotation: {x: 0.06759769, y: -0, z: -0, w: 0.9977127}
+      scale: {x: 1, y: 1.000003, z: 1.0000023}
     - name: Foot.L
       parentName: LowerLeg.L
       position: {x: -0, y: 0.0053482545, z: -5.122274e-11}
-      rotation: {x: -0.7254826, y: -0, z: -0, w: 0.68824065}
-      scale: {x: 1, y: 1.0000036, z: 1.0000002}
+      rotation: {x: -0.72548264, y: -0, z: -0, w: 0.6882406}
+      scale: {x: 1, y: 1.0000033, z: 1.0000001}
     - name: UpperLeg.R
-      parentName: Root
-      position: {x: 0.0009685899, y: 0.010369303, z: -0.00027224826}
-      rotation: {x: 0.99903274, y: -0, z: -0, w: 0.04397282}
-      scale: {x: 1, y: 1.0000005, z: 0.99997264}
+      parentName: Hips
+      position: {x: 0.00096515217, y: 0.00038839362, z: -0.0002761141}
+      rotation: {x: 0.999675, y: -0, z: -0, w: -0.025495589}
+      scale: {x: 1, y: 1.0000005, z: 0.9999724}
     - name: LowerLeg.R
       parentName: UpperLeg.R
       position: {x: -7.4505804e-11, y: 0.004818153, z: 7.4505804e-11}
-      rotation: {x: 0.06759769, y: -0, z: -0, w: 0.99771273}
-      scale: {x: 1, y: 1.0000017, z: 1.0000011}
+      rotation: {x: 0.06759769, y: -0, z: -0, w: 0.9977127}
+      scale: {x: 1, y: 1.000003, z: 1.0000023}
     - name: Foot.R
       parentName: LowerLeg.R
       position: {x: -0, y: 0.0053482545, z: -5.122274e-11}
-      rotation: {x: -0.7254826, y: -0, z: -0, w: 0.68824065}
-      scale: {x: 1, y: 1.0000036, z: 1.0000002}
+      rotation: {x: -0.72548264, y: -0, z: -0, w: 0.6882406}
+      scale: {x: 1, y: 1.0000033, z: 1.0000001}
     - name: Formal_Body
       parentName: Women_Formal(Clone)
       position: {x: -0, y: 0, z: 0}
