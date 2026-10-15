@@ -37,7 +37,7 @@ Semua model berlisensi **CC Attribution 4.0** dan diunduh dari Sketchfab dalam f
 | 13 | `carry` | Suzuki Carry kei truck low poly | alwayshasbean | https://sketchfab.com/models/6bc99e709e9748da98cc9ac676684510 | 2.246 | Pikap | 3,40 m |
 | 14 | `elf` | Isuzu Elf truck XYZ | ann_fenek | https://sketchfab.com/models/ee9e569d3fea439cb41166d07aeb7cca | 10.606 | Truk | 6,00 m |
 
-- File GLB polisi berisi dua mobil. Yang dipakai hanya satu subtree, yaitu sedan polisi. Pilihan ini dicatat di tabel spec model (§3).
+- File GLB polisi berisi dua mobil dalam **satu mesh**. Yang dipakai hanya sedan: builder memotong segitiga ke sebuah kotak (`KeepRegion`, §3) dan menyimpan mesh hasil potongan.
 - Panjang asli dipakai untuk menormalkan skala. Model diskala seragam sampai panjang bounds-nya sama dengan angka di tabel, dengan toleransi 2%.
 
 ## 2. Unduh dan impor
@@ -50,11 +50,12 @@ Semua model berlisensi **CC Attribution 4.0** dan diunduh dari Sketchfab dalam f
 - **Penyimpanan:** setelah lolos cek, file disalin ke `Assets/Vehicles/Art/ThirdParty/<Pembuat>/<Id>.glb`. Setiap folder punya `SOURCES.md` yang mencatat judul, pembuat, link, lisensi, dan perubahan (skala, arah hadap, subtree yang dipakai).
 - **Importer:** paket resmi Unity **glTFast** (`com.unity.cloud.gltfast` 6.15.0).
   - Hierarki node tetap utuh, jadi roda bisa diputar dan setang bisa dibelokkan.
-  - Material diimpor sebagai URP Lit.
+  - Material diimpor ke shader graph glTFast `glTF-pbrMetallicRoughness` untuk URP (warna di properti `baseColorFactor`). Cat ulang mengisi properti itu.
+  - Koreksi Y-up dari Sketchfab ada di rotasi akar GLB; builder menumpuk yaw di atasnya.
   - Kalau tekstur PSX terlihat buram, filternya Bilinear dengan mipmap.
 - **Kredit:** CC-BY mewajibkan atribusi.
   - Menu jeda mendapat tombol **Kredit**. Isinya daftar semua aset pihak ketiga: kendaraan CC-BY, karakter CC0, galon CC-BY, dan tekstur ambientCG.
-  - Daftar itu dibaca dari satu file `Assets/Credits/Credits.txt` yang ditulis builder dari semua `SOURCES.md`.
+  - Daftar itu dibaca dari satu file `Assets/GameSettings/Resources/Credits.txt` (supaya bisa dimuat `Resources.Load`) yang ditulis builder dari semua tabel `SOURCES.md`, dibaca menurut header tiap tabel. Suara buatan proyek dan kandidat yang ditolak tidak ikut.
 
 ## 3. Spec model: `VehicleModelCatalog`
 
@@ -62,7 +63,7 @@ Satu tabel di kode editor, satu baris per model. Isinya diisi setelah GLB diperi
 
 - `id`, file, kelas, panjang asli.
 - Koreksi yaw supaya bagian depan model menghadap +Z.
-- Subtree yang dipakai (opsional).
+- Kotak potong (`KeepRegion`, opsional): kalau satu mesh berisi lebih dari satu kendaraan, hanya segitiga yang pusatnya di dalam kotak yang disimpan.
 - Nama node roda: depan dan belakang (boleh lebih dari satu, misalnya ban ganda Elf).
 - Node setang atau setir (opsional).
 - Material bodi yang boleh dicat. Livery tetap (polisi, angkot) tidak dicat.
@@ -73,6 +74,11 @@ Satu tabel di kode editor, satu baris per model. Isinya diisi setelah GLB diperi
 
 **Kalau nama node roda tidak ada,** misalnya karena roda menyatu dengan bodi, roda tidak berputar. Kondisi ini dicatat di report dan di `SOURCES.md`. Game tetap jalan.
 
+Dua kasus dari model yang diunduh:
+
+- **Setang yang menyatu dengan fairing** (Vario) tidak berbelok; hanya roda depan yang berbelok, dan pegangan tangan ikut fairing. Node lain yang ikut berbelok bersama setang ditulis di `ExtraSteerNodes` (Supra: garpu dan spakbor).
+- **Satu mesh per as roda** (angkot): roda berputar tapi tidak berbelok (`SolidFrontAxle`).
+
 ## 4. Prefab
 
 `VehicleModelBuilder` (editor) membuat satu prefab per model di `Assets/Vehicles/Prefabs/Models/`. Prefab bisa dibangun ulang (idempotent).
@@ -80,7 +86,7 @@ Satu tabel di kode editor, satu baris per model. Isinya diisi setelah GLB diperi
 **Struktur prefab:**
 
 ```
-<Id> (CharacterController + Motorbike + VehicleVisuals + StealVehicleInteractable siap pakai)
+<Id> (CharacterController + Motorbike + MotorbikeVisuals; kunci curian dipasang gameplay)
 ├─ Model        (instance GLB: diskala, diputar, berdiri di y = 0, dipusatkan di X/Z)
 ├─ Seat         (+ RideAnchors untuk motor)
 ├─ Hull         (BoxCollider dari bounds model; controller mengabaikannya, seperti mobil warga sekarang)
@@ -88,7 +94,7 @@ Satu tabel di kode editor, satu baris per model. Isinya diisi setelah GLB diperi
 └─ Audio        (mesin, klakson; klip dari VehicleAudioBuilder yang ada)
 ```
 
-- **`VehicleVisuals`** menggantikan `MotorbikeVisuals` untuk model baru. Isinya:
+- **`MotorbikeVisuals`** diperluas (`ConfigureModel`) untuk model baru, bukan kelas baru. Isinya:
   - array roda yang diputar sesuai kecepatan;
   - pivot setang/setir yang mengikuti input belok;
   - pivot condong (motor saja);
@@ -100,7 +106,7 @@ Satu tabel di kode editor, satu baris per model. Isinya diisi setelah GLB diperi
 
 ## 5. Kelas dan handling
 
-Semua kendaraan memakai controller arcade yang sama (`Motorbike`). Satu preset `BikeTuning` per kelas disimpan sebagai aset di `Assets/Vehicles/Config/Tuning_<Kelas>.asset`. Preset-preset ini menggantikan `VehicleFactory.CarTuning`.
+Semua kendaraan memakai controller arcade yang sama (`Motorbike`). Angka per kelas ada di `VehicleClassPresets`; tiap model punya aset `BikeTuning` sendiri di `Assets/Vehicles/Config/Tuning/<id>.asset` karena ukuran tubuhnya dihitung dari bounds model. Preset-preset ini menggantikan `VehicleFactory.CarTuning`.
 
 | Kelas | Maks | Akselerasi diam → maks | Laju belok rendah/tinggi | Condong | Kamera |
 |---|---|---|---|---|---|
@@ -141,7 +147,7 @@ Semua kendaraan memakai controller arcade yang sama (`Motorbike`). Satu preset `
 
 ## 8. Performa
 
-- **Anggaran per model:** maksimal 13 ribu segitiga (yang paling berat Supra, 12,6 ribu) dan maksimal 3 material.
+- **Anggaran per model:** maksimal 13 ribu segitiga (yang paling berat Supra, 12,6 ribu) dan maksimal 3 material. Lima file melampaui batas material (angkot 7, elf 11, l300 9, lmpv2 13, supra 12; semuanya warna datar). Dibiarkan karena pengukuran batch tetap di bawah +3% (lihat catatan verifikasi).
 - **Jumlah kendaraan parkir** tetap sama. Syaratnya: batch di titik kos dan jalan jam 10.00 naik paling banyak 3% dibanding sebelum perubahan.
 - **Bayangan:** kendaraan parkir lebih dari 40 m tidak membuat bayangan, sama seperti pejalan kaki.
 
@@ -165,7 +171,7 @@ Semua kendaraan memakai controller arcade yang sama (`Motorbike`). Satu preset `
 - **`VehicleFactory`:**
   - campuran kendaraan parkir deterministik menurut indeks;
   - kalau prefab tidak ada, dipakai kendaraan primitif dan counter report naik.
-- **Kredit:** setiap entri `SOURCES.md` di `Assets/**/ThirdParty` muncul di `Credits.txt`.
+- **Kredit:** setiap baris tabel `SOURCES.md` di Assets muncul di `Credits.txt`, kecuali suara buatan proyek dan kandidat yang ditolak.
 
 **Play** (save user dicadangkan dulu, seperti biasa):
 - Screenshot tiap model.
