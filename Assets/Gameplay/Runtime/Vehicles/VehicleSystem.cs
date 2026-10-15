@@ -503,7 +503,7 @@ namespace TycoWorld.Gameplay
         {
             foreach (var v in vehicles)
                 if (v.Active && v.Moved && !v.Body.IsMounted)
-                    yield return new MapMarker { Position = new Vector2(v.Position.x, v.Position.z), Color = new Color(0.9f, 0.25f, 0.25f), Size = 6f };
+                    yield return new MapMarker { Position = new Vector2(v.Position.x, v.Position.z), Color = MapColors.Stolen, Size = 6f };
         }
     }
 }

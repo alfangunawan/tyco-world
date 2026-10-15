@@ -16,6 +16,18 @@ namespace TycoWorld.Gameplay
     /// The phone map (spec #6 §2): the baked road lines drawn with Painter2D around the player, north up, with shop dots,
     /// the kos, mission markers and the player's arrow. Zoom in steps.
     /// </summary>
+    /// <summary>Marker colours on the phone map, shared by the systems that add markers and the legend that explains them.</summary>
+    public static class MapColors
+    {
+        public static readonly Color Shop = new Color(0.3f, 0.7f, 1f);
+        /// <summary>Konter and minimarket: where the data package for the Kerjaan app is sold.</summary>
+        public static readonly Color DataShop = new Color(0.8f, 0.45f, 1f);
+        public static readonly Color Kos = new Color(1f, 0.85f, 0.2f);
+        public static readonly Color Target = new Color(1f, 0.6f, 0.1f);
+        public static readonly Color PakRt = new Color(0.35f, 0.95f, 0.45f);
+        public static readonly Color Stolen = new Color(0.9f, 0.25f, 0.25f);
+    }
+
     public sealed class MapView : VisualElement
     {
         static readonly float[] Zooms = { 0.35f, 0.6f, 1f, 1.6f };

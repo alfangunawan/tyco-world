@@ -15,6 +15,7 @@ namespace TycoWorld.Gameplay
         /// <summary>Pak RT keeps the hours of the Ronda Malam job he offers.</summary>
         public const float PakRtFrom = 21f, PakRtUntil = 2f;
         public const string PakRtPrompt = "[E] Ngobrol dengan Pak RT";
+        public const string PakRtOutToast = "Pak RT jaga di pos ronda dekat kos (lentera, titik hijau di Peta). Ada kerjaan ronda.";
 
         readonly List<Mission> missions = new List<Mission>();
         readonly List<JobListing> listings = new List<JobListing>();
@@ -22,7 +23,8 @@ namespace TycoWorld.Gameplay
         Transform root;
         MissionContext context;
         GameObject beacon;
-        GameObject pakRt;
+        GameObject pakRt, pakRtPost;
+        bool wasPakRtHours;
         float time;
         int started;
 
@@ -32,6 +34,8 @@ namespace TycoWorld.Gameplay
         public MissionContext Context => context;
         public GameObject Beacon => beacon;
         public GameObject PakRt => pakRt;
+        /// <summary>The lantern and kentongan at his post, shown with him.</summary>
+        public GameObject PakRtPost => pakRtPost;
         /// <summary>Raised when a job ends either way (tests, sounds later).</summary>
         public event Action<Mission> Ended;
 
@@ -219,7 +223,9 @@ namespace TycoWorld.Gameplay
         {
             var target = Active != null ? Active.Target : null;
             if (target.HasValue)
-                yield return new MapMarker { Position = new Vector2(target.Value.x, target.Value.z), Color = new Color(1f, 0.6f, 0.1f), Size = 8f };
+                yield return new MapMarker { Position = new Vector2(target.Value.x, target.Value.z), Color = MapColors.Target, Size = 8f };
+            if (pakRt != null && pakRt.activeSelf)
+                yield return new MapMarker { Position = new Vector2(pakRt.transform.position.x, pakRt.transform.position.z), Color = MapColors.PakRt, Size = 6f };
         }
 
         // ---------- Pak RT ----------
@@ -239,17 +245,34 @@ namespace TycoWorld.Gameplay
             // His post: the one nearest the kos (fixed, so he never jumps between posts as you walk).
             var kos = context.NearestLandmark(SpotKind.Kos, context.PlayerPosition);
             var post = ronda != null ? context.NearestLandmark(SpotKind.PosRonda, kos != null ? kos.position : context.PlayerPosition) : null;
-            bool want = post != null && PakRtHours && Active != ronda;
+            bool hours = PakRtHours;
+            bool want = post != null && hours && Active != ronda;
+            // He comes out at nine: say so once (only when the player is free to help).
+            if (hours && !wasPakRtHours && post != null && Active == null) director.Toast(PakRtOutToast);
+            wasPakRtHours = hours;
             if (!want)
             {
                 if (pakRt != null) pakRt.SetActive(false);
+                if (pakRtPost != null) pakRtPost.SetActive(false);
                 return;
             }
+            if (pakRtPost == null)
+            {
+                pakRtPost = new GameObject("PosRonda");
+                pakRtPost.transform.SetParent(root, false);
+                pakRtPost.transform.position = context.OnGround(post.position);
+                var lantern = MissionProps.Lantern(pakRtPost.transform, director.Palette);
+                lantern.transform.localPosition = new Vector3(0.6f, 0f, 2.2f);
+                MissionProps.Kentongan(pakRtPost.transform, director.Palette).transform.localPosition = new Vector3(2.6f, 0f, 0.6f);
+            }
+            if (!pakRtPost.activeSelf) pakRtPost.SetActive(true);
             if (pakRt == null)
             {
                 var look = PersonLook.From(0xA7A7UL);
                 look.Hijab = false;
-                look.Shirt = new Color32(60, 70, 50, 255);
+                // A batik shirt and a sarung: light enough to read under the lantern.
+                look.Shirt = new Color32(196, 128, 52, 255);
+                look.Pants = new Color32(60, 96, 140, 255);
                 pakRt = context.Person("PakRT", context.OnGround(post.position + new Vector3(1.6f, 0f, 1.6f)), Vector3.forward, look, () => PakRtPrompt, TalkToPakRt);
                 Physics.SyncTransforms();
             }

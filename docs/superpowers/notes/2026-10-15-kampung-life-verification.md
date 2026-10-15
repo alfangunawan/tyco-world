@@ -138,6 +138,26 @@ Smoke test Play setelah perbaikan:
 - Tab membuka dan menutup HP.
 - Console tanpa error.
 
+## Masukan playtest user: "gak tau misinya di mana", "gak bisa lihat Pak RT"
+
+Perubahannya:
+
+- **Hari pertama:**
+  - Paket data gratis di hari ke-1 (juga untuk save lama yang masih hari ke-1).
+  - Toast "Cari kerja sampingan: Tab > Kerjaan".
+- **Tab Kerjaan:** menjelaskan cara kerja misi (tujuan muncul di sekitarmu), tempat membeli data, dan Pak RT.
+- **Peta:** warna dengan legenda:
+  - oranye: tujuan kerja;
+  - kuning: kos;
+  - biru: toko;
+  - ungu: konter dan minimarket (paket data);
+  - hijau: Pak RT.
+- **Pak RT:**
+  - Pos-nya kini punya lentera (lampu titik hangat, jangkauan 9 m) dan kentongan, dan bajunya batik yang lebih terang.
+  - Pukul 21.00 muncul toast satu kali yang menunjuk ke pos.
+  - Screenshot `pakrt_night.png`: dari 10 m di jalan, ia jelas terlihat di bawah lentera.
+- **Tes:** suite penuh 1092/0. Save milik user dicadangkan sebelum uji Play dan dipastikan tidak berubah setelahnya.
+
 ## Catatan
 
 - Membobol kunci tidak mengunci kaki. Melangkah lebih dari 0,6 m membatalkannya. Kalau pemain tetap diam di depan saksi, ia pasti tertangkap: saksi 9 m sampai dalam ±1,7 s, sedangkan membobol butuh 3–4 s. Ini disengaja.

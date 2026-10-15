@@ -117,6 +117,14 @@ namespace TycoWorld.Gameplay
         public bool IsMissionDone(string id) => id != null && missionsDone.Contains(id);
 
         /// <summary>The game clock passed midnight.</summary>
+        /// <summary>A data package for today without paying (the first day's welcome).</summary>
+        public void GrantData()
+        {
+            if (DataUntilDay >= Day) return;
+            DataUntilDay = Day;
+            Changed?.Invoke();
+        }
+
         public void NextDay()
         {
             Day++;

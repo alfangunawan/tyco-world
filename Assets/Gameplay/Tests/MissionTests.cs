@@ -392,9 +392,11 @@ namespace TycoWorld.Gameplay.Tests
         [Test]
         public void WithoutData_TheRunningJob_CanStillBeCancelledFromThePhone()
         {
-            Assert.IsFalse(fx.Director.State.HasData);
             var galon = jobs.Get<GalonMission>();
             Assert.IsTrue(jobs.StartJob(galon));
+            // The first day's free package runs out at midnight.
+            fx.Director.State.NextDay();
+            Assert.IsFalse(fx.Director.State.HasData);
             fx.Director.TogglePhone();
             fx.Director.Phone.Select(PhoneTab.Kerjaan);
             Tick();
@@ -402,6 +404,47 @@ namespace TycoWorld.Gameplay.Tests
             Tick();
             Assert.IsNull(jobs.Active);
             Assert.IsFalse(fx.Director.Phone.Click(PhoneView.JobPrefix + "ojek"), "new jobs still need data");
+        }
+
+        [Test]
+        public void ANewGame_ComesWithData_AndSaysWhereTheJobsAre()
+        {
+            Assert.IsTrue(fx.Director.State.HasData, "day 1's package is free");
+            Assert.IsTrue(fx.Director.Hud.Toasts.Contains(KampungDirector.FirstDayJobsToast));
+            fx.Director.TogglePhone();
+            fx.Director.Phone.Select(PhoneTab.Kerjaan);
+            Tick();
+            Assert.IsTrue(fx.Director.Phone.Click(PhoneView.JobPrefix + "galon"), "jobs can be taken straight away");
+            Assert.AreSame(jobs.Get<GalonMission>(), jobs.Active);
+        }
+
+        [Test]
+        public void PakRt_ComesOutAtNine_WithALitPost_AndSaysSo()
+        {
+            fx.Director.JumpClock(20.9f);
+            Tick();
+            Assert.IsTrue(jobs.PakRtPost == null || !jobs.PakRtPost.activeSelf);
+            fx.Director.JumpClock(21.1f);
+            Tick();
+            Assert.IsTrue(jobs.PakRt.activeSelf);
+            Assert.IsTrue(jobs.PakRtPost.activeSelf);
+            var lamp = jobs.PakRtPost.GetComponentInChildren<Light>();
+            Assert.IsNotNull(lamp, "a lantern lights him up at night");
+            Assert.Less(Vector3.Distance(lamp.transform.position, jobs.PakRt.transform.position), 4f);
+            Assert.IsTrue(fx.Director.Hud.Toasts.Contains(MissionSystem.PakRtOutToast));
+            int toasts = fx.Director.Hud.Toasts.Count(t => t == MissionSystem.PakRtOutToast);
+            Tick(5);
+            Assert.AreEqual(toasts, fx.Director.Hud.Toasts.Count(t => t == MissionSystem.PakRtOutToast), "said once");
+        }
+
+        [Test]
+        public void PakRt_ShowsOnTheMap_WhileHeIsOut()
+        {
+            fx.Director.JumpClock(21.5f);
+            Tick();
+            var marker = fx.Director.MarkerSources.SelectMany(s => s()).Where(m => m.Color == MapColors.PakRt).ToList();
+            Assert.AreEqual(1, marker.Count);
+            Assert.Less(Vector2.Distance(marker[0].Position, new Vector2(jobs.PakRt.transform.position.x, jobs.PakRt.transform.position.z)), 0.01f);
         }
 
         [Test]

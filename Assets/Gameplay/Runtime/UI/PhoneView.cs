@@ -127,10 +127,16 @@ namespace TycoWorld.Gameplay
                     minus.style.width = plus.style.width = 44f;
                     zoomRow.Add(minus);
                     zoomRow.Add(plus);
-                    var legend = GameplayStyle.Text("  ● toko  ● kos  ● tujuan", 13f);
-                    legend.style.color = GameplayStyle.DimText;
-                    zoomRow.Add(legend);
                     body.Add(zoomRow);
+                    var legend = GameplayStyle.Row();
+                    legend.style.flexWrap = Wrap.Wrap;
+                    legend.style.marginTop = 4f;
+                    Legend(legend, MapColors.Target, "tujuan kerja");
+                    Legend(legend, MapColors.Kos, "kos");
+                    Legend(legend, MapColors.Shop, "toko");
+                    Legend(legend, MapColors.DataShop, "paket data");
+                    Legend(legend, MapColors.PakRt, "Pak RT (malam)");
+                    body.Add(legend);
                     map.style.height = 470f;
                     map.style.marginTop = 6f;
                     body.Add(map);
@@ -227,7 +233,8 @@ namespace TycoWorld.Gameplay
         {
             if (!state.HasData)
             {
-                body.Add(Dim("Butuh paket data. Beli Paket data harian di konter pulsa atau minimarket."));
+                body.Add(Dim("Butuh paket data untuk lihat kerjaan. Beli di konter pulsa (08.00-22.00) atau minimarket 24 jam: titik ungu di tab Peta."));
+                body.Add(Dim("Malam (21.00-02.00) Pak RT di pos ronda menawarkan Ronda Malam tanpa paket data: titik hijau di Peta."));
                 // A job already running can still be cancelled.
                 var running = new List<JobListing>();
                 if (jobs != null)
@@ -236,6 +243,7 @@ namespace TycoWorld.Gameplay
                 if (running.Count == 0) return;
                 jobs = running;
             }
+            body.Add(Dim("Ambil satu kerjaan; tujuannya muncul di sekitarmu (pilar cahaya, panah di atas layar, titik oranye di Peta)."));
             if (jobs == null || jobs.Count == 0)
             {
                 body.Add(Dim("Belum ada kerjaan. Coba lagi nanti."));
@@ -266,6 +274,20 @@ namespace TycoWorld.Gameplay
                 card.Add(row);
                 body.Add(card);
             }
+        }
+
+        /// <summary>One "● label" entry, kept together when the legend wraps.</summary>
+        static void Legend(VisualElement row, Color color, string text)
+        {
+            var entry = GameplayStyle.Row();
+            entry.style.marginRight = 8f;
+            var dot = GameplayStyle.Text("●", 13f);
+            dot.style.color = color;
+            entry.Add(dot);
+            var label = GameplayStyle.Text(text, 13f);
+            label.style.color = GameplayStyle.DimText;
+            entry.Add(label);
+            row.Add(entry);
         }
 
         static VisualElement Line(string label, string value, float size)

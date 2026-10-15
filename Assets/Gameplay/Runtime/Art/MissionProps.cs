@@ -72,6 +72,28 @@ namespace TycoWorld.Gameplay
             return root;
         }
 
+        /// <summary>A pole with a warm bulb and a small point light: the pos ronda is lit at night so Pak RT can be seen from the road.</summary>
+        public static GameObject Lantern(Transform parent, Palette palette)
+        {
+            var root = new GameObject("Lentera");
+            root.transform.SetParent(parent, false);
+            var wood = palette.Get(new Color32(90, 64, 40, 255));
+            Primitives.Part(PrimitiveType.Cube, root.transform, "Pole", new Vector3(0f, 1.3f, 0f), new Vector3(0.08f, 2.6f, 0.08f), wood);
+            Primitives.Part(PrimitiveType.Cube, root.transform, "Arm", new Vector3(0f, 2.55f, 0.2f), new Vector3(0.05f, 0.05f, 0.4f), wood);
+            var bulb = Primitives.Part(PrimitiveType.Sphere, root.transform, "Bulb", new Vector3(0f, 2.4f, 0.38f), new Vector3(0.16f, 0.16f, 0.16f),
+                palette.Glow(new Color32(255, 214, 140, 255), 3f));
+            bulb.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var light = new GameObject("Light").AddComponent<Light>();
+            light.transform.SetParent(root.transform, false);
+            light.transform.localPosition = new Vector3(0f, 2.3f, 0.38f);
+            light.type = LightType.Point;
+            light.range = 9f;
+            light.intensity = 3f;
+            light.color = new Color(1f, 0.82f, 0.55f);
+            light.shadows = LightShadows.None;
+            return root;
+        }
+
         /// <summary>A bamboo kentongan hanging from a post at the pos ronda.</summary>
         public static GameObject Kentongan(Transform parent, Palette palette)
         {

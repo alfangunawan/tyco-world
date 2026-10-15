@@ -33,6 +33,7 @@ namespace TycoWorld.Gameplay
         public const string SleepyToast = "Ngantuk berat. Pulang dan tidur di kos.";
         public const string NotSleepyToast = "Belum ngantuk.";
         public const string PullOverToast = "Pinggirkan kendaraan dulu.";
+        public const string FirstDayJobsToast = "Cari kerja sampingan: Tab > Kerjaan. Paket data hari ini gratis.";
 
         [SerializeField] KampungData data;
         [SerializeField] ItemCatalog catalog;
@@ -241,9 +242,12 @@ namespace TycoWorld.Gameplay
                 Hud.Render(State, 0f);
             }
             foreach (var s in systems) s.Begin(this);
+            // The first day comes with data, so the Kerjaan app (and the side jobs) can be found at once.
+            if (State.Day == 1) State.GrantData();
             Toast(continuing
                 ? "Hari " + State.Day + ". Uangmu " + RupiahFormat.Format(State.Wallet.Balance) + "."
-                : "Selamat datang di Sukabirus. Uangmu " + RupiahFormat.Format(State.Wallet.Balance) + ". Tab untuk buka HP.");
+                : "Selamat datang di Sukabirus. Uangmu " + RupiahFormat.Format(State.Wallet.Balance) + ".");
+            if (State.Day == 1) Toast(FirstDayJobsToast);
             Ready?.Invoke();
         }
 
@@ -567,9 +571,15 @@ namespace TycoWorld.Gameplay
         {
             var markers = new List<MapMarker>();
             foreach (var site in data.shops)
-                markers.Add(new MapMarker { Position = new Vector2(site.counter.x, site.counter.z), Color = new Color(0.3f, 0.7f, 1f), Size = 4f });
+            {
+                bool sellsData = site.type == ShopType.Konter || site.type == ShopType.Minimarket;
+                markers.Add(new MapMarker
+                {
+                    Position = new Vector2(site.counter.x, site.counter.z), Color = sellsData ? MapColors.DataShop : MapColors.Shop, Size = sellsData ? 5f : 4f
+                });
+            }
             foreach (var spot in data.spots)
-                if (spot.kind == SpotKind.Kos) markers.Add(new MapMarker { Position = new Vector2(spot.position.x, spot.position.z), Color = new Color(1f, 0.85f, 0.2f), Size = 6f });
+                if (spot.kind == SpotKind.Kos) markers.Add(new MapMarker { Position = new Vector2(spot.position.x, spot.position.z), Color = MapColors.Kos, Size = 6f });
             foreach (var source in MarkerSources)
             {
                 var extra = source();
