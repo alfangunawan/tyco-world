@@ -71,30 +71,33 @@ namespace TycoWorld.Vehicles.Authoring
         static GameObject SavePrefab(VehicleAssets a)
         {
             string path = VehiclePaths.MotorbikePrefab;
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
-            {
-                var root = new GameObject(MotorbikeBuilder.RootName);
-                try
-                {
-                    MotorbikeBuilder.Build(root, a.Tuning, a.Materials, a.Clips);
-                    PlaceholderPropFactory.SaveMeshes(root, VehiclePaths.MeshesFolder);
-                    return PrefabUtility.SaveAsPrefabAsset(root, path);
-                }
-                finally
-                {
-                    Object.DestroyImmediate(root);
-                }
-            }
-            var contents = PrefabUtility.LoadPrefabContents(path);
+            var vario = AssetDatabase.LoadAssetAtPath<GameObject>(VehicleModelFiles.Path("vario"));
+            bool exists = AssetDatabase.LoadAssetAtPath<GameObject>(path) != null;
+            var contents = exists ? PrefabUtility.LoadPrefabContents(path) : new GameObject(MotorbikeBuilder.RootName);
             try
             {
-                MotorbikeBuilder.Build(contents, a.Tuning, a.Materials, a.Clips);
+                if (vario != null)
+                {
+                    // The kos bike is the Vario model (spec vehicles-3a §6); its id, tuning asset and parking pose stay.
+                    var bounds = VehicleModelBuilder.Build(contents, VehicleModelCatalog.Get("vario"), vario, a.Tuning, a.Materials, a.Clips);
+                    VehicleClassPresets.FitBody(a.Tuning, bounds, VehicleClass.MotorMatic);
+                    Motorbike.ConfigureBody(contents.GetComponent<CharacterController>(), a.Tuning);
+                    var interactable = contents.GetComponent<MotorbikeInteractable>();
+                    if (interactable == null) interactable = contents.AddComponent<MotorbikeInteractable>();
+                    interactable.SetInteractionId(MotorbikeBuilder.InteractionId);
+                    EditorUtility.SetDirty(a.Tuning);
+                }
+                else
+                {
+                    MotorbikeBuilder.Build(contents, a.Tuning, a.Materials, a.Clips);
+                }
                 PlaceholderPropFactory.SaveMeshes(contents, VehiclePaths.MeshesFolder);
                 return PrefabUtility.SaveAsPrefabAsset(contents, path);
             }
             finally
             {
-                PrefabUtility.UnloadPrefabContents(contents);
+                if (exists) PrefabUtility.UnloadPrefabContents(contents);
+                else Object.DestroyImmediate(contents);
             }
         }
     }
