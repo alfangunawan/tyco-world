@@ -58,6 +58,7 @@ namespace TycoWorld.WorldGen.Tests
             var r = One(DeadEndKind.Boundary, 6f);
             int blocks = r.Props.Count(p => p.Variant == BarrierBuilder.ConcreteVariant);
             Assert.GreaterOrEqual(blocks, Mathf.FloorToInt(6f / settings.deadEnds.blockSpacing));
+            Assert.GreaterOrEqual(settings.deadEnds.blockSpacing, 1.85f, "a block is 1.9 m long: no overlapping blocks");
             Assert.AreEqual(1, r.Props.Count(p => p.Variant == BarrierBuilder.RoadClosedVariant));
             Assert.IsNotEmpty(r.Collider, "solid even before the prefabs are assigned");
         }
@@ -69,7 +70,7 @@ namespace TycoWorld.WorldGen.Tests
             foreach (var p in wall.Props) Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 0f), 0.5f, "pot: outward +Z is yaw 0");
             var edge = One(DeadEndKind.Boundary);
             foreach (var p in edge.Props.Where(p => p.Variant == BarrierBuilder.ConcreteVariant))
-                Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 90f), 0.5f, "blocks lie across the road");
+                Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 0f), 0.5f, "blocks (long along their local X) lie across the road");
             foreach (var p in edge.Props.Where(p => p.Variant == BarrierBuilder.RoadClosedVariant))
                 Assert.AreEqual(0f, Mathf.DeltaAngle(p.YawDegrees, 180f), 0.5f, "the sign faces back down the road");
         }

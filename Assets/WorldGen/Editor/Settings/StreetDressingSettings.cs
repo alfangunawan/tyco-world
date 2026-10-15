@@ -230,8 +230,8 @@ namespace TycoWorld.WorldGen.Authoring
         public int wallBand = 1;
         public float portalHeight = 1.0f;
         public float portalPost = 0.1f;
-        /// <summary>Spacing of the concrete blocks across a road at the map edge.</summary>
-        public float blockSpacing = 1.4f;
+        /// <summary>Spacing of the concrete blocks across a road at the map edge (one block is 1.9 m long).</summary>
+        public float blockSpacing = 1.9f;
         public string[] portalHighways = { "service", "track" };
         public Material stripe;
     }

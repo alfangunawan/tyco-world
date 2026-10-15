@@ -494,6 +494,35 @@ MonoBehaviour:
     twoStoreyShare: 0.4
     clearance: 0.5
     maxInfill: 2500
+  clearance:
+    enabled: 1
+    margin: 0.3
+    maxShift: 2
+    shiftExtra: 0.05
+    houseMaxArea: 300
+    sampleStep: 0.5
+    minPieceLength: 3
+  deadEnds:
+    enabled: 1
+    boundaryDistance: 20
+    endInset: 0.3
+    minWidth: 1.2
+    joinMargin: 0.5
+    buildingAhead: 2
+    wallHeight: 0.9
+    wallThickness: 0.2
+    wallBand: 1
+    portalHeight: 1
+    portalPost: 0.1
+    blockSpacing: 1.9
+    portalHighways:
+    - service
+    - track
+    stripe: {fileID: 2100000, guid: 80cbc3b01c3ac9a4cb34788cca968643, type: 2}
+  barrierPrefabs:
+  - {fileID: 6940033665339629237, guid: 632b655accd110c46afd1b710201c1a9, type: 3}
+  - {fileID: 6429244267739974120, guid: eebf4430cbfe84e46812f2781ca3c16e, type: 3}
+  - {fileID: 3362950537778187459, guid: 83a2077562b587a40a9b2ea69499edfc, type: 3}
   keyBuildings:
   - osmId: 1257717375
     label: Telkom University Landmark Tower (TULT)

@@ -122,6 +122,63 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void BarrierStripes_AreYellowAndBlackDiagonals()
+        {
+            var a = StreetTextureGenerator.BarrierStripes();
+            var b = StreetTextureGenerator.BarrierStripes();
+            try
+            {
+                CollectionAssert.AreEqual(a.GetPixels32(), b.GetPixels32());
+                Color yellow = a.GetPixel(4, 4), black = a.GetPixel(4 + a.width / 4, 4);
+                Assert.Greater(yellow.r, 0.7f);
+                Assert.Greater(yellow.g, 0.55f);
+                Assert.Less(yellow.b, 0.3f);
+                Assert.Less(black.grayscale, 0.15f);
+                var along = a.GetPixel(4 + a.width / 4, 4 - a.width / 4 + a.width);
+                Assert.IsTrue(along.r > 0.7f && along.b < 0.3f, "diagonal: the same yellow band one step along x and back along y");
+            }
+            finally
+            {
+                Object.DestroyImmediate(a);
+                Object.DestroyImmediate(b);
+            }
+        }
+
+        [Test]
+        public void BarrierPrefabs_AreBuilt_Solid_AndOfASensibleSize()
+        {
+            var prefabs = BarrierArt.BuildPrefabs(null);
+            Assert.AreEqual(3, prefabs.Length);
+            float[,] height = { { 0.5f, 0.9f }, { 0.6f, 1.0f }, { 1.2f, 2.0f } };
+            for (int i = 0; i < 3; i++)
+            {
+                var p = prefabs[i];
+                Assert.IsNotNull(p, "prefab " + i);
+                Assert.IsNotNull(p.GetComponent<Collider>(), p.name + " is solid");
+                var renderers = p.GetComponentsInChildren<Renderer>();
+                Assert.IsNotEmpty(renderers, p.name);
+                var b = renderers[0].bounds;
+                foreach (var r in renderers) b.Encapsulate(r.bounds);
+                Assert.That(b.size.y, Is.InRange(height[i, 0], height[i, 1]), p.name + " height");
+                Assert.AreEqual(0f, b.min.y, 0.02f, p.name + " stands on the ground");
+            }
+            var sign = prefabs[BarrierBuilder.RoadClosedVariant].GetComponentInChildren<TextMesh>();
+            Assert.IsNotNull(sign, "the barricade carries its board");
+            Assert.AreEqual("JALAN DITUTUP", sign.text);
+        }
+
+        [Test]
+        public void SavedSettings_UseTheBarrierPrefabs_AndTheStripeMaterial()
+        {
+            var s = UnityEditor.AssetDatabase.LoadAssetAtPath<WorldGenSettings>(WorldGenPaths.SettingsAsset);
+            Assert.IsNotNull(s);
+            Assert.AreEqual(3, s.barrierPrefabs.Length);
+            Assert.IsTrue(s.barrierPrefabs.All(p => p != null));
+            Assert.IsNotNull(s.deadEnds.stripe);
+            Assert.IsNotNull(s.deadEnds.stripe.GetTexture("_BaseMap"));
+        }
+
+        [Test]
         public void KerbStripes_AreDarkThenLightAlongU()
         {
             var a = StreetTextureGenerator.KerbStripes();
