@@ -69,6 +69,21 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void Details_UseTheDetailDistance()
+        {
+            var wall = fx.Cube("Frontage/Chunk_0_0", new Vector3(75.5f, 0f, 0f));
+            var edge = fx.Cube("RoadEdges/Chunk_1_0", new Vector3(45.5f, 0f, 0f));
+            var tree = fx.Cube("Props/Trees/Chunk_0_0", new Vector3(75.5f, 0f, 0f));
+            culler.ViewDistance = 300f;
+            culler.PropDistance = 180f;
+            culler.DetailDistance = 60f;
+            culler.Tick(0.25f);
+            Assert.IsFalse(Shown(wall), "75 m > 60 m");
+            Assert.IsTrue(Shown(edge), "45 m < 60 m");
+            Assert.IsTrue(Shown(tree), "props keep their own distance");
+        }
+
+        [Test]
         public void Hysteresis_KeepsStateWithin10Metres()
         {
             var b = fx.Cube("Buildings/Chunk_1_0", new Vector3(105.5f, 0f, 0f));

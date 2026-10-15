@@ -144,6 +144,47 @@ namespace TycoWorld.WorldGen.Tests
             }
         }
 
+        /// <summary>
+        /// A left turn of 90° cut by a 2.2 m chamfer (two 45° turns). Inside, an offset line beyond 2.2 / (2 tan 22.5°) ≈ 2.66 m
+        /// folds over the chamfer: the outer gutter lines (hw + 0.38 … 0.8) do, the shoulder lines (hw − 0.05, hw + 0.3) do not.
+        /// </summary>
+        static Vector2[] TightBend()
+        {
+            float c = 2.2f * Mathf.Sqrt(0.5f);
+            return new[] { V(-300, -150), V(-260, -150), V(-260 + c, -150 + c), V(-260 + c, -110) };
+        }
+
+        static bool OnTop(MeshData m, int sub, Vector2 p, float y)
+        {
+            var idx = m.Indices(sub);
+            for (int i = 0; i + 2 < idx.Count; i += 3)
+            {
+                Vector3 a = m.Vertices[idx[i]], b = m.Vertices[idx[i + 1]], c = m.Vertices[idx[i + 2]];
+                if (Mathf.Abs(a.y - y) > 1e-4f || Mathf.Abs(b.y - y) > 1e-4f || Mathf.Abs(c.y - y) > 1e-4f) continue;
+                if (Polygon2D.ContainsPoint(new List<Vector2> { new Vector2(a.x, a.z), new Vector2(b.x, b.z), new Vector2(c.x, c.z) }, p)) return true;
+            }
+            return false;
+        }
+
+        [Test]
+        public void TightBend_InsideStripsStayWhereTheOuterLipFoldsAway()
+        {
+            var fx = new StreetFixture(settings, osm => osm.Way(2003, TightBend(), false, ("highway", "residential")));
+            var r = Build(fx);
+            var run = RunsOf(r, 2003, 1).Single();
+            var chain = run.Chain;
+            // Walk the mitred middle line of the shoulder (hw + 0.15, which does not fold) through the corner.
+            float shoulderMiddle = chain.HalfWidth + settings.roadEdges.shoulderWidth * 0.5f;
+            var along = new List<float>();
+            var middle = Polyline2D.Offset(Polyline2D.Slice(chain.Points, chain.Cum, 35f, 50f, along), along, shoulderMiddle, new List<float>());
+            var cum = Polyline2D.Cumulative(middle);
+            for (float u = 0f; u <= cum[cum.Length - 1]; u += 0.1f)
+            {
+                var p = Polyline2D.PointAt(middle, cum, u, out _);
+                Assert.IsTrue(r.Gutter.Values.Any(m => OnTop(m, RoadEdgeBuilder.GutterConcrete, p, settings.roadEdges.edgeBaseY)), "shoulder missing at " + p);
+            }
+        }
+
         [Test]
         public void RoadLeavingTheWorld_EdgesStayInside()
         {

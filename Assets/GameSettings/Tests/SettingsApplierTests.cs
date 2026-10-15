@@ -78,6 +78,7 @@ namespace TycoWorld.GameSettings.Tests
             Assert.IsTrue(player.InvertY);
             Assert.AreEqual(300f, culler.ViewDistance);
             Assert.AreEqual(180f, culler.PropDistance, 1e-3f);
+            Assert.AreEqual(120f, culler.DetailDistance, 1e-3f);
             Assert.AreEqual(2.3f / 300f, director.MinFogDensity, 1e-6f);
             Assert.AreEqual(8, director.Lamps.LightBudget);
             Assert.AreEqual(180f, director.Lamps.MaxLightDistance, 1e-3f);

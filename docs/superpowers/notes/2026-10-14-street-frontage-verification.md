@@ -79,6 +79,91 @@ Kriteria: batches ≤ +15%, fps ≥ 90% dari before. Tiga dari enam titik gagal 
 
 Hasil: fps lulus di semua enam titik (>= 90%); batches masih gagal di empat titik (road dan high, kedua jam). Mitigasi bayangan dan wajah tersembunyi hampir tidak menggeser jumlah batch (batch ditentukan jumlah renderer chunk, bukan segitiga); tris turun (kos 10: 431k -> 408k). Nilai road 10 (7058) lebih tinggi dari Task 16 (6419) pada titik yang sama; selisih ini tidak dijelaskan oleh perubahan kode di atas dan dicatat apa adanya. Tidak ada tuning lain dan tidak ada waiver dari user.
 
+## Frontage polish + perf pass (branch feature/frontage-polish)
+
+Desain: `docs/superpowers/specs/2026-10-14-frontage-polish-design.md`.
+
+### Metode ukur batch yang baru
+
+Pembacaan `UnityStats.drawCalls` satu frame (dipakai `McpPerfProbe.Report`) ternyata naik-turun sampai ±15% antar-pembacaan. Akibatnya angka "+25–33%" di bagian sebelumnya terlalu tinggi. Metode baru:
+
+- Batch dihitung sebagai rata-rata `UnityStats.drawCalls` selama 90 frame, setelah jeda 60 frame sesudah `Place` dan `SetTime`. Hasilnya stabil (min = max dalam satu titik).
+- FPS tetap diambil dari `McpPerfProbe` (`Begin(5)`, lalu `Report`).
+- Pembanding = dunia yang sama di sesi Play yang sama, dengan semua renderer `Frontage`, `RoadEdges`, dan `Infill` dimatikan ("tanpa jalan"). Di sesi pertama, pembanding ini cocok dengan before asli:
+
+| Titik | Before asli | Tanpa jalan | Selisih |
+|---|---|---|---|
+| high 10 | 3782 | 3791 | +0.2% |
+| road 10 | 5645 | 5728 | +1.5% |
+| kos 10 | 8025 | 8293 | +3.3% |
+
+  Selisihnya berasal dari marka dan posisi lampu atau pohon yang memang berubah.
+- Antar-sesi Play, angka absolut bisa bergeser bersama-sama (sesi kedua sekitar +800 di semua titik, diduga ikut terhitungnya Scene view). Karena itu yang dibandingkan selalu pasangan dalam sesi yang sama.
+
+### Sebelum polish (kode PR #6, metode baru)
+
+| Titik | Jam | Tanpa jalan | Dengan jalan | Kenaikan | Dengan Detail 200 m (uji manual) |
+|---|---|---|---|---|---|
+| kos | 10 | 8293 | 9047 | +9.1% | 8851 (+6.7%) |
+| kos | 21 | 8515 | 9281 | +9.0% | 9084 (+6.7%) |
+| road | 10 | 5728 | 6415 | +12.0% | 6190 (+8.1%) |
+| road | 21 | 5716 | 6485 | +13.5% | 6260 (+9.5%) |
+| high | 10 | 3791 | 4363 | +15.1% | 4209 (+11.0%) |
+| high | 21 | 3802 | 4383 | +15.3% | 4228 (+11.2%) |
+
+### Perubahan
+
+**Geometri:**
+- **Offset tanpa lipatan:** sisi dalam tikungan yang lebih sempit dari offset diciutkan, bukan dibiarkan terlipat.
+- **Jalan loop:** sambungan loop dipindah ke tengah segmen terpanjang, sehingga belokan di sambungan 0°.
+- **Aspal di sambungan loop:** sambungan way loop di-miter.
+- **Pulau bundaran kecil:** tidak diberi tepi jalan maupun tembok.
+- **Tembok:** dipotong dari satu garis tembok per sisi chain.
+- **Gerbang:**
+  - menjauhi tikungan (≤ 5°);
+  - selalu selebar penuh;
+  - rata dengan batas lot atau berjarak ≥ 1 m darinya.
+- **Peralihan trotoar ↔ selokan:** diberi tembok sambungan.
+
+**Perf:** kategori cull `Detail` untuk `Frontage` dan `RoadEdges`, dengan jarak max(80, 0.4 × view distance), yaitu 200 m di High.
+
+### Hasil
+
+- **Tes:** EditMode `group=. passed=992 failed=0`.
+- **Generate:** 25.5–25.7 s. Dua kali Generate: `IDENTICAL chunks=280`.
+- **Metrik tembok seluruh dunia** (dihitung dari hasil `FrontageMeshBuilder`):
+
+| Metrik | Sebelum aturan potongan pendek | Sesudah |
+|---|---|---|
+| Pasangan pilaster < 0.5 m | 795 | 139 |
+| Pasangan blocker tembok yang bersilang | 64 | 64 |
+
+  Kolom "sebelum" sudah memakai garis tembok tunggal. Kode PR #6 tidak diukur dengan metrik ini.
+
+  Sisa pilaster dempet dan semua persilangan ada di sudut persimpangan, tempat tembok dua jalan bertemu. Itu tidak termasuk ruang lingkup polish ini; sudut-sudutnya tertutup, tanpa celah.
+- **Gates dan Doors:** 2859/593 → 2853/579. Bukaan di sisi dalam tikungan yang tidak muat lagi tidak digambar, dan temboknya menyambung.
+- **Cek visual** (tampak atas dan mata):
+  - **Sudut dalam Jl. Sukabirus dekat titik `road`:** sebelumnya ada daun gerbang terlipat dan pilaster dobel. Sekarang garis tembok bersih, pintu dan gerbang selebar penuh, dengan pilaster bersama di batas lot.
+  - **Loop 197338573:** tepi jalan menerus di sambungan, takik aspal hilang.
+  - **Loop 686884808:** pulau r ≈ 5 m sebelumnya berisi cincin pilaster; sekarang bersih.
+
+### Perf sesudah polish (preset High, pasangan dalam sesi Play yang sama)
+
+| Titik | Jam | Batch tanpa jalan | Batch dengan jalan | Kenaikan | FPS tanpa jalan | FPS dengan jalan | FPS % | Lulus? |
+|---|---|---|---|---|---|---|---|---|
+| kos | 10 | 8294 | 8926 | +7.6% | 149.1 | 140.0 | 93.9% | ya |
+| kos | 21 | 8516 | 9159 | +7.5% | 140.9 | 135.9 | 96.5% | ya |
+| road | 10 | 5716 | 6427 | +12.4% | 156.6 | 149.3 | 95.3% | ya |
+| road | 21 | 6371 | 7154 | +12.3% | 145.1 | 138.5 | 95.5% | ya |
+| high | 10 | 4583 | 5015 | +9.4% | 169.5 | 163.2 | 96.3% | ya |
+| high | 21 | 4598 | 5038 | +9.6% | 145.3 | 151.0 | 103.9% | ya |
+
+Kriteria spec §15 (batch ≤ +15%, FPS ≥ 90%) lulus di keenam titik. Pengukuran masih memakai preset tersimpan **High**, karena preset Sedang tidak dipakai di before maupun di sini.
+
+### Masih terbuka (di luar ruang lingkup)
+
+- **Sudut persimpangan:** tembok dua jalan yang bertemu di sudut kadang saling lewat beberapa puluh cm (64 pasang). Sambungan sudut yang rapi bisa dibuat nanti.
+
 ## QA manual (user)
 - [ ] Jalan kaki dan naik motor di Jl. Sukabirus, gang dekat kos, dan Jl. Raya Bojongsoang; siang dan malam.
 - [ ] Cari z-fighting atau celah di simpang, tembok yang melintang, dan rumah infill yang aneh.

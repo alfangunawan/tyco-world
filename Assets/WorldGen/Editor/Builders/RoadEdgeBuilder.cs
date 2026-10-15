@@ -230,9 +230,20 @@ namespace TycoWorld.WorldGen.Authoring
             var outer = lines[section.Xs[section.Xs.Count - 1]];
             for (int j = 0; j + 1 < outer.Count; j++)
             {
-                Vector2 dir = outer[j + 1] - outer[j];
-                if (dir.sqrMagnitude < 1e-10f) continue;
-                var mesh = MeshIn(meshes, WorldMeshPipeline.ChunkOf((outer[j] + outer[j + 1]) * 0.5f, chunkSize), submeshes);
+                // The inside of a tight turn collapses the outer lines first (Polyline2D.Offset); the strips nearer the road
+                // still need this segment, so it is skipped only when every line has collapsed here.
+                Vector2 dir = Vector2.zero, mid = Vector2.zero;
+                foreach (float x in section.Xs)
+                {
+                    var l = lines[x];
+                    var d = l[j + 1] - l[j];
+                    if (d.sqrMagnitude < 1e-10f) continue;
+                    dir = d;
+                    mid = (l[j] + l[j + 1]) * 0.5f;
+                    break;
+                }
+                if (dir == Vector2.zero) continue;
+                var mesh = MeshIn(meshes, WorldMeshPipeline.ChunkOf(mid, chunkSize), submeshes);
                 Vector3 away = Xz.Dir(Polyline2D.LeftNormal(dir.normalized) * run.Side);
                 float a0 = lineAlong[j], a1 = lineAlong[j + 1];
                 foreach (var st in section.Strips)

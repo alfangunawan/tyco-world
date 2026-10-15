@@ -75,6 +75,113 @@ namespace TycoWorld.WorldGen.Tests
             CollectionAssert.AreEqual(new[] { 0f, 10f, 10f, s[2] }, along);
         }
 
+        /// <summary>Points every 1 m around an arc of the given radius (left turn), starting east from the origin.</summary>
+        static List<Vector2> Arc(float radius, float degrees)
+        {
+            float step = 2f * Mathf.Asin(0.5f / radius) * Mathf.Rad2Deg;
+            var pts = new List<Vector2> { V(-10, 0), V(0, 0) };
+            float heading = 0f;
+            for (float turned = 0f; turned < degrees; turned += step)
+            {
+                heading += step * Mathf.Deg2Rad;
+                pts.Add(pts[pts.Count - 1] + V(Mathf.Cos(heading), Mathf.Sin(heading)));
+            }
+            pts.Add(pts[pts.Count - 1] + V(Mathf.Cos(heading), Mathf.Sin(heading)) * 10f);
+            return pts;
+        }
+
+        static bool CrossesItself(List<Vector2> line)
+        {
+            for (int a = 0; a + 1 < line.Count; a++)
+                for (int b = a + 2; b + 1 < line.Count; b++)
+                {
+                    Vector2 p = line[a], r = line[a + 1] - p, q = line[b], s = line[b + 1] - q;
+                    float denom = Polygon2D.Cross(r, s);
+                    if (r.sqrMagnitude < 1e-8f || s.sqrMagnitude < 1e-8f || Mathf.Abs(denom) < 1e-9f) continue;
+                    float t = Polygon2D.Cross(q - p, s) / denom, u = Polygon2D.Cross(q - p, r) / denom;
+                    if (t > 1e-3f && t < 1f - 1e-3f && u > 1e-3f && u < 1f - 1e-3f) return true;
+                }
+            return false;
+        }
+
+        /// <summary>Every offset segment of real length runs the same way as the centreline at its arc position (no fold runs backwards).</summary>
+        static void AssertRunsForward(IReadOnlyList<Vector2> pts, List<Vector2> line, List<float> along, string label)
+        {
+            var cum = Polyline2D.Cumulative(pts);
+            for (int i = 0; i + 1 < line.Count; i++)
+            {
+                var d = line[i + 1] - line[i];
+                if (d.magnitude < 1e-3f || along[i + 1] - along[i] < 1e-4f) continue;
+                Polyline2D.PointAt(pts, cum, 0.5f * (along[i] + along[i + 1]), out var t);
+                Assert.Greater(Vector2.Dot(d, t), 0f, label + " segment " + i + " runs backwards");
+            }
+        }
+
+        [Test]
+        public void Offset_InsideATightArc_CollapsesTheFold()
+        {
+            var pts = Arc(2f, 120f);
+            var s = Polyline2D.Cumulative(pts);
+            var along = new List<float>();
+            var inner = Polyline2D.Offset(pts, s, 3f, along);
+            var outerAlong = new List<float>();
+            var outer = Polyline2D.Offset(pts, s, -3f, outerAlong);
+            Assert.AreEqual(outer.Count, inner.Count, "a collapse keeps the point count");
+            AssertRunsForward(pts, inner, along, "inner (radius 2 < offset 3)");
+            AssertRunsForward(pts, outer, outerAlong, "outer");
+            Assert.IsFalse(CrossesItself(inner));
+            for (int i = 1; i < along.Count; i++) Assert.GreaterOrEqual(along[i], along[i - 1]);
+            for (int i = 0; i + 1 < outer.Count; i++) Assert.Greater(Vector2.Distance(outer[i], outer[i + 1]), 0.01f, "the outside is untouched");
+            // The lead-in and lead-out stay on their own offset lines.
+            Assert.AreEqual(3f, inner[0].y, 1e-4f);
+            Assert.AreEqual(-10f, inner[0].x, 1e-4f);
+        }
+
+        [Test]
+        public void Offset_ReversedTails_CollapseOntoTheJoint()
+        {
+            // A 2 m span centred on a 30° left turn, offset 3.775 m to the inside: both 1 m legs lie behind the miter point.
+            var pts = new List<Vector2> { V(-1, 0), V(0, 0), V(Mathf.Cos(30f * Mathf.Deg2Rad), Mathf.Sin(30f * Mathf.Deg2Rad)) };
+            var along = new List<float>();
+            var line = Polyline2D.Offset(pts, Polyline2D.Cumulative(pts), 3.775f, along);
+            Assert.AreEqual(3, line.Count);
+            AssertRunsForward(pts, line, along, "inside");
+            Assert.Less(Vector2.Distance(line[0], line[2]), 1e-4f, "the folded span collapses to one point");
+            var outside = Polyline2D.Offset(pts, Polyline2D.Cumulative(pts), -3.775f, new List<float>());
+            Assert.Greater(Vector2.Distance(outside[0], outside[2]), 3f, "the outside of the turn keeps its full span");
+        }
+
+        [Test]
+        public void Offset_InsideASharpBevelledCorner_CutsTheOvershoot()
+        {
+            // A 160° turn bevels; inside it both legs overshoot the point where their offset lines meet and cross each other.
+            float a = 160f * Mathf.Deg2Rad;
+            var pts = new List<Vector2> { V(-20, 0), V(0, 0), V(20f * Mathf.Cos(a), 20f * Mathf.Sin(a)) };
+            var along = new List<float>();
+            var line = Polyline2D.Offset(pts, Polyline2D.Cumulative(pts), 1f, along);
+            Assert.AreEqual(4, line.Count, "bevel");
+            Assert.IsFalse(CrossesItself(line));
+            AssertRunsForward(pts, line, along, "inside");
+        }
+
+        [Test]
+        public void Offset_InsideANearUTurn_StaysNearTheRoad()
+        {
+            // 175° over three short segments: the legs' inner offset lines meet ~80 m away; the collapse must not go there.
+            var pts = new List<Vector2> { V(0, 0), V(10, 0) };
+            float heading = 0f;
+            foreach (float turn in new[] { 60f, 60f, 55f })
+            {
+                heading += turn * Mathf.Deg2Rad;
+                pts.Add(pts[pts.Count - 1] + V(Mathf.Cos(heading), Mathf.Sin(heading)) * (turn == 55f ? 10f : 1f));
+            }
+            var along = new List<float>();
+            var line = Polyline2D.Offset(pts, Polyline2D.Cumulative(pts), 4.5f, along);
+            foreach (var p in line)
+                Assert.LessOrEqual(Polyline2D.DistanceTo(pts, p), 4.5f * RoadMeshBuilder.MiterLimit + 0.01f, "offset point " + p);
+            AssertRunsForward(pts, line, along, "near U-turn");
+        }
+
         [Test]
         public void Project_FindsArcLengthAndDistance()
         {

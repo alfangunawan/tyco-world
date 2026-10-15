@@ -41,6 +41,12 @@ namespace TycoWorld.WorldGen.Authoring
         public EdgeProfile[] Left = new EdgeProfile[0];
         public EdgeProfile[] Right = new EdgeProfile[0];
 
+        /// <summary>
+        /// The chain is a loop: its first and last points coincide. Loops open in the middle of their longest segment, so the
+        /// seam turns 0° and offsets of both ends meet (spec frontage-polish §2.1).
+        /// </summary>
+        public bool Closed;
+
         public float HalfWidth => Width * 0.5f;
         public float Length => Cum.Length > 0 ? Cum[Cum.Length - 1] : 0f;
         public EdgeProfile[] Profiles(int side) => side > 0 ? Left : Right;
@@ -175,11 +181,13 @@ namespace TycoWorld.WorldGen.Authoring
         {
             hits.Clear();
             grid.Query(Around(p, radius), hits);
-            float best = radius;
+            float best = radius, length = chain.Length;
             foreach (int i in hits)
             {
                 var seg = segs[i];
                 if (seg.Chain != chain.Index || (seg.S1 > sMin && seg.S0 < sMax)) continue;
+                // On a loop the stretch continues across the seam.
+                if (chain.Closed && ((seg.S1 > sMin + length && seg.S0 < sMax + length) || (seg.S1 > sMin - length && seg.S0 < sMax - length))) continue;
                 best = Mathf.Min(best, Polygon2D.DistanceToSegment(p, seg.A, seg.B));
             }
             return best;
@@ -250,11 +258,26 @@ namespace TycoWorld.WorldGen.Authoring
             return best;
         }
 
+        /// <summary>Island left inside a loop beyond its edge band, below which the inside is a traffic island: no edge, no frontage.</summary>
+        const float IslandMinMargin = 2f;
+
+        /// <summary>The loop's inside side (+1 left) when its island is too small for an edge and a lot; 0 otherwise.</summary>
+        int SmallIslandSide(RoadChain chain)
+        {
+            if (!chain.Closed || chain.Length < 1e-3f) return 0;
+            var ring = chain.Points.GetRange(0, chain.Points.Count - 1);
+            float area = Polygon2D.SignedArea(ring);
+            // Inradius of the loop, exact for a circle: 2 A / perimeter.
+            float radius = 2f * Mathf.Abs(area) / chain.Length;
+            return radius < chain.HalfWidth + settings.Width(chain.BaseProfile) + IslandMinMargin ? (area > 0f ? 1 : -1) : 0;
+        }
+
         EdgeProfile[] ComputeProfiles(RoadChain chain, int side, IReadOnlyList<Polygon> campus)
         {
             float step = settings.SafeSampleStep;
             int n = Mathf.Max(1, Mathf.CeilToInt(chain.Length / step - 1e-4f) + 1);
             var result = new EdgeProfile[n];
+            if (side == SmallIslandSide(chain)) return result;
             float probe = chain.HalfWidth + settings.sidewalkWidth * 0.5f;
             float cap = settings.campusSidewalkDistance + 1f;
             for (int i = 0; i < n; i++)
@@ -354,6 +377,13 @@ namespace TycoWorld.WorldGen.Authoring
                 u = fwd ? unit.EndLink : unit.StartLink;
                 fwd = enterAtStart;
             }
+            int last = chain.Points.Count - 1;
+            if (last >= 3 && (chain.Points[0] - chain.Points[last]).sqrMagnitude < 1e-4f)
+            {
+                chain.Points[last] = chain.Points[0];
+                OpenLoopAtLongestSegment(chain.Points, ranges);
+                chain.Closed = true;
+            }
             chain.Cum = Polyline2D.Cumulative(chain.Points);
             var head = ranges[0].road;
             chain.Highway = head.Highway ?? "";
@@ -373,6 +403,50 @@ namespace TycoWorld.WorldGen.Authoring
             chain.Id = id;
             chain.Key = unchecked((long)SplitMix64.Hash(id, "chain:" + Quantize(chain.Points[0]).ToString(CultureInfo.InvariantCulture)));
             Chains.Add(chain);
+        }
+
+        /// <summary>
+        /// Re-opens a loop (points[0] == points[m]) at the middle of its longest segment: the new first and last point is that
+        /// midpoint. Member ranges follow; the range holding the longest segment splits into its two halves.
+        /// </summary>
+        static void OpenLoopAtLongestSegment(List<Vector2> points, List<(RoadFeature road, int start, int end)> ranges)
+        {
+            int m = points.Count - 1;
+            int k = 0;
+            float longest = -1f;
+            for (int i = 0; i < m; i++)
+            {
+                float d = (points[i + 1] - points[i]).sqrMagnitude;
+                if (d > longest + 1e-6f)
+                {
+                    longest = d;
+                    k = i;
+                }
+            }
+            var mid = 0.5f * (points[k] + points[k + 1]);
+            // Old index j (0..m, with m == 0 as a place) to new index: k+1..m → j-k, 0..k → j+m-k; the midpoint is 0 and m+1.
+            int Map(int j) => j > k ? j - k : j + m - k;
+            var rotated = new List<Vector2>(m + 2) { mid };
+            for (int j = k + 1; j <= m; j++) rotated.Add(points[j]);
+            for (int j = 1; j <= k; j++) rotated.Add(points[j]);
+            rotated.Add(mid);
+            var moved = new List<(RoadFeature road, int start, int end)>();
+            foreach (var (road, start, end) in ranges)
+            {
+                if (start <= k && end >= k + 1)
+                {
+                    // This range runs over the longest segment: k → mid → k+1 becomes the chain's end and its start.
+                    moved.Add((road, 0, Map(end)));
+                    moved.Add((road, Map(start), m + 1));
+                }
+                else if (start > k) moved.Add((road, Map(start), Map(end)));
+                else moved.Add((road, Map(start), end == 0 ? m - k : Map(end)));
+            }
+            moved.Sort((a, b) => a.start != b.start ? a.start.CompareTo(b.start) : a.end.CompareTo(b.end));
+            points.Clear();
+            points.AddRange(rotated);
+            ranges.Clear();
+            ranges.AddRange(moved);
         }
 
         void IndexSegments(RoadChain chain)

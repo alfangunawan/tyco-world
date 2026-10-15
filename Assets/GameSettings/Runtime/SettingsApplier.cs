@@ -124,6 +124,7 @@ namespace TycoWorld.GameSettings
             {
                 culler.ViewDistance = view;
                 culler.PropDistance = props;
+                culler.DetailDistance = ViewDistanceRules.DetailDistance(view);
             }
 
             var director = FindDirector != null ? FindDirector() : null;

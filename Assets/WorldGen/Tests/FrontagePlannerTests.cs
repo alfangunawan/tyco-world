@@ -49,6 +49,85 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual(EdgeProfile.Gutter, run.Profile);
         }
 
+        /// <summary>A residential chain turning 30° right at s = 20 (legs of 20 m), with one lot on its left (outside) between s0 and s1.</summary>
+        (RoadChain chain, FrontageInterval lot) BentLot(float s0, float s1)
+        {
+            float a = 30f * Mathf.Deg2Rad;
+            var rule = settings.roadRules.Single(r => r.highway == "residential");
+            var road = new RoadFeature { Id = 9, Highway = "residential", Rule = rule, Width = 5f, Y = 0.08f, Tags = TestOsm.Tags(("highway", "residential")) };
+            road.Pieces.Add(new LinePiece(new List<Vector2> { V(0, 0), V(20, 0), V(20f + 20f * Mathf.Cos(a), -20f * Mathf.Sin(a)) }, false, false));
+            var chain = new RoadNetwork(new[] { road }, new Polygon[0], settings.roadEdges).Chains[0];
+            // The house sits on the outside of the bend, on its bisector, so it faces (projects onto) the vertex itself.
+            var bisector = (V(0, 1) + V(Mathf.Sin(a), Mathf.Cos(a))).normalized;
+            var house = new StreetBuilding { Id = 77, Centroid = V(20, 0) + bisector * 9f };
+            return (chain, new FrontageInterval { Chain = chain, Side = 1, Profile = EdgeProfile.Gutter, S0 = s0, S1 = s1, Kind = FrontageKind.Lot, Building = house });
+        }
+
+        [Test]
+        public void GateFacingABend_SlidesToTheStraightPartOfItsLot()
+        {
+            var (_, lot) = BentLot(12f, 30f);
+            var gate = FrontagePlanner.Walls(new[] { lot }, settings.frontage).Single().Openings.Single();
+            float clear = gate.Width * 0.5f + settings.frontage.pilasterSize + 0.05f;
+            Assert.GreaterOrEqual(Mathf.Abs(gate.S - 20f), clear - 0.01f, "gate and posts clear the 30° vertex");
+            Assert.LessOrEqual(Mathf.Abs(gate.S - 20f), clear + 0.15f, "but stays as close to the house as it can");
+        }
+
+        [Test]
+        public void GateOnALotThatIsAllBend_StaysFacingTheHouse()
+        {
+            var (_, lot) = BentLot(18f, 22.5f);
+            var gate = FrontagePlanner.Walls(new[] { lot }, settings.frontage).Single().Openings.Single();
+            Assert.AreEqual(20f, gate.S, 0.05f, "no straight stretch long enough: the old placement");
+        }
+
+        [Test]
+        public void SmallRoundaboutIsland_GetsNoWall()
+        {
+            var ring = new Vector2[17];
+            for (int i = 0; i < 16; i++) ring[i] = V(-250, 200) + new Vector2(Mathf.Cos(i * Mathf.PI / 8f), Mathf.Sin(i * Mathf.PI / 8f)) * 5f;
+            ring[16] = ring[0];
+            var plan = Plan(new StreetFixture(settings, osm => osm.Way(3301, ring, false, ("highway", "residential"))));
+            Assert.IsFalse(Of(plan, 3301, 1).Any(), "nothing to wall on the inside of a 5 m island");
+            Assert.IsTrue(Of(plan, 3301, -1).Any(), "the outside still has a property line");
+        }
+
+        [Test]
+        public void HouseAcrossALoopSeam_GetsOneOpeningAndOneWallLook()
+        {
+            // A 40 m block drawn from its corner: the seam moves to the middle of the south side, right in front of a house.
+            var plan = Plan(new StreetFixture(settings, osm =>
+            {
+                osm.Way(3401, new[] { V(-400, 300), V(-360, 300), V(-360, 340), V(-400, 340), V(-400, 300) }, false, ("highway", "residential"));
+                osm.Rect(9001, -385f, 306.7f, 10f, 8f, ("building", "house"));
+            }));
+            // The house also faces the west and east sides of the block; only its south frontage straddles the seam.
+            var lots = Of(plan, 3401, 1).Where(x => x.Kind == FrontageKind.Lot && x.Building.Id == 9001 && (x.S0 < 1e-3f || x.S1 > x.Chain.Length - 1e-3f)).ToList();
+            Assert.AreEqual(2, lots.Count, "the seam splits the house's south frontage");
+            Assert.AreSame(lots[0], lots[1].SeamPartner);
+            var runs = FrontagePlanner.Walls(lots, settings.frontage);
+            Assert.AreEqual(1, runs.Sum(r => r.Openings.Count), "one house, one opening");
+            Assert.AreEqual(runs[0].Style, runs[1].Style);
+            Assert.AreEqual(runs[0].Height, runs[1].Height);
+            Assert.AreEqual(runs[0].Band, runs[1].Band);
+        }
+
+        [Test]
+        public void VacantStretchAcrossALoopSeam_KeepsOneWallLook()
+        {
+            var plan = Plan(new StreetFixture(settings, osm =>
+                osm.Way(3402, new[] { V(-400, 400), V(-360, 400), V(-360, 440), V(-400, 440), V(-400, 400) }, false, ("highway", "residential"))));
+            var side = Of(plan, 3402, -1);
+            var first = side.First(x => x.S0 < 1e-3f);
+            var last = side.Last(x => x.S1 > first.Chain.Length - 1e-3f);
+            Assert.AreEqual(FrontageKind.Vacant, first.Kind);
+            Assert.AreEqual(FrontageKind.Vacant, last.Kind);
+            var runs = FrontagePlanner.Walls(new[] { first, last }, settings.frontage);
+            Assert.AreEqual(runs[0].Style, runs[1].Style);
+            Assert.AreEqual(runs[0].Height, runs[1].Height);
+            Assert.AreEqual(runs[0].Band, runs[1].Band);
+        }
+
         [Test]
         public void FlushHouse_GetsNoWall()
         {

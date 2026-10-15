@@ -179,6 +179,7 @@ namespace TycoWorld.WorldGen.Tests
             Assert.AreEqual(0.1f, f.pilasterExtra, 1e-6f);
             Assert.AreEqual(1f, f.pilasterMinGap);
             Assert.AreEqual(20f, f.pilasterMinTurnDegrees);
+            Assert.AreEqual(5f, f.gateMaxTurnDegrees);
             Assert.AreEqual(2f, f.gateWidth);
             Assert.AreEqual(0.9f, f.doorWidth, 1e-6f);
             Assert.AreEqual(1.6f, f.gateHeight, 1e-6f);
@@ -255,6 +256,8 @@ namespace TycoWorld.WorldGen.Tests
             string yaml = System.IO.File.ReadAllText(WorldGenPaths.SettingsAsset);
             StringAssert.Contains("pilasterMinGap:", yaml, "the saved file itself carries the field, not only the initializer");
             StringAssert.Contains("pilasterMinTurnDegrees:", yaml);
+            Assert.AreEqual(5f, asset.frontage.gateMaxTurnDegrees, 1e-6f);
+            StringAssert.Contains("gateMaxTurnDegrees:", yaml);
             Assert.IsNotNull(asset.infill);
             Assert.AreEqual(2500, asset.infill.maxInfill);
         }

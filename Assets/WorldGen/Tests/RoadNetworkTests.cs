@@ -199,6 +199,71 @@ namespace TycoWorld.WorldGen.Tests
         }
 
         [Test]
+        public void LoopWay_IsClosed_AndOpensMidwayAlongItsLongestSide()
+        {
+            // A 40 x 10 block drawn from its corner: the seam moves to the middle of a 40 m side, where it turns 0°.
+            var net = Net(null, Road(5, "residential", 5f, V(0, 0), V(40, 0), V(40, 10), V(0, 10), V(0, 0)));
+            var c = net.Chains.Single();
+            Assert.IsTrue(c.Closed);
+            Assert.AreEqual(100f, c.Length, 1e-3f);
+            Assert.AreEqual(c.Points[0], c.Points[c.Points.Count - 1]);
+            Assert.AreEqual(20f, c.Points[0].x, 1e-4f, "middle of a 40 m side");
+            Assert.AreEqual(1, Mathf.RoundToInt(Mathf.Abs(c.Points[0].y - 5f) / 5f), "on the bottom or top side");
+            foreach (int side in RoadNetwork.Sides)
+                Assert.Less(Vector2.Distance(c.SidePoint(0f, side, 3.3f), c.SidePoint(c.Length, side, 3.3f)), 1e-3f, "offsets meet at the seam, side " + side);
+            Assert.AreEqual(100f, c.Members.Sum(m => m.S1 - m.S0), 1e-3f, "the way still covers the whole loop");
+            Assert.IsTrue(c.Members.All(m => m.Road.Id == 5));
+        }
+
+        [Test]
+        public void OpenWay_IsNotClosed()
+        {
+            var net = Net(null, Road(6, "residential", 5f, V(0, 0), V(40, 0), V(40, 10)));
+            Assert.IsFalse(net.Chains.Single().Closed);
+        }
+
+        [Test]
+        public void DistanceToChain_OnALoop_IgnoresTheStretchAcrossTheSeam()
+        {
+            var net = Net(null, Road(5, "residential", 5f, V(0, 0), V(40, 0), V(40, 10), V(0, 10), V(0, 0)));
+            var c = net.Chains.Single();
+            var p = c.SidePoint(0.5f, 1, 3f);
+            // [s - 4, s + 4] around s = 0.5 reaches back over the seam to s = L - 3.5: those 3.5 m are ignored too.
+            float d = net.DistanceToChain(c, p, 10f, 0.5f - 4f, 0.5f + 4f);
+            Assert.Greater(d, 3.5f, "the seam's other side must not count as another road part");
+        }
+
+        /// <summary>A closed counter-clockwise way around a circle (its inside is on the left, +1).</summary>
+        static Vector2[] Circle(Vector2 centre, float radius, int segments)
+        {
+            var pts = new Vector2[segments + 1];
+            for (int i = 0; i < segments; i++)
+            {
+                float a = i * Mathf.PI * 2f / segments;
+                pts[i] = centre + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * radius;
+            }
+            pts[segments] = pts[0];
+            return pts;
+        }
+
+        [Test]
+        public void SmallRoundaboutIsland_HasNoEdgeOnItsInside()
+        {
+            // Radius 5: the gutter (half width 2.5 + 0.8) would leave under 2 m of island.
+            var c = Net(null, Road(8, "residential", 5f, Circle(V(0, 0), 5f, 16))).Chains.Single();
+            Assert.IsTrue(c.Closed);
+            Assert.IsTrue(c.Profiles(1).All(p => p == EdgeProfile.None), "inside");
+            Assert.IsTrue(c.Profiles(-1).All(p => p == EdgeProfile.Gutter), "outside");
+        }
+
+        [Test]
+        public void LargeLoop_KeepsItsInsideEdge()
+        {
+            var c = Net(null, Road(8, "residential", 5f, Circle(V(0, 0), 15f, 32))).Chains.Single();
+            Assert.IsTrue(c.Profiles(1).All(p => p == EdgeProfile.Gutter));
+        }
+
+        [Test]
         public void EdgeLookup_ByRoadAndSide()
         {
             var net = Net(new[] { Square(0, 5, 100, 55) }, Road(1, "tertiary", 6f, V(0, 0), V(100, 0)));

@@ -44,6 +44,35 @@ namespace TycoWorld.WorldGen.Authoring
                 endR[s] = pts[s + 1] - normal[s] * hw;
             }
 
+            // A loop way (first point = last point, no free ends) joins its last segment to its first like any other joint.
+            if (!extendStart && !extendEnd && last >= 3 && (pts[0] - pts[last]).sqrMagnitude < 1e-4f)
+            {
+                bool mitred = false;
+                Vector2 sum = normal[segments - 1] + normal[0];
+                if (sum.sqrMagnitude > 1e-6f)
+                {
+                    Vector2 miter = sum.normalized;
+                    float cosHalf = Vector2.Dot(miter, normal[0]);
+                    if (cosHalf > 1e-4f && 1f / cosHalf <= MiterLimit)
+                    {
+                        Vector2 offset = miter * (hw / cosHalf);
+                        endL[segments - 1] = startL[0] = pts[0] + offset;
+                        endR[segments - 1] = startR[0] = pts[0] - offset;
+                        mitred = true;
+                    }
+                }
+                if (!mitred)
+                {
+                    // Too sharp to miter: fill the outside of the seam with a bevel triangle, like an interior joint.
+                    Vector2 d0 = pts[last] - pts[last - 1], d1 = pts[1] - pts[0];
+                    bool leftTurn = d0.x * d1.y - d0.y * d1.x > 0f;
+                    Vector2 outer0 = leftTurn ? endR[segments - 1] : endL[segments - 1];
+                    Vector2 outer1 = leftTurn ? startR[0] : startL[0];
+                    var uv = new Vector2(hw, 0f);
+                    mesh.AddTriangle(submesh, Xz.At(pts[0], y), Xz.At(outer0, y), Xz.At(outer1, y), uv, uv, uv, Vector3.up);
+                }
+            }
+
             for (int i = 1; i < last; i++)
             {
                 Vector2 n0 = normal[i - 1], n1 = normal[i];
