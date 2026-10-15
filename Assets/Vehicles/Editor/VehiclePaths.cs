@@ -10,6 +10,9 @@ namespace TycoWorld.Vehicles.Authoring
         public const string PrefabsFolder = Root + "/Prefabs";
         public const string MeshesFolder = PrefabsFolder + "/Meshes";
         public const string MotorbikePrefab = PrefabsFolder + "/Motorbike.prefab";
+        public const string ModelPrefabsFolder = PrefabsFolder + "/Models";
+        public const string ModelTuningFolder = ConfigFolder + "/Tuning";
+        public const string CatalogAsset = ConfigFolder + "/VehicleCatalog.asset";
         public const string AudioFolder = Root + "/Audio";
         public const string AudioSourcesFile = AudioFolder + "/SOURCES.md";
     }

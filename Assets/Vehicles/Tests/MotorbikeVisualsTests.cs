@@ -114,5 +114,36 @@ namespace TycoWorld.Vehicles.Tests
             Assert.AreSame(tailMaterial, tail.sharedMaterial);
             Assert.AreSame(lensMaterial, lens.sharedMaterial);
         }
+
+        [Test]
+        public void ModelWheels_SpinByTheirRadius_AndFrontOnesSteer()
+        {
+            var go = new GameObject("CarVisuals");
+            try
+            {
+                var lean = new GameObject("LeanPivot").transform;
+                lean.SetParent(go.transform, false);
+                Transform Wheel(string n)
+                {
+                    var t = new GameObject(n).transform;
+                    t.SetParent(lean, false);
+                    return t;
+                }
+                var fl = Wheel("FL");
+                var steerFl = new GameObject("SteerFL").transform;
+                steerFl.SetParent(lean, false);
+                fl.SetParent(steerFl, false);
+                var rl = Wheel("RL");
+                var v = go.AddComponent<MotorbikeVisuals>();
+                v.ConfigureModel(lean, null, new[] { fl, rl }, new[] { steerFl }, 0.35f, null, null, null);
+                v.Apply(0.35f, 20f, 0f, false, false, false, 1f);
+                Assert.AreEqual(Mathf.Rad2Deg, Quaternion.Angle(Quaternion.identity, rl.localRotation), 0.5f, "1 rad per radius travelled");
+                Assert.AreEqual(20f, steerFl.localEulerAngles.y, 0.01f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
     }
 }

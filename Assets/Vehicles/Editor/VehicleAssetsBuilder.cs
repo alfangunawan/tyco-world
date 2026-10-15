@@ -14,6 +14,7 @@ namespace TycoWorld.Vehicles.Authoring
         public VehicleMaterialSet Materials;
         public VehicleClipSet Clips;
         public GameObject MotorbikePrefab;
+        public VehicleCatalog Catalog;
     }
 
     /// <summary>Creates or updates every vehicle asset in place (re-running is safe; tuning and materials keep user edits).</summary>
@@ -47,6 +48,7 @@ namespace TycoWorld.Vehicles.Authoring
                 }
             };
             a.MotorbikePrefab = SavePrefab(a);
+            a.Catalog = VehicleModelAssets.BuildAll(a.Materials, a.Clips);
             AssetDatabase.SaveAssets();
             foreach (var s in cleanScenes)
                 if (s.IsValid() && s.isDirty) EditorSceneManager.SaveScene(s);

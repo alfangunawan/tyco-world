@@ -6,7 +6,7 @@ namespace TycoWorld.Vehicles
     [DisallowMultipleComponent]
     public sealed class MotorbikeVisuals : MonoBehaviour
     {
-        const float WheelRadius = 0.3f;
+        public const float DefaultWheelRadius = 0.3f;
         const float TailDim = 0.35f;
 
         [SerializeField] Transform leanPivot;
@@ -17,6 +17,9 @@ namespace TycoWorld.Vehicles
         [SerializeField] Light headlight;
         [SerializeField] Renderer tailLight;
         [SerializeField] Renderer headlightLens;
+        [SerializeField] Transform[] wheels = new Transform[0];
+        [SerializeField] Transform[] steerPivots = new Transform[0];
+        [SerializeField] float wheelRadius = DefaultWheelRadius;
 
         RuntimeEmission tail, lens;
         float wheelAngle;
@@ -32,6 +35,8 @@ namespace TycoWorld.Vehicles
         public Renderer HeadlightLens => headlightLens;
         public bool TailBright => tail != null && tail.IsHigh;
         public bool LensOn => lens != null && lens.IsHigh;
+        public System.Collections.Generic.IReadOnlyList<Transform> Wheels => wheels;
+        public float WheelRadius => wheelRadius;
 
         public void Configure(Transform lean, Transform bar, Transform front, Transform rear, Transform riderModel, Light light,
             Renderer tailRenderer, Renderer lensRenderer)
@@ -41,6 +46,26 @@ namespace TycoWorld.Vehicles
             frontWheel = front;
             rearWheel = rear;
             rider = riderModel;
+            headlight = light;
+            tailLight = tailRenderer;
+            headlightLens = lensRenderer;
+            wheels = new Transform[0];
+            steerPivots = new Transform[0];
+            wheelRadius = DefaultWheelRadius;
+        }
+
+        /// <summary>A model-built vehicle (spec vehicles-3a §4): any number of spinning wheels and, for cars, front-wheel steer pivots.</summary>
+        public void ConfigureModel(Transform lean, Transform steer, Transform[] spinning, Transform[] steering, float radius, Light light,
+            Renderer tailRenderer, Renderer lensRenderer)
+        {
+            leanPivot = lean;
+            handlebar = steer;
+            frontWheel = null;
+            rearWheel = null;
+            rider = null;
+            wheels = spinning != null ? spinning : new Transform[0];
+            steerPivots = steering != null ? steering : new Transform[0];
+            wheelRadius = radius > 0.05f ? radius : DefaultWheelRadius;
             headlight = light;
             tailLight = tailRenderer;
             headlightLens = lensRenderer;
@@ -75,11 +100,13 @@ namespace TycoWorld.Vehicles
         public void Apply(float speed, float steerAngle, float lean, bool braking, bool headlightOn, bool riderVisible, float dt)
         {
             if (!initialized) Initialize();
-            wheelAngle = Mathf.Repeat(wheelAngle + speed / WheelRadius * Mathf.Rad2Deg * dt, 360f);
+            wheelAngle = Mathf.Repeat(wheelAngle + speed / wheelRadius * Mathf.Rad2Deg * dt, 360f);
             var spin = Quaternion.Euler(wheelAngle, 0f, 0f);
             if (frontWheel != null) frontWheel.localRotation = spin;
             if (rearWheel != null) rearWheel.localRotation = spin;
+            foreach (var w in wheels) if (w != null) w.localRotation = spin;
             if (handlebar != null) handlebar.localRotation = Quaternion.Euler(0f, steerAngle, 0f);
+            foreach (var p in steerPivots) if (p != null) p.localRotation = Quaternion.Euler(0f, steerAngle, 0f);
             if (leanPivot != null) leanPivot.localRotation = Quaternion.Euler(0f, 0f, -lean);
             if (headlight != null && headlight.enabled != headlightOn) headlight.enabled = headlightOn;
             if (rider != null && rider.gameObject.activeSelf != riderVisible) rider.gameObject.SetActive(riderVisible);

@@ -809,6 +809,9 @@ MonoBehaviour:
   headlight: {fileID: 1369681881281312638}
   tailLight: {fileID: 781707694333789783}
   headlightLens: {fileID: 8478688488524813980}
+  wheels: []
+  steerPivots: []
+  wheelRadius: 0.3
 --- !u!114 &103739262285780516
 MonoBehaviour:
   m_ObjectHideFlags: 0
