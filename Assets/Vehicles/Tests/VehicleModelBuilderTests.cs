@@ -145,6 +145,37 @@ namespace TycoWorld.Vehicles.Tests
             Assert.IsFalse(root.GetComponentsInChildren<Transform>(true).Any(t => t.name.StartsWith("Steer")));
         }
 
+        [TestCase("vario")]
+        [TestCase("supra")]
+        public void Bike_HasAnchorsInARiderShape(string id)
+        {
+            var b = BuildModel(id);
+            var a = root.GetComponentInChildren<RideAnchors>(true);
+            Assert.IsNotNull(a, id);
+            Assert.AreSame(a, RideAnchors.Of(root.GetComponent<Motorbike>()), "the model's own anchors, not the code scooter's");
+            Assert.Greater(a.gripRight.position.y, a.seat.position.y, "grips above the seat");
+            Assert.Greater(a.seat.position.y, a.footRight.position.y + 0.2f, "seat well above the feet");
+            Assert.Greater(a.gripRight.position.z, a.seat.position.z, "grips ahead of the seat");
+            Assert.Less(a.pillion.position.z, a.seat.position.z, "pillion behind the rider");
+            Assert.AreEqual(-a.gripRight.localPosition.x, a.gripLeft.localPosition.x, 0.01f, "left mirrors right");
+            Assert.AreEqual(-a.footRight.localPosition.x, a.footLeft.localPosition.x, 0.01f);
+            var inside = b;
+            inside.Expand(0.2f);
+            foreach (var t in new[] { a.seat, a.gripLeft, a.gripRight, a.footLeft, a.footRight, a.pillion, a.pillionFootLeft, a.pillionFootRight })
+                Assert.IsTrue(inside.Contains(t.position), id + " " + t.name + " on the bike");
+            var steer = root.transform.Find(VehicleModelBuilder.LeanName + "/" + VehicleModelBuilder.SteerName);
+            // The Vario's bar is part of its fairing and does not turn (Task 2 ruling), so its grips stay put with it.
+            if (string.IsNullOrEmpty(VehicleModelCatalog.Get(id).SteerNode)) Assert.IsFalse(a.gripRight.IsChildOf(steer), "grips stay on the fixed bar");
+            else Assert.IsTrue(a.gripRight.IsChildOf(steer), "grips turn with the bar");
+        }
+
+        [Test]
+        public void Car_HasNoRideAnchors()
+        {
+            BuildModel("hatch");
+            Assert.IsNull(root.GetComponentInChildren<RideAnchors>(true));
+        }
+
         [Test]
         public void Build_TwiceOnTheSameRoot_LeavesOneModel()
         {

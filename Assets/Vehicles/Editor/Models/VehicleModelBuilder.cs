@@ -100,12 +100,45 @@ namespace TycoWorld.Vehicles.Authoring
             var seat = NewChild(SeatName, root.transform);
             seat.localPosition = spec.DriverSeat ?? (bike ? new Vector3(0f, b.max.y * 0.8f, b.center.z) : new Vector3(b.extents.x * 0.42f, b.max.y * 0.42f, b.center.z + 0.15f));
 
+            if (bike && spec.Bike != null)
+            {
+                var a = lean.gameObject.AddComponent<RideAnchors>();
+                // The grips ride on whatever shows the bar: the steer pivot, or the lean when the bar is part of a fixed fairing.
+                var bar = steer != null && !string.IsNullOrEmpty(spec.SteerNode) ? steer : lean;
+                a.seat = Point("RiderSeat", lean, spec.Bike.Seat);
+                a.gripRight = PointWorld("GripR", bar, spec.Bike.GripRight);
+                a.gripLeft = PointWorld("GripL", bar, Mirror(spec.Bike.GripRight));
+                a.footRight = Point("FootR", lean, spec.Bike.FootRight);
+                a.footLeft = Point("FootL", lean, Mirror(spec.Bike.FootRight));
+                a.pillion = Point("PillionSeat", lean, spec.Bike.Pillion);
+                a.pillionFootRight = Point("PillionFootR", lean, spec.Bike.PillionFootRight);
+                a.pillionFootLeft = Point("PillionFootL", lean, Mirror(spec.Bike.PillionFootRight));
+                seat.localPosition = spec.Bike.Seat;
+            }
+
             Motorbike.ConfigureBody(GetOrAdd<CharacterController>(root), tuning);
             var visuals = GetOrAdd<MotorbikeVisuals>(root);
             visuals.ConfigureModel(lean, steer, spinning.ToArray(), steering.ToArray(), radius, headlight, tailLamp, lens);
             var sound = MotorbikeBuilder.BuildAudio(root, clips);
             GetOrAdd<Motorbike>(root).Configure(tuning, seat, visuals, sound);
             return b;
+        }
+
+        static Vector3 Mirror(Vector3 v) => new Vector3(-v.x, v.y, v.z);
+
+        static Transform Point(string name, Transform parent, Vector3 local)
+        {
+            var t = NewChild(name, parent);
+            t.localPosition = local;
+            return t;
+        }
+
+        /// <summary>A point given in prefab space under a parent that is not at the origin (the steer pivot).</summary>
+        static Transform PointWorld(string name, Transform parent, Vector3 prefabSpace)
+        {
+            var t = NewChild(name, parent);
+            t.position = prefabSpace;
+            return t;
         }
 
         /// <summary>A pivot at the wheel's centre (axes of the vehicle) that the wheel hangs from, so spinning it turns the wheel in place.</summary>

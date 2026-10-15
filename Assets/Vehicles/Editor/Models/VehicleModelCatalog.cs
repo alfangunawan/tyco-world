@@ -26,14 +26,26 @@ namespace TycoWorld.Vehicles.Authoring
             {
                 Id = "vario", Class = VehicleClass.MotorMatic, Length = 1.92f, YawFix = 0f,
                 FrontWheels = new[] { "wheel.vario" }, RearWheels = new[] { "wheel.vario.001" },
-                PaintMaterials = new[] { "material" }, PaintStrength = 0.6f
+                PaintMaterials = new[] { "material" }, PaintStrength = 0.6f,
+                // Measured on the built prefab: front of the seat 0.75 m, floorboard 0.25 m, bar ends at x 0.27–0.31.
+                Bike = new BikeAnchorSpec
+                {
+                    Seat = new Vector3(0f, 0.75f, -0.15f), GripRight = new Vector3(0.27f, 1.0f, 0.17f), FootRight = new Vector3(0.12f, 0.25f, 0.22f),
+                    Pillion = new Vector3(0f, 0.81f, -0.55f), PillionFootRight = new Vector3(0.24f, 0.3f, -0.15f)
+                }
             },
             new VehicleModelSpec
             {
                 Id = "supra", Class = VehicleClass.MotorBebek, Length = 1.89f, YawFix = 180f,
                 FrontWheels = new[] { "wheel_front" }, RearWheels = new[] { "wheel_rear" },
                 SteerNode = "handlebars", ExtraSteerNodes = new[] { "forks_front" },
-                PaintMaterials = new[] { "chassis.002" }, PaintStrength = 0.6f
+                PaintMaterials = new[] { "chassis.002" }, PaintStrength = 0.6f,
+                // Measured on the built prefab: front of the seat 0.73 m, footpegs at x 0.2 / 0.28 m, bar ends at x 0.30–0.34.
+                Bike = new BikeAnchorSpec
+                {
+                    Seat = new Vector3(0f, 0.73f, -0.25f), GripRight = new Vector3(0.3f, 0.99f, 0.27f), FootRight = new Vector3(0.2f, 0.3f, 0f),
+                    Pillion = new Vector3(0f, 0.8f, -0.6f), PillionFootRight = new Vector3(0.22f, 0.34f, -0.38f)
+                }
             },
             new VehicleModelSpec
             {
