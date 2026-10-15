@@ -27,6 +27,49 @@ namespace TycoWorld.Gameplay.Tests
             Object.DestroyImmediate(settings);
         }
 
+        /// <summary>The bake sees the cut roads (RoadClearance runs inside Classify): the phone map and GPS stop short of the walls.</summary>
+        public static KampungData BakeRoadThroughNamedBuilding(WorldGenSettings settings, out Polygon footprint)
+        {
+            var report = new GenerationReport();
+            var osm = new TestOsm();
+            osm.Way(1, new[] { new Vector2(-100f, 0f), new Vector2(100f, 0f) }, false, ("highway", "residential"));
+            osm.Rect(20, -15f, -15f, 30f, 30f, ("building", "university"), ("name", "Gedung Uji"));
+            var world = new FeatureClassifier(settings, report).Classify(osm.Data);
+            footprint = world.Buildings.First(b => b.Id == 20).Spec.Footprint;
+            return KampungBaker.Bake(world, settings, report);
+        }
+
+        /// <summary>How many points every 0.5 m along the lanes fall inside the footprint.</summary>
+        public static int PointsInside(Lane[] lanes, Polygon footprint)
+        {
+            int inside = 0;
+            foreach (var lane in lanes)
+                for (int i = 1; i < lane.points.Length; i++)
+                {
+                    Vector2 a = lane.points[i - 1], b = lane.points[i];
+                    int steps = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(a, b) / 0.5f));
+                    for (int k = 0; k <= steps; k++)
+                        if (footprint.Contains(Vector2.Lerp(a, b, k / (float)steps))) inside++;
+                }
+            return inside;
+        }
+
+        [Test]
+        public void MapRoads_StopShortOfANamedBuilding_ARoadRanThrough()
+        {
+            var baked = BakeRoadThroughNamedBuilding(settings, out var footprint);
+            try
+            {
+                Assert.IsNotEmpty(baked.mapRoads);
+                Assert.AreEqual(0, PointsInside(baked.mapRoads, footprint), "the phone map and GPS do not route through the building");
+                Assert.AreEqual(0, PointsInside(baked.walkLanes, footprint), "nor do the warga walk through it");
+            }
+            finally
+            {
+                Object.DestroyImmediate(baked);
+            }
+        }
+
         [Test]
         public void SameWorld_SameData()
         {
