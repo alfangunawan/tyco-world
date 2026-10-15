@@ -46,5 +46,23 @@ namespace TycoWorld.GameSettings.Tests
             foreach (var name in new[] { PauseMenuView.PanelName, PauseMenuView.SettingsHostName, PauseMenuView.ConfirmName })
                 Assert.AreEqual(name == visible ? DisplayStyle.Flex : DisplayStyle.None, Display(root.Q(name)), name);
         }
+
+        [Test]
+        public void HasACreditsButton_ThatOpensItsOwnPage()
+        {
+            var button = root.Q<Button>(PauseMenuView.CreditsName);
+            Assert.IsNotNull(button);
+            Assert.AreEqual(SettingsText.Credits, button.text);
+            view.Show(MenuPage.Credits);
+            Assert.AreEqual(DisplayStyle.Flex, root.Q(PauseMenuView.CreditsPanelName).style.display.value);
+            Assert.AreEqual(DisplayStyle.None, root.Q(PauseMenuView.PanelName).style.display.value);
+        }
+
+        [Test]
+        public void SetCredits_ShowsTheText()
+        {
+            view.SetCredits("Han66st — CC Attribution 4.0");
+            StringAssert.Contains("Han66st", root.Q<Label>(PauseMenuView.CreditsTextName).text);
+        }
     }
 }

@@ -49,6 +49,7 @@ namespace TycoWorld.Vehicles.Authoring
             };
             a.MotorbikePrefab = SavePrefab(a);
             a.Catalog = VehicleModelAssets.BuildAll(a.Materials, a.Clips);
+            CreditsBuilder.Write();
             AssetDatabase.SaveAssets();
             foreach (var s in cleanScenes)
                 if (s.IsValid() && s.isDirty) EditorSceneManager.SaveScene(s);
